@@ -1,9 +1,10 @@
 "use client";
 
 import { useUser } from "@stackframe/stack";
-import { Box, Button, Heading, Text, VStack, HStack, Card } from "@chakra-ui/react";
+import { Box, Heading, Text, VStack, Card } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { Header } from "@/components/ui/header";
 
 export default function Dashboard() {
   const user = useUser();
@@ -36,50 +37,44 @@ export default function Dashboard() {
   }
 
   return (
-    <Box minH="100vh" p={8}>
-      {/* Header */}
-      <HStack justify="space-between" mb={8}>
-        <Heading size="xl" color="blue.600">
-          Dashboard
-        </Heading>
-        <Button 
-          colorScheme="red" 
-          variant="outline"
-          onClick={() => user.signOut()}
-        >
-          Log ud
-        </Button>
-      </HStack>
+    <Box minH="100vh">
+      <Header />
+      
+      <Box p={8}>
+        {/* Welcome Section */}
+        <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
+          <Heading size="xl" color="blue.600" mb={4}>
+            Dashboard
+          </Heading>
+          
+          <Card.Root>
+            <Card.Body>
+              <VStack align="start" gap={2}>
+                <Heading size="lg">
+                  Velkommen, {user.displayName || user.primaryEmail}!
+                </Heading>
+                <Text color="gray.600">
+                  Dette er dit dashboard. Her kan du administrere dine kurser og aktiviteter.
+                </Text>
+              </VStack>
+            </Card.Body>
+          </Card.Root>
 
-      {/* Welcome Section */}
-      <VStack gap={6} align="stretch" maxW="4xl">
-        <Card.Root>
-          <Card.Body>
-            <VStack align="start" gap={2}>
-              <Heading size="lg">
-                Velkommen, {user.displayName || user.primaryEmail}!
-              </Heading>
-              <Text color="gray.600">
-                Dette er dit dashboard. Her kan du administrere dine kurser og aktiviteter.
-              </Text>
-            </VStack>
-          </Card.Body>
-        </Card.Root>
-
-        {/* Dashboard Content - Empty for now */}
-        <Card.Root>
-          <Card.Body>
-            <VStack gap={4} py={8}>
-              <Heading size="md" color="gray.500">
-                Dashboard indhold kommer snart
-              </Heading>
-              <Text color="gray.400" textAlign="center">
-                Her vil du kunne se dine kurser, opgaver og fremskridt.
-              </Text>
-            </VStack>
-          </Card.Body>
-        </Card.Root>
-      </VStack>
+          {/* Dashboard Content - Empty for now */}
+          <Card.Root>
+            <Card.Body>
+              <VStack gap={4} py={8}>
+                <Heading size="md" color="gray.500">
+                  Dashboard indhold kommer snart
+                </Heading>
+                <Text color="gray.400" textAlign="center">
+                  Her vil du kunne se dine kurser, opgaver og fremskridt.
+                </Text>
+              </VStack>
+            </Card.Body>
+          </Card.Root>
+        </VStack>
+      </Box>
     </Box>
   );
 }
