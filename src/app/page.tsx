@@ -3,9 +3,19 @@
 import { useUser } from "@stackframe/stack";
 import { Box, Button, Heading, Text, VStack, HStack } from "@chakra-ui/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function Home() {
   const user = useUser();
+  const router = useRouter();
+
+  // Redirect to dashboard if authenticated
+  useEffect(() => {
+    if (user) {
+      router.push("/dashboard");
+    }
+  }, [user, router]);
 
   return (
     <Box 
@@ -20,35 +30,11 @@ export default function Home() {
           Velkommen til ReSchool
         </Heading>
         
-        {user ? (
-          <VStack gap={4}>
-            <Text fontSize="lg">
-              Hej, {user.displayName || user.primaryEmail}!
-            </Text>
-            
-            <Box 
-              p={4} 
-              borderWidth={1} 
-              borderRadius="lg" 
-              textAlign="center"
-            >
-              <Text fontWeight="bold" mb={2}>
-                {user.displayName || "No name set"}
-              </Text>
-              <Text color="gray.600">
-                {user.primaryEmail}
-              </Text>
-            </Box>
-            
-            <Button 
-              colorScheme="red" 
-              onClick={() => user.signOut()}
-              size="lg"
-            >
-              Log ud
-            </Button>
-          </VStack>
-        ) : (
+        {user === undefined ? (
+          // Loading state
+          <Text>Loading...</Text>
+        ) : user === null ? (
+          // Not authenticated - show login/signup
           <VStack gap={4}>
             <Text fontSize="lg" color="gray.600">
               Log ind eller opret en konto for at komme i gang.
@@ -75,7 +61,7 @@ export default function Home() {
               </Link>
             </HStack>
           </VStack>
-        )}
+        ) : null}
       </VStack>
     </Box>
   );
