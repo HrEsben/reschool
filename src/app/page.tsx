@@ -45,7 +45,7 @@ export default function Home() {
               onClick={() => user.signOut()}
               size="lg"
             >
-              Sign Out
+              Sign Out test
             </Button>
           </VStack>
         ) : (
