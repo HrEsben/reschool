@@ -17,13 +17,13 @@ export default function Home() {
     >
       <VStack gap={8} textAlign="center">
         <Heading size="2xl" color="blue.600">
-          Welcome to ReSchool
+          Velkommen til ReSchool
         </Heading>
         
         {user ? (
           <VStack gap={4}>
             <Text fontSize="lg">
-              Hello, {user.displayName || user.primaryEmail}!
+              Hej, {user.displayName || user.primaryEmail}!
             </Text>
             
             <Box 
@@ -45,13 +45,13 @@ export default function Home() {
               onClick={() => user.signOut()}
               size="lg"
             >
-              Sign Out
+              Log ud
             </Button>
           </VStack>
         ) : (
           <VStack gap={4}>
             <Text fontSize="lg" color="gray.600">
-              You are not logged in
+              Log ind eller opret en konto for at komme i gang.
             </Text>
             
             <HStack gap={4}>
@@ -60,7 +60,7 @@ export default function Home() {
                   colorScheme="blue" 
                   size="lg"
                 >
-                  Sign In
+                  Log ind
                 </Button>
               </Link>
               
@@ -70,7 +70,7 @@ export default function Home() {
                   colorScheme="blue" 
                   size="lg"
                 >
-                  Sign Up
+                  Opret bruger
                 </Button>
               </Link>
             </HStack>
