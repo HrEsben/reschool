@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Card,
@@ -8,7 +9,8 @@ import {
   VStack,
   Text,
   Badge,
-  Spinner
+  Spinner,
+  Button
 } from '@chakra-ui/react';
 
 interface Child {
@@ -28,6 +30,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
   const [children, setChildren] = useState<Child[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const fetchChildren = async () => {
     try {
@@ -119,9 +122,9 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
         </Heading>
       </Box>
       
-      <VStack gap={3} align="stretch">
+            <VStack gap={3} align="stretch">
         {children.map((child) => (
-          <Card.Root key={child.id} variant="outline">
+          <Card.Root key={child.id} variant="outline" _hover={{ shadow: "md", cursor: "pointer" }}>
             <Card.Body p={4}>
               <Box display="flex" justifyContent="space-between" alignItems="start">
                 <VStack align="start" gap={2} flex={1}>
@@ -145,6 +148,13 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                     Tilføjet: {new Date(child.createdAt).toLocaleDateString('da-DK')}
                   </Text>
                 </VStack>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => router.push(`/children/${child.id}`)}
+                >
+                  Se profil
+                </Button>
               </Box>
             </Card.Body>
           </Card.Root>

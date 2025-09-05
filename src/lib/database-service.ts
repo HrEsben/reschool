@@ -15,8 +15,8 @@ export interface Child {
   id: number;
   name: string;
   createdBy: number;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // Changed from Date to string for consistency
+  updatedAt: string; // Changed from Date to string for consistency
 }
 
 export interface UserChildRelation {
@@ -139,8 +139,8 @@ export async function getChildrenForUser(userId: number): Promise<ChildWithRelat
       id: row.id,
       name: row.name,
       createdBy: row.created_by,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString(),
       relation: row.relation,
       customRelationName: row.custom_relation_name,
       isAdministrator: row.is_administrator
@@ -179,9 +179,81 @@ export async function getChildById(childId: number): Promise<Child | null> {
       [childId]
     );
 
-    return result.rows[0] as Child || null;
+    if (result.rows.length === 0) return null;
+    
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      name: row.name,
+      createdBy: row.created_by,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
   } catch (error) {
     console.error('Error getting child by ID:', error);
+    return null;
+  }
+}
+
+export interface UserWithRelation {
+  id: number;
+  stackAuthId: string;
+  email: string;
+  displayName?: string;
+  profileImageUrl?: string;
+  relation: string;
+  customRelationName?: string;
+  isAdministrator: boolean;
+  createdAt: string; // Changed from Date to string for consistency
+}
+
+export async function getUsersForChild(childId: number): Promise<UserWithRelation[]> {
+  try {
+    const result = await query(
+      `SELECT 
+         u.id,
+         u.stack_auth_id,
+         u.email,
+         u.display_name,
+         u.profile_image_url,
+         ucr.relation,
+         ucr.custom_relation_name,
+         ucr.is_administrator,
+         ucr.created_at
+       FROM users u
+       JOIN user_child_relations ucr ON u.id = ucr.user_id
+       WHERE ucr.child_id = $1
+       ORDER BY ucr.is_administrator DESC, ucr.created_at ASC`,
+      [childId]
+    );
+
+    return result.rows.map(row => ({
+      id: row.id,
+      stackAuthId: row.stack_auth_id,
+      email: row.email,
+      displayName: row.display_name,
+      profileImageUrl: row.profile_image_url,
+      relation: row.relation,
+      customRelationName: row.custom_relation_name,
+      isAdministrator: row.is_administrator,
+      createdAt: new Date(row.created_at).toISOString()
+    }));
+  } catch (error) {
+    console.error('Error getting users for child:', error);
+    return [];
+  }
+}
+
+export async function getChildWithUsers(childId: number): Promise<{child: Child; users: UserWithRelation[]} | null> {
+  try {
+    const child = await getChildById(childId);
+    if (!child) return null;
+
+    const users = await getUsersForChild(childId);
+    
+    return { child, users };
+  } catch (error) {
+    console.error('Error getting child with users:', error);
     return null;
   }
 }

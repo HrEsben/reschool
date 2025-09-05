@@ -6,21 +6,27 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000, // Increased to 10 seconds
 });
 
 // Helper function to execute queries
 export async function query(text: string, params?: any[]) {
   const start = Date.now();
-  const client = await pool.connect();
+  let client;
   
   try {
+    client = await pool.connect();
     const res = await client.query(text, params);
     const duration = Date.now() - start;
     console.log('Executed query', { text, duration, rows: res.rowCount });
     return res;
+  } catch (error) {
+    console.error('Database query error:', error);
+    throw error;
   } finally {
-    client.release();
+    if (client) {
+      client.release();
+    }
   }
 }
 
