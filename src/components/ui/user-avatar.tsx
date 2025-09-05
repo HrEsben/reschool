@@ -80,7 +80,6 @@ export function UserAvatar() {
         border="1px solid"
         borderColor="gray.200"
         borderRadius="md"
-        boxShadow="lg"
         p={2}
         zIndex={1000}
         _focus={{ outline: "none" }}

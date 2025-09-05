@@ -152,7 +152,6 @@ export function DialogManager({
         zIndex="modal"
         bg="white"
         borderRadius="xl"
-        boxShadow="2xl"
         border="2px solid"
         borderColor={styles.borderColor}
         p={0}

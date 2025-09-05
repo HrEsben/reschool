@@ -167,8 +167,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
           <Card.Root 
             key={child.id} 
             variant="outline" 
-            className={`${getCardBgColor(child.relation)} hover:shadow-lg`}
-            shadow="sm"
+            className={`${getCardBgColor(child.relation)}`}
             _hover={{ 
               cursor: "pointer",
               transform: "translateY(-1px)",
@@ -205,8 +204,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                     onClick={() => router.push(`/${generateSlug(child.name)}`)}
                     fontWeight="500"
                     _hover={{
-                      transform: "translateY(-1px)",
-                      shadow: "sm"
+                      transform: "translateY(-1px)"
                     }}
                     transition="all 0.2s ease"
                   >

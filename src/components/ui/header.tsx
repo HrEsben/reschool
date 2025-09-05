@@ -53,7 +53,7 @@ export function Header() {
   return (
     <Box 
       borderBottomWidth={1} 
-      className="border-eggshell-400 bg-white shadow-sm"
+      className="border-eggshell-400 bg-white"
       px={8} 
       py={4}
       position="sticky"

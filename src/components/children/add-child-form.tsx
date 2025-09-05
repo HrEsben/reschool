@@ -18,7 +18,9 @@ import {
   DialogHeader,
   DialogRoot,
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
+  RadioGroup,
+  Card
 } from '@chakra-ui/react';
 
 interface AddChildFormProps {
@@ -127,7 +129,7 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
       <DialogRoot open={open} onOpenChange={(e) => setOpen(e.open)} placement="center">
         <DialogTrigger asChild>
           <Button 
-            className="bg-delft-blue-500 text-white hover:bg-delft-blue-400 shadow-md hover:shadow-lg"
+            className="bg-delft-blue-500 text-white hover:bg-delft-blue-400"
             size="lg"
             fontWeight="600"
             px={6}
@@ -152,13 +154,19 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
           zIndex="modal"
           className="bg-eggshell-900 border border-eggshell-300"
           borderRadius="xl"
-          shadow="2xl"
           p={0}
           maxH="90vh"
           overflow="hidden"
         >
-          <DialogHeader p={6} pb={0} className="bg-eggshell-800" borderTopRadius="xl">
-            <DialogTitle className="text-delft-blue-500" fontWeight="600" fontSize="xl">Tilføj barn</DialogTitle>
+          <DialogHeader 
+            p={6} 
+            pb={4} 
+            bg="#f8f9fc" 
+            borderBottom="1px solid" 
+            borderBottomColor="#e1e5f0" 
+            borderTopRadius="xl"
+          >
+            <DialogTitle color="#2a3a5c" fontWeight="600" fontSize="xl">Tilføj barn</DialogTitle>
           </DialogHeader>
 
           <DialogBody p={6} overflowY="auto" className="bg-eggshell-900">
@@ -170,7 +178,8 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
                     value={childName}
                     onChange={(e) => setChildName(e.target.value)}
                     placeholder="Indtast barnets navn"
-                    className={errors.childName ? 'border-burnt-sienna-400 bg-white' : 'border-eggshell-400 bg-white'}
+                    bg="white"
+                    className={errors.childName ? 'border-burnt-sienna-400' : 'border-eggshell-400'}
                     _focus={{
                       borderColor: 'delft-blue.500',
                       shadow: '0 0 0 1px token(colors.delft-blue.500)'
@@ -184,57 +193,89 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
                 </Box>
 
                 <Box>
-                  <Text mb={2} fontWeight="500" className="text-delft-blue-600">Din relation til barnet</Text>
-                  <VStack gap={2} align="start">
-                    {[
-                      { value: 'Mor', label: 'Mor' },
-                      { value: 'Far', label: 'Far' },
-                      { value: 'Underviser', label: 'Underviser' },
-                      { value: 'Ressourceperson', label: 'Ressourceperson' },
-                    ].map((option) => (
-                      <Box key={option.value} display="flex" alignItems="center">
-                        <input
-                          type="radio"
-                          id={option.value}
-                          name="relation"
-                          value={option.value}
-                          checked={relation === option.value}
-                          onChange={(e) => setRelation(e.target.value as RelationType)}
-                          style={{ marginRight: '8px' }}
-                        />
-                        <label htmlFor={option.value} style={{ color: 'var(--colors-fg-default)', fontWeight: '500' }}>
-                          {option.label}
-                        </label>
-                      </Box>
-                    ))}
-                  </VStack>
+                  <Text mb={3} fontWeight="500" className="text-delft-blue-600">Din relation til barnet</Text>
+                  <Card.Root 
+                    variant="outline" 
+                    className="border-eggshell-400"
+                  >
+                    <Card.Body p={4}>
+                      <RadioGroup.Root
+                        value={relation}
+                        onValueChange={(details) => {
+                          if (details.value) {
+                            setRelation(details.value as RelationType);
+                          }
+                        }}
+                      >
+                        <VStack gap={3} align="start">
+                          {[
+                            { value: 'Mor', label: 'Mor' },
+                            { value: 'Far', label: 'Far' },
+                            { value: 'Underviser', label: 'Underviser' },
+                            { value: 'Ressourceperson', label: 'Ressourceperson' },
+                          ].map((option) => (
+                            <RadioGroup.Item
+                              key={option.value}
+                              value={option.value}
+                              className="hover:bg-eggshell-900 rounded-sm px-2 py-1 cursor-pointer w-full transition-colors duration-200"
+                            >
+                              <HStack gap={3}>
+                                <RadioGroup.ItemHiddenInput />
+                                <RadioGroup.ItemIndicator className="border-delft-blue-500 data-[checked]:bg-delft-blue-500" />
+                                <RadioGroup.ItemText fontWeight="500" className="text-delft-blue-700">
+                                  {option.label}
+                                </RadioGroup.ItemText>
+                              </HStack>
+                            </RadioGroup.Item>
+                          ))}
+                        </VStack>
+                      </RadioGroup.Root>
+                    </Card.Body>
+                  </Card.Root>
                 </Box>
 
-                {relation === 'Ressourceperson' && (
-                  <Box>
+                <Box 
+                  style={{
+                    maxHeight: relation === 'Ressourceperson' ? '140px' : '0px',
+                    opacity: relation === 'Ressourceperson' ? 1 : 0,
+                    overflow: 'hidden',
+                    transition: 'all 0.3s ease-in-out'
+                  }}
+                >
+                  <Box pt={relation === 'Ressourceperson' ? 2 : 0} px={1} pb={2}>
                     <Text mb={2} fontWeight="500" className="text-delft-blue-600">Type af ressourceperson</Text>
-                    <Input
-                      value={customRelationName}
-                      onChange={(e) => setCustomRelationName(e.target.value)}
-                      placeholder="f.eks. Psykolog, Talepædagog, etc."
-                      className={errors.customRelationName ? 'border-burnt-sienna-400 bg-white' : 'border-eggshell-400 bg-white'}
-                      _focus={{
-                        borderColor: 'delft-blue.500',
-                        shadow: '0 0 0 1px token(colors.delft-blue.500)'
-                      }}
-                    />
+                    <Box px={1} pb={1}>
+                      <Input
+                        value={customRelationName}
+                        onChange={(e) => setCustomRelationName(e.target.value)}
+                        placeholder="f.eks. Psykolog, Talepædagog, etc."
+                        bg="white"
+                        className={errors.customRelationName ? 'border-burnt-sienna-400' : 'border-eggshell-400'}
+                        _focus={{
+                          borderColor: 'delft-blue.500',
+                          shadow: '0 0 0 1px token(colors.delft-blue.500)'
+                        }}
+                      />
+                    </Box>
                     {errors.customRelationName && (
-                      <Text className="text-burnt-sienna-500" fontSize="sm" mt={1} fontWeight="500">
+                      <Text className="text-burnt-sienna-500" fontSize="sm" mt={1} fontWeight="500" px={1}>
                         {errors.customRelationName}
                       </Text>
                     )}
                   </Box>
-                )}
+                </Box>
               </VStack>
             </form>
           </DialogBody>
 
-          <DialogFooter p={6} pt={4} className="bg-eggshell-800 border-t border-eggshell-300" borderBottomRadius="xl">
+          <DialogFooter 
+            p={6} 
+            pt={4} 
+            bg="#fef9f0" 
+            borderTop="1px solid" 
+            borderTopColor="#f5e6d3" 
+            borderBottomRadius="xl"
+          >
             <DialogActionTrigger asChild>
               <Button variant="outline" className="border-delft-blue-400 text-delft-blue-600 hover:bg-delft-blue-900">Annuller</Button>
             </DialogActionTrigger>

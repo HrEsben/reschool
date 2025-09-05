@@ -20,7 +20,7 @@ export function ChildrenManager() {
   };
 
   return (
-    <Card.Root className="bg-white shadow-lg border-l-4 border-cambridge-blue-500 border-t border-r border-b border-eggshell-300" borderRadius="xl">
+    <Card.Root className="bg-white border-l-4 border-cambridge-blue-500 border-t border-r border-b border-eggshell-300" borderRadius="xl">
       <Card.Header>
         <HStack justify="space-between" align="center">
           <VStack align="start" gap={1}>

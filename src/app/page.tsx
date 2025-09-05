@@ -54,7 +54,7 @@ export default function Home() {
             <HStack gap={4}>
               <Link href="/handler/sign-in">
                 <Button 
-                  className="bg-cambridge-blue-500 text-white hover:bg-cambridge-blue-400 shadow-md hover:shadow-lg"
+                  className="bg-cambridge-blue-500 text-white hover:bg-cambridge-blue-400"
                   size="lg"
                 >
                   Log ind

@@ -281,7 +281,6 @@ export default function ChildSlugPage() {
             border="1px solid" 
             borderColor="border.muted" 
             p={6}
-            shadow="lg"
           >
             <VStack align="stretch" gap={4}>
               <Heading size="lg" color="fg.default" fontWeight="600">
@@ -376,7 +375,6 @@ export default function ChildSlugPage() {
             border="1px solid" 
             borderColor="border.muted" 
             p={6}
-            shadow="lg"
           >
             <VStack align="stretch" gap={4}>
               <Heading size="lg" color="fg.default" fontWeight="600">
