@@ -64,7 +64,17 @@ export function Header() {
     >
       <HStack justify="space-between" maxW="7xl" mx="auto" position="relative">
         {/* Logo */}
-        <Heading size="lg" className="text-delft-blue-500" fontWeight="700" letterSpacing="-0.02em">
+        <Heading 
+          size="lg" 
+          fontWeight="700" 
+          letterSpacing="-0.02em"
+          style={{
+            background: 'linear-gradient(135deg, #e07a5f 0%, #3d405b 25%, #81b29a 75%, #f2cc8f 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}
+        >
           ReSchool
         </Heading>
         
