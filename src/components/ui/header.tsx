@@ -16,14 +16,17 @@ export function Header() {
       py={4}
       position="sticky"
       top={0}
-      zIndex={10}
+      zIndex={100}
+      width="100%"
     >
-      <HStack justify="space-between" maxW="7xl" mx="auto">
+      <HStack justify="space-between" maxW="7xl" mx="auto" position="relative">
         <Heading size="lg" color="blue.600">
           ReSchool
         </Heading>
         
-        {user && <UserAvatar />}
+        <Box position="relative">
+          {user && <UserAvatar />}
+        </Box>
       </HStack>
     </Box>
   );
