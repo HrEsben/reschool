@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@stackframe/stack';
 import {
@@ -15,7 +15,7 @@ import {
   Separator,
   Table
 } from '@chakra-ui/react';
-import { Header } from '@/components/ui/header';
+import { AuthenticatedLayout } from '@/components/layouts/authenticated-layout';
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 
 interface UserWithRelation {
@@ -54,46 +54,12 @@ export default function ChildSlugPage() {
 
   const slug = params.slug as string;
 
-  useEffect(() => {
-    if (user === null) {
-      router.push("/");
-      return;
-    }
-
-    // Skip certain reserved routes
-    const reservedRoutes = ['dashboard', 'settings', 'api', 'children', 'users', '_next', 'favicon.ico'];
-    if (reservedRoutes.includes(slug.toLowerCase())) {
-      setError('Ugyldig side');
-      return;
-    }
-
-    if (user && slug) {
-      fetchChildData();
-    }
-  }, [user, slug]);
-
-  const fetchChildData = async () => {
+  const fetchChildData = useCallback(async () => {
     try {
       setLoading(true);
-      // First, get all children for the user to find the one matching the slug
-      const childrenResponse = await fetch('/api/children');
-      if (!childrenResponse.ok) {
-        setError('Der opstod en fejl ved hentning af børn');
-        return;
-      }
-
-      const childrenData = await childrenResponse.json();
-      const targetChild = childrenData.children?.find((child: any) => 
-        child.name.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase()
-      );
-
-      if (!targetChild) {
-        setError('Barnet blev ikke fundet');
-        return;
-      }
-
-      // Now fetch the detailed child data using the ID
-      const response = await fetch(`/api/children/${targetChild.id}`);
+      
+      // Direct slug-based lookup using the new API endpoint
+      const response = await fetch(`/api/children/slug/${slug}`);
       
       if (!response.ok) {
         if (response.status === 403) {
@@ -114,7 +80,20 @@ export default function ChildSlugPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [slug]);
+
+  useEffect(() => {
+    // Skip certain reserved routes
+    const reservedRoutes = ['dashboard', 'settings', 'api', 'children', 'users', '_next', 'favicon.ico'];
+    if (reservedRoutes.includes(slug.toLowerCase())) {
+      setError('Ugyldig side');
+      return;
+    }
+
+    if (slug && user) {
+      fetchChildData();
+    }
+  }, [user, slug, fetchChildData]); // Include fetchChildData in dependencies
 
   const getRelationDisplayName = (user: UserWithRelation) => {
     if (user.relation === 'Ressourceperson' && user.customRelationName) {
@@ -196,35 +175,30 @@ export default function ChildSlugPage() {
     }
   };
 
-  // Show loading state while checking authentication
-  if (user === undefined || loading) {
+  // Show loading state while fetching data
+  if (loading) {
     return (
-      <Box 
-        minH="100vh" 
-        display="flex" 
-        alignItems="center" 
-        justifyContent="center"
-        flexDirection="column"
-        gap={4}
-        bg="bg.canvas"
-      >
-        <Spinner size="xl" colorPalette="navy" />
-        <Text color="fg.muted" fontSize="lg" fontWeight="500">
-          Indlæser barnets profil...
-        </Text>
-      </Box>
+      <AuthenticatedLayout>
+        <Box 
+          minH="50vh" 
+          display="flex" 
+          alignItems="center" 
+          justifyContent="center"
+          flexDirection="column"
+          gap={4}
+        >
+          <Spinner size="xl" colorPalette="navy" />
+          <Text color="fg.muted" fontSize="lg" fontWeight="500">
+            Indlæser barnets profil...
+          </Text>
+        </Box>
+      </AuthenticatedLayout>
     );
-  }
-
-  // Don't render if user is not authenticated (will redirect)
-  if (user === null) {
-    return null;
   }
 
   if (error) {
     return (
-      <Box minH="100vh" bg="bg.canvas">
-        <Header />
+      <AuthenticatedLayout>
         <Box p={8}>
           <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
             <Button
@@ -249,7 +223,7 @@ export default function ChildSlugPage() {
             </Box>
           </VStack>
         </Box>
-      </Box>
+      </AuthenticatedLayout>
     );
   }
 
@@ -257,13 +231,11 @@ export default function ChildSlugPage() {
     return null;
   }
 
-  const currentUserRelation = childData.users.find(u => u.stackAuthId === user.id);
+  const currentUserRelation = childData.users.find(u => u.stackAuthId === user?.id);
   const isCurrentUserAdmin = currentUserRelation?.isAdministrator || false;
 
   return (
-    <Box minH="100vh" bg="bg.canvas">
-      <Header />
-      
+    <AuthenticatedLayout>
       <Box p={8}>
         <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
           {/* Child Header - simplified */}
@@ -415,6 +387,6 @@ export default function ChildSlugPage() {
 
         </VStack>
       </Box>
-    </Box>
+    </AuthenticatedLayout>
   );
 }

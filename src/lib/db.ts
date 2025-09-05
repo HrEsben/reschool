@@ -10,7 +10,7 @@ const pool = new Pool({
 });
 
 // Helper function to execute queries
-export async function query(text: string, params?: any[]) {
+export async function query(text: string, params?: unknown[]) {
   const start = Date.now();
   let client;
   

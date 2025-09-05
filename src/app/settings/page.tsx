@@ -18,7 +18,7 @@ import {
 } from "@chakra-ui/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Header } from "@/components/ui/header";
+import { AppLayout } from "@/components/ui/app-layout";
 import { Avatar } from "@chakra-ui/react";
 
 export default function Settings() {
@@ -148,9 +148,7 @@ export default function Settings() {
   const initials = getInitials(user.displayName, user.primaryEmail);
 
   return (
-    <Box minH="100vh">
-      <Header />
-      
+    <AppLayout>
       <Box p={8}>
         <VStack gap={8} align="stretch" maxW="2xl" mx="auto">
           {/* Message Display */}
@@ -313,6 +311,6 @@ export default function Settings() {
           )}
         </VStack>
       </Box>
-    </Box>
+    </AppLayout>
   );
 }

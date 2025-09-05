@@ -17,10 +17,10 @@ import {
   Link
 } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, memo, useCallback } from "react";
 import { UserAvatar } from "./user-avatar";
 
-export function Header() {
+export const Header = memo(function Header() {
   const user = useUser();
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -30,10 +30,10 @@ export function Header() {
     { label: "Indstillinger", href: "/settings" },
   ];
 
-  const handleMenuItemClick = (href: string) => {
+  const handleMenuItemClick = useCallback((href: string) => {
     router.push(href);
     setIsMenuOpen(false);
-  };
+  }, [router]);
 
   const HamburgerIcon = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -137,7 +137,7 @@ export function Header() {
       {/* Mobile Drawer Menu */}
       <DrawerRoot 
         open={isMenuOpen} 
-        onOpenChange={(details: any) => setIsMenuOpen(details.open)}
+        onOpenChange={(details: { open: boolean }) => setIsMenuOpen(details.open)}
         placement="end"
       >
         <DrawerBackdrop />
@@ -213,4 +213,4 @@ export function Header() {
       </DrawerRoot>
     </Box>
   );
-}
+});

@@ -16,7 +16,7 @@ import {
   Separator,
   Table
 } from '@chakra-ui/react';
-import { Header } from '@/components/ui/header';
+import { AppLayout } from '@/components/ui/app-layout';
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 
 interface UserWithRelation {
@@ -198,8 +198,7 @@ export default function ChildProfilePage() {
 
   if (error) {
     return (
-      <Box minH="100vh">
-        <Header />
+      <AppLayout>
         <Box p={8}>
           <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
             <Button
@@ -223,7 +222,7 @@ export default function ChildProfilePage() {
             </Box>
           </VStack>
         </Box>
-      </Box>
+      </AppLayout>
     );
   }
 
@@ -235,9 +234,7 @@ export default function ChildProfilePage() {
   const isCurrentUserAdmin = currentUserRelation?.isAdministrator || false;
 
   return (
-    <Box minH="100vh" bg="bg.canvas">
-      <Header />
-      
+    <AppLayout>
       <Box p={8}>
         <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
           {/* Child Header - simplified */}
@@ -383,6 +380,6 @@ export default function ChildProfilePage() {
 
         </VStack>
       </Box>
-    </Box>
+    </AppLayout>
   );
 }

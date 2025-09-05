@@ -17,6 +17,7 @@ import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 interface Child {
   id: string;
   name: string;
+  slug: string;
   relation: 'Mor' | 'Far' | 'Underviser' | 'Ressourceperson';
   customRelationName?: string;
   isAdministrator: boolean;
@@ -33,10 +34,6 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
   const [error, setError] = useState<string | null>(null);
   const [deletingChildId, setDeletingChildId] = useState<string | null>(null);
   const router = useRouter();
-
-  const generateSlug = (name: string) => {
-    return name.toLowerCase().replace(/\s+/g, '-');
-  };
 
   const handleDeleteChild = async (child: Child) => {
     setDeletingChildId(child.id);
@@ -151,7 +148,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
           Ingen børn tilføjet endnu
         </Text>
         <Text className="text-delft-blue-400" fontSize="sm">
-          Klik på "Tilføj barn" knappen ovenfor for at komme i gang.
+          Klik på &quot;Tilføj barn&quot; knappen ovenfor for at komme i gang.
         </Text>
       </Box>
     );
@@ -201,7 +198,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                     size="sm"
                     variant="outline"
                     className="border-delft-blue-400 text-delft-blue-500 hover:bg-delft-blue-800 hover:text-delft-blue-500"
-                    onClick={() => router.push(`/${generateSlug(child.name)}`)}
+                    onClick={() => router.push(`/${child.slug}`)}
                     fontWeight="500"
                     _hover={{
                       transform: "translateY(-1px)"

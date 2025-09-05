@@ -15,7 +15,7 @@ interface UserProfileResponse {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userSlug: string } }
+  { params }: { params: Promise<{ userSlug: string }> }
 ) {
   try {
     const user = await stackServerApp.getUser();
@@ -24,7 +24,8 @@ export async function GET(
       return NextResponse.json({ error: 'Ikke autoriseret' }, { status: 401 });
     }
 
-    const userSlug = params.userSlug;
+    const resolvedParams = await params;
+    const userSlug = resolvedParams.userSlug;
     
     // Get the target user by slug
     const targetUser = await getUserBySlug(userSlug);

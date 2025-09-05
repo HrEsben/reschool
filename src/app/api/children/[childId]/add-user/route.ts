@@ -9,7 +9,7 @@ import {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { childId: string } }
+  { params }: { params: Promise<{ childId: string }> }
 ) {
   try {
     const user = await stackServerApp.getUser();
@@ -26,7 +26,8 @@ export async function POST(
       }
     }
 
-    const childId = parseInt(params.childId);
+    const resolvedParams = await params;
+    const childId = parseInt(resolvedParams.childId);
     if (isNaN(childId)) {
       return NextResponse.json({ error: 'Invalid child ID' }, { status: 400 });
     }

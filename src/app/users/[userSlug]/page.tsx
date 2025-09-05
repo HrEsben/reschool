@@ -15,7 +15,7 @@ import {
   Separator,
   Table
 } from '@chakra-ui/react';
-import { Header } from '@/components/ui/header';
+import { AppLayout } from '@/components/ui/app-layout';
 
 interface ChildWithRelation {
   id: number;
@@ -167,8 +167,7 @@ export default function UserSlugPage() {
 
   if (error) {
     return (
-      <Box minH="100vh" bg="bg.canvas">
-        <Header />
+      <AppLayout>
         <Box p={8}>
           <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
             <Button
@@ -193,7 +192,7 @@ export default function UserSlugPage() {
             </Box>
           </VStack>
         </Box>
-      </Box>
+      </AppLayout>
     );
   }
 
@@ -204,9 +203,7 @@ export default function UserSlugPage() {
   const isOwnProfile = userProfileData.user.stackAuthId === user.id;
 
   return (
-    <Box minH="100vh" bg="bg.canvas">
-      <Header />
-      
+    <AppLayout>
       <Box p={8}>
         <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
           {/* User Header - simplified */}
@@ -375,6 +372,6 @@ export default function UserSlugPage() {
 
         </VStack>
       </Box>
-    </Box>
+    </AppLayout>
   );
 }

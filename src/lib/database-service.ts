@@ -37,9 +37,22 @@ export interface ChildWithRelation extends Child {
   isAdministrator: boolean;
 }
 
+interface StackAuthUser {
+  id: string;
+  primaryEmail: string | null;
+  displayName: string | null | undefined;
+  profileImageUrl: string | null | undefined;
+}
+
 // User service functions
-export async function syncUserToDatabase(stackAuthUser: any): Promise<User | null> {
+export async function syncUserToDatabase(stackAuthUser: StackAuthUser): Promise<User | null> {
   try {
+    // Check if user has an email
+    if (!stackAuthUser.primaryEmail) {
+      console.error('User has no primary email, cannot sync to database');
+      return null;
+    }
+
     const result = await query(
       `INSERT INTO users (stack_auth_id, email, display_name, profile_image_url, updated_at)
        VALUES ($1, $2, $3, $4, NOW())
