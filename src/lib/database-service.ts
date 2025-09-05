@@ -14,6 +14,7 @@ export interface User {
 export interface Child {
   id: number;
   name: string;
+  slug: string;
   createdBy: number;
   createdAt: string; // Changed from Date to string for consistency
   updatedAt: string; // Changed from Date to string for consistency

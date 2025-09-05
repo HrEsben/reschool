@@ -12,8 +12,8 @@ import {
   Spinner,
   Badge,
   Button,
-  Grid,
-  Separator
+  Separator,
+  Table
 } from '@chakra-ui/react';
 import { Header } from '@/components/ui/header';
 
@@ -42,7 +42,7 @@ interface ChildData {
   users: UserWithRelation[];
 }
 
-export default function ChildProfilePage() {
+export default function ChildSlugPage() {
   const params = useParams();
   const router = useRouter();
   const user = useUser();
@@ -50,7 +50,7 @@ export default function ChildProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const childId = params.id as string;
+  const slug = params.slug as string;
 
   useEffect(() => {
     if (user === null) {
@@ -58,15 +58,40 @@ export default function ChildProfilePage() {
       return;
     }
 
-    if (user && childId) {
+    // Skip certain reserved routes
+    const reservedRoutes = ['dashboard', 'settings', 'api', 'children', 'users', '_next', 'favicon.ico'];
+    if (reservedRoutes.includes(slug.toLowerCase())) {
+      setError('Ugyldig side');
+      return;
+    }
+
+    if (user && slug) {
       fetchChildData();
     }
-  }, [user, childId]);
+  }, [user, slug]);
 
   const fetchChildData = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/children/${childId}`);
+      // First, get all children for the user to find the one matching the slug
+      const childrenResponse = await fetch('/api/children');
+      if (!childrenResponse.ok) {
+        setError('Der opstod en fejl ved hentning af børn');
+        return;
+      }
+
+      const childrenData = await childrenResponse.json();
+      const targetChild = childrenData.children?.find((child: any) => 
+        child.name.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase()
+      );
+
+      if (!targetChild) {
+        setError('Barnet blev ikke fundet');
+        return;
+      }
+
+      // Now fetch the detailed child data using the ID
+      const response = await fetch(`/api/children/${targetChild.id}`);
       
       if (!response.ok) {
         if (response.status === 403) {
@@ -104,6 +129,28 @@ export default function ChildProfilePage() {
       case 'Ressourceperson': return 'orange';
       default: return 'gray';
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date string:', dateString);
+        return 'Ugyldig dato';
+      }
+      return date.toLocaleDateString('da-DK');
+    } catch (error) {
+      console.error('Error formatting date:', error, dateString);
+      return 'Ugyldig dato';
+    }
+  };
+
+  const getPossessiveForm = (name: string) => {
+    // Danish possessive: if name ends with 's', add apostrophe (´), otherwise add 's'
+    if (name.toLowerCase().endsWith('s')) {
+      return `${name}´`;
+    }
+    return `${name}s`;
   };
 
   // Show loading state while checking authentication
@@ -199,7 +246,7 @@ export default function ChildProfilePage() {
                 </Heading>
                 <HStack>
                   <Text color="gray.600" fontSize="sm">
-                    Oprettet: {new Date(childData.child.createdAt).toLocaleDateString('da-DK')}
+                    Oprettet: {formatDate(childData.child.createdAt)}
                   </Text>
                   {isCurrentUserAdmin && (
                     <Badge colorScheme="blue">
@@ -231,70 +278,78 @@ export default function ChildProfilePage() {
           >
             <VStack align="stretch" gap={4}>
               <Heading size="lg" color="gray.700">
-                Tilknyttede Brugere ({childData.users.length})
+                {getPossessiveForm(childData.child.name)} voksne ({childData.users.length})
               </Heading>
               
               <Separator />
 
-              <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
-                {childData.users.map((userData) => (
-                  <Box 
-                    key={userData.id}
-                    bg="gray.50" 
-                    borderRadius="md" 
-                    border="1px solid" 
-                    borderColor="gray.200" 
-                    p={4}
-                  >
-                    <HStack gap={4}>
-                      <Box
-                        w={12}
-                        h={12}
-                        bg="blue.500"
-                        borderRadius="full"
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                        color="white"
-                        fontWeight="bold"
-                        fontSize="lg"
-                      >
-                        {(userData.displayName || userData.email).charAt(0).toUpperCase()}
-                      </Box>
-                      
-                      <VStack align="start" flex={1} gap={1}>
-                        <HStack gap={2} wrap="wrap">
-                          <Text fontWeight="semibold" fontSize="md">
+              <Table.Root size="md" variant="line" striped>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.ColumnHeader>Navn</Table.ColumnHeader>
+                    <Table.ColumnHeader>Email</Table.ColumnHeader>
+                    <Table.ColumnHeader>Relation</Table.ColumnHeader>
+                    <Table.ColumnHeader>Rolle</Table.ColumnHeader>
+                    <Table.ColumnHeader>Tilføjet</Table.ColumnHeader>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {childData.users.map((userData) => (
+                    <Table.Row 
+                      key={userData.id}
+                      _hover={{ bg: "blue.50", cursor: "pointer" }}
+                      onClick={() => router.push(`/users/${userData.stackAuthId}`)}
+                    >
+                      <Table.Cell>
+                        <HStack gap={3}>
+                          <Box
+                            w={8}
+                            h={8}
+                            bg="blue.500"
+                            borderRadius="full"
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                            color="white"
+                            fontWeight="bold"
+                            fontSize="sm"
+                          >
+                            {(userData.displayName || userData.email).charAt(0).toUpperCase()}
+                          </Box>
+                          <Text fontWeight="medium">
                             {userData.displayName || 'Navn ikke angivet'}
                           </Text>
-                          {userData.isAdministrator && (
-                            <Badge colorScheme="blue" size="sm">
-                              ⭐ Admin
-                            </Badge>
-                          )}
                         </HStack>
-                        
+                      </Table.Cell>
+                      <Table.Cell>
                         <Text color="gray.600" fontSize="sm">
                           {userData.email}
                         </Text>
-                        
-                        <HStack>
-                          <Badge 
-                            colorScheme={getRelationBadgeColor(userData.relation)}
-                            size="sm"
-                          >
-                            {getRelationDisplayName(userData)}
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Badge 
+                          colorScheme={getRelationBadgeColor(userData.relation)}
+                          size="sm"
+                        >
+                          {getRelationDisplayName(userData)}
+                        </Badge>
+                      </Table.Cell>
+                      <Table.Cell>
+                        {userData.isAdministrator && (
+                          <Badge colorScheme="blue" size="sm">
+                            ⭐ Admin
                           </Badge>
-                        </HStack>
-                        
-                        <Text color="gray.500" fontSize="xs">
-                          Tilføjet: {new Date(userData.createdAt).toLocaleDateString('da-DK')}
+                        )}
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Text color="gray.500" fontSize="sm">
+                          {formatDate(userData.createdAt)}
                         </Text>
-                      </VStack>
-                    </HStack>
-                  </Box>
-                ))}
-              </Grid>
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table.Root>
 
               {childData.users.length === 0 && (
                 <Text color="gray.500" textAlign="center" py={8}>

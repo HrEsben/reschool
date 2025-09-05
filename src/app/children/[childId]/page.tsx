@@ -13,7 +13,8 @@ import {
   Badge,
   Button,
   Grid,
-  Separator
+  Separator,
+  Table
 } from '@chakra-ui/react';
 import { Header } from '@/components/ui/header';
 
@@ -258,65 +259,73 @@ export default function ChildProfilePage() {
               
               <Separator />
 
-              <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
-                {childData.users.map((userData) => (
-                  <Box 
-                    key={userData.id}
-                    bg="gray.50" 
-                    borderRadius="md" 
-                    border="1px solid" 
-                    borderColor="gray.200" 
-                    p={4}
-                  >
-                    <HStack gap={4}>
-                      <Box
-                        w={12}
-                        h={12}
-                        bg="blue.500"
-                        borderRadius="full"
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                        color="white"
-                        fontWeight="bold"
-                        fontSize="lg"
-                      >
-                        {(userData.displayName || userData.email).charAt(0).toUpperCase()}
-                      </Box>
-                      
-                      <VStack align="start" flex={1} gap={1}>
-                        <HStack gap={2} wrap="wrap">
-                          <Text fontWeight="semibold" fontSize="md">
+              <Table.Root size="md" variant="line" striped>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.ColumnHeader>Navn</Table.ColumnHeader>
+                    <Table.ColumnHeader>Email</Table.ColumnHeader>
+                    <Table.ColumnHeader>Relation</Table.ColumnHeader>
+                    <Table.ColumnHeader>Rolle</Table.ColumnHeader>
+                    <Table.ColumnHeader>Tilføjet</Table.ColumnHeader>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {childData.users.map((userData) => (
+                    <Table.Row 
+                      key={userData.id}
+                      _hover={{ bg: "blue.50", cursor: "pointer" }}
+                      onClick={() => router.push(`/users/${userData.stackAuthId}`)}
+                    >
+                      <Table.Cell>
+                        <HStack gap={3}>
+                          <Box
+                            w={8}
+                            h={8}
+                            bg="blue.500"
+                            borderRadius="full"
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                            color="white"
+                            fontWeight="bold"
+                            fontSize="sm"
+                          >
+                            {(userData.displayName || userData.email).charAt(0).toUpperCase()}
+                          </Box>
+                          <Text fontWeight="medium">
                             {userData.displayName || 'Navn ikke angivet'}
                           </Text>
-                          {userData.isAdministrator && (
-                            <Badge colorScheme="blue" size="sm">
-                              ⭐ Admin
-                            </Badge>
-                          )}
                         </HStack>
-                        
+                      </Table.Cell>
+                      <Table.Cell>
                         <Text color="gray.600" fontSize="sm">
                           {userData.email}
                         </Text>
-                        
-                        <HStack>
-                          <Badge 
-                            colorScheme={getRelationBadgeColor(userData.relation)}
-                            size="sm"
-                          >
-                            {getRelationDisplayName(userData)}
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Badge 
+                          colorScheme={getRelationBadgeColor(userData.relation)}
+                          size="sm"
+                        >
+                          {getRelationDisplayName(userData)}
+                        </Badge>
+                      </Table.Cell>
+                      <Table.Cell>
+                        {userData.isAdministrator && (
+                          <Badge colorScheme="blue" size="sm">
+                            ⭐ Admin
                           </Badge>
-                        </HStack>
-                        
-                        <Text color="gray.500" fontSize="xs">
-                          Tilføjet: {formatDate(userData.createdAt)}
+                        )}
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Text color="gray.500" fontSize="sm">
+                          {formatDate(userData.createdAt)}
                         </Text>
-                      </VStack>
-                    </HStack>
-                  </Box>
-                ))}
-              </Grid>
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table.Root>
 
               {childData.users.length === 0 && (
                 <Text color="gray.500" textAlign="center" py={8}>

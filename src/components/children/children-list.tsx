@@ -32,6 +32,10 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  const generateSlug = (name: string) => {
+    return name.toLowerCase().replace(/\s+/g, '-');
+  };
+
   const fetchChildren = async () => {
     try {
       setIsLoading(true);
@@ -151,7 +155,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => router.push(`/children/${child.id}`)}
+                  onClick={() => router.push(`/${generateSlug(child.name)}`)}
                 >
                   Se profil
                 </Button>
