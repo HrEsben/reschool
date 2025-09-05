@@ -24,10 +24,7 @@ export function ChildrenManager() {
       <Card.Header>
         <HStack justify="space-between" align="center">
           <VStack align="start" gap={1}>
-            <Heading size="lg" color="fg.default" fontWeight="600">Børneadministration</Heading>
-            <Text color="fg.muted" fontSize="sm" fontWeight="500">
-              Administrer og tilføj børn til din profil
-            </Text>
+            <Heading size="lg" color="fg.default" fontWeight="600">Børn i forløb</Heading>
           </VStack>
           <AddChildForm onChildAdded={handleChildAdded} />
         </HStack>

@@ -147,9 +147,6 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
   return (
     <Box>
       <Box mb={4} display="flex" alignItems="center" gap={2}>
-        <Heading size="sm" color="fg.default" fontWeight="600">
-          Mine børn ({children.length})
-        </Heading>
       </Box>
       
       <VStack gap={3} align="stretch">
@@ -189,9 +186,6 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                       </Badge>
                     )}
                   </Box>
-                  <Text fontSize="xs" color="fg.muted" fontWeight="500">
-                    Tilføjet: {new Date(child.createdAt).toLocaleDateString('da-DK')}
-                  </Text>
                 </VStack>
                 <VStack gap={2}>
                   <Button
@@ -217,7 +211,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                           variant="outline"
                           fontWeight="500"
                         >
-                          🗑️ Slet
+                          Slet
                         </Button>
                       }
                       childName={child.name}
