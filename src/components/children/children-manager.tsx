@@ -23,10 +23,9 @@ export function ChildrenManager() {
     <Card.Root className="bg-white border-l-4 border-cambridge-blue-500 border-t border-r border-b border-eggshell-300" borderRadius="xl">
       <Card.Header>
         <HStack justify="space-between" align="center">
-          <VStack align="start" gap={1}>
-            <Heading size="lg" className="text-delft-blue-500" fontWeight="600">Børn i forløb</Heading>
-            <Box className="w-12 h-1 bg-sunset-500 rounded-full"></Box>
-          </VStack>
+          <Box>
+            {/* Header removed - cleaner design */}
+          </Box>
           <AddChildForm onChildAdded={handleChildAdded} />
         </HStack>
       </Card.Header>

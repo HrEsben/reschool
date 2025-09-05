@@ -26,7 +26,7 @@ export default function Dashboard() {
         <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
           <Box>
             <Heading size="xl" className="text-delft-blue-500" mb={2} fontWeight="700">
-              Dashboard
+              Børn i forløb
             </Heading>
             <Box className="w-16 h-1 bg-cambridge-blue-500 rounded-full"></Box>
           </Box>

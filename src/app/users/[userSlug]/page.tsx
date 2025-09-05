@@ -359,12 +359,8 @@ export default function UserSlugPage() {
                     size="sm"
                     justifyContent="start"
                   >
-                    ⚙️ Rediger profil
+                    Rediger profil
                   </Button>
-                  
-                  <Text color="fg.muted" fontSize="sm" fontWeight="500">
-                    Flere indstillinger kommer snart...
-                  </Text>
                 </VStack>
               </VStack>
             </Box>

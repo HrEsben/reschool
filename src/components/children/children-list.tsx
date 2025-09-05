@@ -7,10 +7,13 @@ import {
   Card,
   Heading,
   VStack,
+  HStack,
   Text,
   Badge,
   Spinner,
-  Button
+  Button,
+  IconButton,
+  Icon
 } from '@chakra-ui/react';
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 
@@ -91,33 +94,43 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
     return child.relation;
   };
 
+  const getBadgeInfo = (child: Child) => {
+    const relation = getRelationDisplay(child);
+    const badges = [];
+    
+    // Relation badge - using neutral color for all relations
+    badges.push({
+      label: `Din relation: ${relation}`,
+      color: 'gray',
+      variant: 'subtle' as const,
+      type: 'text' as const
+    });
+    
+    // Administrator badge
+    if (child.isAdministrator) {
+      badges.push({
+        label: 'Administrator',
+        color: 'gray',
+        variant: 'subtle' as const,
+        type: 'icon' as const
+      });
+    }
+    
+    return badges;
+  };
+
   const getRelationColor = (relation: string) => {
     switch (relation) {
       case 'Mor':
-        return 'burnt-sienna'; // Using new color name
+        return 'pink';
       case 'Far':
-        return 'delft-blue'; // Using new color name
+        return 'blue';
       case 'Underviser':
-        return 'cambridge-blue'; // Using new color name
+        return 'teal';
       case 'Ressourceperson':
-        return 'sunset'; // Using new color name
+        return 'purple';
       default:
         return 'gray';
-    }
-  };
-
-  const getCardBgColor = (relation: string) => {
-    switch (relation) {
-      case 'Mor':
-        return 'bg-burnt-sienna-900 hover:bg-burnt-sienna-800 border-burnt-sienna-400'; 
-      case 'Far':
-        return 'bg-delft-blue-900 hover:bg-delft-blue-800 border-delft-blue-400';
-      case 'Underviser':
-        return 'bg-cambridge-blue-900 hover:bg-cambridge-blue-800 border-cambridge-blue-400';
-      case 'Ressourceperson':
-        return 'bg-sunset-900 hover:bg-sunset-800 border-sunset-400';
-      default:
-        return 'bg-white hover:bg-eggshell-900 border-eggshell-300';
     }
   };
 
@@ -159,72 +172,136 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
       <Box mb={4} display="flex" alignItems="center" gap={2}>
       </Box>
       
-      <VStack gap={3} align="stretch">
+      <VStack gap={4} align="stretch">
         {children.map((child) => (
           <Card.Root 
             key={child.id} 
-            variant="outline" 
-            className={`${getCardBgColor(child.relation)}`}
+            variant="elevated"
+            bg="white"
+            borderRadius="xl"
+            borderWidth={1}
+            borderColor="gray.200"
             _hover={{ 
-              cursor: "pointer",
-              transform: "translateY(-1px)",
+              shadow: "lg",
+              borderColor: "blue.300"
             }}
-            transition="all 0.2s ease"
-            borderRadius="lg"
+            transition="all 0.3s ease"
+            overflow="hidden"
           >
-            <Card.Body p={4}>
-              <Box display="flex" justifyContent="space-between" alignItems="start">
-                <VStack align="start" gap={2} flex={1}>
-                  <Heading size="sm" className="text-delft-blue-500" fontWeight="600">
+            <Card.Body p={0}>
+              {/* Header section with solid color */}
+              <Box 
+                bg="#3d405b"
+                px={6}
+                py={4}
+              >
+                <HStack justify="space-between" align="center">
+                  <Heading size="md" color="white" fontWeight="600" letterSpacing="-0.02em">
                     {child.name}
                   </Heading>
-                  <Box display="flex" gap={2} flexWrap="wrap">
-                    <Badge
-                      colorPalette={getRelationColor(child.relation)}
-                      variant="solid"
-                      fontWeight="500"
-                    >
-                      {getRelationDisplay(child)}
-                    </Badge>
-                    {child.isAdministrator && (
-                      <Badge colorPalette="sunset" variant="solid" fontWeight="500">
-                        Administrator
-                      </Badge>
-                    )}
-                  </Box>
-                </VStack>
-                <VStack gap={2}>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-delft-blue-400 text-delft-blue-500 hover:bg-delft-blue-800 hover:text-delft-blue-500"
-                    onClick={() => router.push(`/${child.slug}`)}
-                    fontWeight="500"
-                    _hover={{
-                      transform: "translateY(-1px)"
-                    }}
-                    transition="all 0.2s ease"
-                  >
-                    Se profil
-                  </Button>
-                  {child.isAdministrator && (
-                    <DeleteChildDialog
-                      trigger={
-                        <Button
-                          size="sm"
-                          className="border-burnt-sienna-400 text-burnt-sienna-500 hover:bg-burnt-sienna-800 hover:text-burnt-sienna-500"
-                          variant="outline"
-                          fontWeight="500"
+                  <HStack gap={2}>
+                    {getBadgeInfo(child).map((badge, index) => (
+                      badge.type === 'icon' ? (
+                        <Box
+                          key={index}
+                          bg="whiteAlpha.200"
+                          p={1.5}
+                          borderRadius="full"
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                          border="1px solid"
+                          borderColor="whiteAlpha.300"
                         >
-                          Slet
-                        </Button>
-                      }
-                      childName={child.name}
-                      onConfirm={() => handleDeleteChild(child)}
-                      isLoading={deletingChildId === child.id}
-                    />
-                  )}
-                </VStack>
+                          <Icon color="whiteAlpha.800" boxSize={3}>
+                            <svg fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 2L13 7l5.5 1-4 4 1 5.5L10 15l-5.5 2.5 1-5.5-4-4L7 7l3-5z" clipRule="evenodd" />
+                            </svg>
+                          </Icon>
+                        </Box>
+                      ) : (
+                        <Badge
+                          key={index}
+                          colorPalette={badge.color}
+                          variant={badge.variant}
+                          size="sm"
+                          fontWeight="500"
+                          px={3}
+                          py={1}
+                          borderRadius="full"
+                          bg="whiteAlpha.200"
+                          color="white"
+                          borderWidth={1}
+                          borderColor="whiteAlpha.300"
+                        >
+                          {badge.label}
+                        </Badge>
+                      )
+                    ))}
+                  </HStack>
+                </HStack>
+              </Box>
+
+              {/* Content section */}
+              <Box px={6} py={4}>
+                <HStack justify="space-between" align="center">
+                  {/* Future tools section */}
+                  <HStack gap={2}>
+                    <Text fontSize="sm" color="gray.600" fontWeight="500">
+                      Værktøjer kommer snart
+                    </Text>
+                    {/* Placeholder for future tool icons */}
+                    <Box display="flex" gap={1}>
+                      <Box w={6} h={6} bg="gray.100" borderRadius="sm" />
+                      <Box w={6} h={6} bg="gray.100" borderRadius="sm" />
+                      <Box w={6} h={6} bg="gray.100" borderRadius="sm" />
+                    </Box>
+                  </HStack>
+                  
+                  {/* Action buttons */}
+                  <HStack gap={3}>
+                    <Button
+                      size="sm"
+                      bg="#81b29a"
+                      color="white"
+                      variant="solid"
+                      onClick={() => router.push(`/${child.slug}`)}
+                      fontWeight="500"
+                      px={6}
+                      borderRadius="full"
+                      _hover={{
+                        bg: "#6da085",
+                        shadow: "md"
+                      }}
+                      transition="all 0.2s ease"
+                    >
+                      Se profil
+                    </Button>
+                    {child.isAdministrator && (
+                      <DeleteChildDialog
+                        trigger={
+                          <Button
+                            size="sm"
+                            colorPalette="red"
+                            variant="outline"
+                            fontWeight="500"
+                            px={4}
+                            borderRadius="full"
+                            _hover={{
+                              shadow: "md"
+                            }}
+                            transition="all 0.2s ease"
+                          >
+                            Slet
+                          </Button>
+                        }
+                        childName={child.name}
+                        onConfirm={() => handleDeleteChild(child)}
+                        isLoading={deletingChildId === child.id}
+                      />
+                    )}
+                  </HStack>
+                </HStack>
               </Box>
             </Card.Body>
           </Card.Root>

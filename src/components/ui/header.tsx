@@ -7,28 +7,69 @@ import {
   Heading, 
   Button, 
   VStack,
-  DrawerRoot,
-  DrawerBackdrop,
-  DrawerContent,
-  DrawerHeader,
-  DrawerBody,
+  Drawer,
   IconButton,
   Text,
-  Link
+  Link,
+  Avatar
 } from "@chakra-ui/react";
-import { useRouter } from "next/navigation";
-import { useState, memo, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useState, memo, useCallback, useEffect } from "react";
 import { UserAvatar } from "./user-avatar";
 
 export const Header = memo(function Header() {
   const user = useUser();
   const router = useRouter();
+  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [breadcrumbs, setBreadcrumbs] = useState<Array<{ label: string; href: string }>>([]);
 
-  const menuItems = [
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Indstillinger", href: "/settings" },
-  ];
+  // Generate breadcrumbs based on current path
+  useEffect(() => {
+    const generateBreadcrumbs = async () => {
+      const crumbs: Array<{ label: string; href: string }> = [];
+      
+      if (pathname === '/dashboard') {
+        crumbs.push({ label: "Børn", href: "/dashboard" });
+      } else if (pathname?.startsWith('/users/')) {
+        // User profile page (e.g., /users/esben-stephansen)
+        const username = pathname.split('/')[2]; // Get username from path
+        crumbs.push({ label: user?.displayName || "Bruger", href: pathname });
+      } else if (pathname === '/settings') {
+        // Settings page (accessed from "Rediger profil")
+        crumbs.push({ label: user?.displayName || "Bruger", href: `/users/${user?.primaryEmail?.split('@')[0] || 'profile'}` });
+        crumbs.push({ label: "Indstillinger", href: "/settings" });
+      } else if (pathname?.match(/^\/[^\/]+$/)) {
+        // Child profile page (e.g., /mads, /hilda)
+        const slug = pathname.slice(1); // Remove leading slash
+        
+        // Fetch child name from slug
+        try {
+          const response = await fetch(`/api/children/slug/${slug}`);
+          if (response.ok) {
+            const childData = await response.json();
+            crumbs.push({ label: "Børn", href: "/dashboard" });
+            crumbs.push({ label: childData.child.name, href: pathname });
+          } else {
+            crumbs.push({ label: "Børn", href: "/dashboard" });
+          }
+        } catch (error) {
+          console.error('Error fetching child data for breadcrumb:', error);
+          crumbs.push({ label: "Børn", href: "/dashboard" });
+        }
+      } else {
+        // Default fallback
+        crumbs.push({ label: "Børn", href: "/dashboard" });
+      }
+      
+      setBreadcrumbs(crumbs);
+    };
+
+    if (pathname) {
+      generateBreadcrumbs();
+    }
+  }, [pathname]);
 
   const handleMenuItemClick = useCallback((href: string) => {
     router.push(href);
@@ -62,10 +103,15 @@ export const Header = memo(function Header() {
       width="100%"
       backdropFilter="blur(8px)"
     >
-      <HStack justify="space-between" maxW="7xl" mx="auto" position="relative">
+      <HStack 
+        justify={{ base: "center", md: "space-between" }} 
+        maxW="7xl" 
+        mx="auto" 
+        position="relative"
+      >
         {/* Logo */}
         <Heading 
-          size="lg" 
+          size={{ base: "xl", md: "lg" }}
           fontWeight="700" 
           letterSpacing="-0.02em"
           style={{
@@ -74,6 +120,7 @@ export const Header = memo(function Header() {
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text'
           }}
+          order={{ base: 0, md: 0 }}
         >
           ReSchool<Text 
             as="sup" 
@@ -87,130 +134,245 @@ export const Header = memo(function Header() {
           >©</Text>
         </Heading>
         
-        {/* Desktop Navigation */}
-        <HStack gap={6} display={{ base: "none", md: "flex" }}>
-          {user && menuItems.map((item) => (
-            <Link
-              key={item.href}
-              onClick={() => router.push(item.href)}
-              fontSize="sm"
-              fontWeight="500"
-              className="text-delft-blue-600 hover:text-delft-blue-500 hover:bg-cambridge-blue-900 focus:bg-cambridge-blue-800 focus:text-delft-blue-500"
-              _hover={{ 
-                textDecoration: "none",
-                transform: "translateY(-1px)"
-              }}
-              cursor="pointer"
-              transition="all 0.2s ease"
-              px={3}
-              py={2}
-              borderRadius="md"
-            >
-              {item.label}
-            </Link>
+        {/* Desktop Navigation - Breadcrumb Style */}
+        <HStack gap={2} display={{ base: "none", md: "flex" }}>
+          {user && breadcrumbs.map((crumb, index) => (
+            <HStack key={`${crumb.href}-${index}`} gap={2}>
+              <Box 
+                position="relative"
+                cursor="pointer"
+                onClick={() => router.push(crumb.href)}
+                onMouseEnter={() => setHoveredItem(crumb.href)}
+                onMouseLeave={() => setHoveredItem(null)}
+                py={2}
+                px={1}
+              >
+                <Text
+                  fontSize="md"
+                  fontWeight="600"
+                  color={hoveredItem === crumb.href ? "#3d405b" : "#3d405b"}
+                  transform={hoveredItem === crumb.href ? "translateY(-1px)" : "translateY(0)"}
+                  transition="all 0.3s ease"
+                >
+                  {crumb.label}
+                </Text>
+                
+                {/* Animated underline - matching page colors for symbolic value */}
+                <Box
+                  position="absolute"
+                  bottom="0"
+                  left="0"
+                  width={
+                    (hoveredItem === crumb.href) || 
+                    (index === breadcrumbs.length - 1) // Active page (last breadcrumb)
+                      ? "60%" : "0%"
+                  }
+                  height="4px"
+                  backgroundColor={
+                    crumb.label === "Børn" ? "#81b29a" : 
+                    crumb.label === "Indstillinger" ? "#e07a5f" : // Orange for settings
+                    (pathname?.startsWith('/users/') || (pathname === "/settings" && crumb.href.startsWith('/users/'))) ? "#3d405b" : // Dark blue for user name
+                    "#f2cc8f" // Default yellow for child names
+                  }
+                  borderRadius="9999px"
+                  transition="all 0.3s ease"
+                  zIndex={10}
+                />
+              </Box>
+              
+              {/* Arrow separator */}
+              {index < breadcrumbs.length - 1 && (
+                <Text 
+                  color="#6b7280" 
+                  fontSize="sm"
+                  fontWeight="500"
+                  mx={1}
+                >
+                  →
+                </Text>
+              )}
+            </HStack>
           ))}
         </HStack>
 
         {/* Right side items */}
-        <HStack gap={3}>
-          {/* Mobile menu button */}
-          {user && (
-            <IconButton
-              aria-label="Åbn menu"
-              onClick={() => setIsMenuOpen(true)}
-              variant="ghost"
-              display={{ base: "flex", md: "none" }}
-              className="text-delft-blue-500 hover:bg-cambridge-blue-900"
-              size="sm"
-            >
-              <HamburgerIcon />
-            </IconButton>
-          )}
-          
-          {/* User Avatar */}
+        <HStack gap={3} display={{ base: "none", md: "flex" }}>
+          {/* User Avatar - hidden on mobile since it's in the hamburger menu */}
           <Box position="relative">
             {user && <UserAvatar />}
           </Box>
         </HStack>
+
+        {/* Mobile menu button - positioned absolutely */}
+        {user && (
+          <IconButton
+            aria-label="Åbn menu"
+            onClick={() => setIsMenuOpen(true)}
+            variant="ghost"
+            display={{ base: "flex", md: "none" }}
+            className="text-delft-blue-500 hover:bg-cambridge-blue-900"
+            size="sm"
+            position="absolute"
+            right={0}
+            top="50%"
+            transform="translateY(-50%)"
+          >
+            <HamburgerIcon />
+          </IconButton>
+        )}
       </HStack>
 
       {/* Mobile Drawer Menu */}
-      <DrawerRoot 
+      <Drawer.Root 
         open={isMenuOpen} 
         onOpenChange={(details: { open: boolean }) => setIsMenuOpen(details.open)}
         placement="end"
+        size="full"
       >
-        <DrawerBackdrop />
-        <DrawerContent maxW="280px" bg="bg.surface">
-          <DrawerHeader borderBottomWidth={1} borderColor="border.muted">
-            <HStack justify="space-between" align="center">
-              <Heading size="md" color="navy.800" fontWeight="600">
-                Menu
-              </Heading>
-              <IconButton
-                aria-label="Luk menu"
-                onClick={() => setIsMenuOpen(false)}
-                variant="ghost"
-                size="sm"
-                colorPalette="gray"
-              >
-                <CloseIcon />
-              </IconButton>
-            </HStack>
-          </DrawerHeader>
-          
-          <DrawerBody p={0}>
-            <VStack gap={0} align="stretch">
-              {menuItems.map((item) => (
+        <Drawer.Backdrop />
+        <Drawer.Positioner>
+          <Drawer.Content bg="white" borderLeftWidth={1} borderColor="gray.200">
+            <Drawer.Header borderBottomWidth={1} borderColor="border.muted" p={4} bg="gray.50">
+              <HStack justify="space-between" align="center">
+                <Drawer.Title>
+                  <Text fontSize="lg" color="navy.800" fontWeight="600">
+                    Menu
+                  </Text>
+                </Drawer.Title>
+                <Drawer.CloseTrigger asChild>
+                  <IconButton
+                    aria-label="Luk menu"
+                    variant="ghost"
+                    size="sm"
+                    colorPalette="gray"
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                </Drawer.CloseTrigger>
+              </HStack>
+            </Drawer.Header>
+            
+            <Drawer.Body p={0}>
+              <VStack gap={0} align="stretch" h="full">
+              {/* User info section at top - clickable to go to profile */}
+              {user && (
                 <Button
-                  key={item.href}
-                  onClick={() => handleMenuItemClick(item.href)}
+                  onClick={() => handleMenuItemClick(`/users/${user.primaryEmail?.split('@')[0] || 'profile'}`)}
                   variant="ghost"
-                  justifyContent="flex-start"
-                  h="auto"
-                  p={4}
-                  borderRadius={0}
-                  fontWeight="500"
-                  fontSize="md"
-                  color="fg.default"
-                  _hover={{ 
-                    bg: "cream.100",
-                    color: "navy.700"
-                  }}
-                  _active={{ bg: "cream.200" }}
+                  p={6}
                   borderBottomWidth={1}
                   borderColor="border.muted"
+                  bg="gray.25"
+                  borderRadius={0}
+                  h="auto"
+                  _hover={{ bg: "gray.50" }}
+                  _active={{ bg: "gray.100" }}
                 >
-                  {item.label}
+                  <HStack gap={4} align="center" w="full">
+                    <Avatar.Root size="lg">
+                      <Avatar.Image 
+                        src={user.profileImageUrl || undefined}
+                        alt={user.displayName || 'User'}
+                      />
+                      <Avatar.Fallback>
+                        {user.displayName 
+                          ? user.displayName.split(' ').map(word => word.charAt(0)).join('').toUpperCase().slice(0, 2)
+                          : user.primaryEmail?.charAt(0).toUpperCase() || 'U'
+                        }
+                      </Avatar.Fallback>
+                    </Avatar.Root>
+                    <VStack gap={1} align="start" flex={1}>
+                      <Text fontSize="lg" fontWeight="semibold" color="navy.800">
+                        {user.displayName || "Ingen navn"}
+                      </Text>
+                      <Text fontSize="sm" color="gray.600">
+                        {user.primaryEmail}
+                      </Text>
+                    </VStack>
+                  </HStack>
                 </Button>
-              ))}
+              )}
               
-              {/* Logout button in mobile menu */}
-              <Button
-                onClick={() => {
-                  user?.signOut();
-                  setIsMenuOpen(false);
-                }}
-                variant="ghost"
-                justifyContent="flex-start"
-                h="auto"
-                p={4}
-                borderRadius={0}
-                fontWeight="500"
-                fontSize="md"
-                color="coral.600"
-                _hover={{ 
-                  bg: "coral.50",
-                  color: "coral.700"
-                }}
-                _active={{ bg: "coral.100" }}
-              >
-                Log ud
-              </Button>
-            </VStack>
-          </DrawerBody>
-        </DrawerContent>
-      </DrawerRoot>
+              {/* Navigation section */}
+              <Box p={4}>
+                <Text fontSize="sm" fontWeight="semibold" color="gray.600" mb={3} px={2}>
+                  Forløb
+                </Text>
+                <VStack gap={1} align="stretch">
+                  <Button
+                    onClick={() => handleMenuItemClick("/dashboard")}
+                    variant="ghost"
+                    justifyContent="flex-start"
+                    h="auto"
+                    p={4}
+                    borderRadius="lg"
+                    fontWeight="500"
+                    fontSize="md"
+                    color="fg.default"
+                    _hover={{ 
+                      bg: "gray.50"
+                    }}
+                    _active={{ bg: "gray.100" }}
+                  >
+                    Børn
+                  </Button>
+                </VStack>
+              </Box>
+              
+              {/* Account menu items */}
+              <Box p={4} borderTopWidth={1} borderColor="border.muted">
+                <Text fontSize="sm" fontWeight="semibold" color="gray.600" mb={3} px={2}>
+                  Konto
+                </Text>
+                <VStack gap={1} align="stretch">
+                  <Button
+                    onClick={() => handleMenuItemClick("/settings")}
+                    variant="ghost"
+                    justifyContent="flex-start"
+                    h="auto"
+                    p={4}
+                    borderRadius="lg"
+                    fontWeight="500"
+                    fontSize="md"
+                    color="fg.default"
+                    _hover={{ 
+                      bg: "gray.50"
+                    }}
+                    _active={{ bg: "gray.100" }}
+                  >
+                    Indstillinger
+                  </Button>
+                </VStack>
+              </Box>                {/* Logout button at bottom */}
+                <Box p={4} mt="auto">
+                  <Button
+                    onClick={() => {
+                      user?.signOut();
+                      setIsMenuOpen(false);
+                    }}
+                    variant="ghost"
+                    justifyContent="flex-start"
+                    w="full"
+                    h="auto"
+                    p={4}
+                    borderRadius="lg"
+                    fontWeight="500"
+                    fontSize="md"
+                    color="coral.600"
+                    _hover={{ 
+                      bg: "coral.50",
+                      color: "coral.700"
+                    }}
+                    _active={{ bg: "coral.100" }}
+                  >
+                    Log ud
+                  </Button>
+                </Box>
+              </VStack>
+            </Drawer.Body>
+          </Drawer.Content>
+        </Drawer.Positioner>
+      </Drawer.Root>
     </Box>
   );
 });
