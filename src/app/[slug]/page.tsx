@@ -249,67 +249,10 @@ export default function ChildSlugPage() {
       
       <Box p={8}>
         <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
-          {/* Navigation */}
-          <Button
-            variant="ghost"
-            onClick={() => router.push('/dashboard')}
-            alignSelf="flex-start"
-          >
-            ← Tilbage til Dashboard
-          </Button>
-
-          {/* Child Header */}
-          <Box 
-            bg="white" 
-            borderRadius="lg" 
-            border="1px solid" 
-            borderColor="gray.200" 
-            p={6}
-            shadow="sm"
-          >
-            <HStack justify="space-between" align="center">
-              <VStack align="start" gap={2}>
-                <Heading size="xl" color="blue.600">
-                  {childData.child.name}
-                </Heading>
-                <HStack>
-                  <Text color="gray.600" fontSize="sm">
-                    Oprettet: {formatDate(childData.child.createdAt)}
-                  </Text>
-                  {isCurrentUserAdmin && (
-                    <Badge colorScheme="blue">
-                      ⭐ Administrator
-                    </Badge>
-                  )}
-                </HStack>
-              </VStack>
-              
-              {isCurrentUserAdmin && (
-                <HStack gap={3}>
-                  <Button
-                    colorScheme="blue"
-                    variant="outline"
-                  >
-                    ⚙️ Indstillinger
-                  </Button>
-                  
-                  <DeleteChildDialog
-                    trigger={
-                      <Button
-                        colorScheme="red"
-                        variant="outline"
-                      >
-                        🗑️ Slet barn
-                      </Button>
-                    }
-                    childName={childData.child.name}
-                    onConfirm={handleDeleteChild}
-                    isLoading={deleting}
-                  />
-                </HStack>
-              )}
-            </HStack>
-          </Box>
+          {/* Child Header - simplified */}
+          <Heading size="xl" color="blue.600" mb={4}>
+            {childData.child.name}
+          </Heading>
 
           {/* Connected Users Section */}
           <Box 
@@ -424,6 +367,28 @@ export default function ChildSlugPage() {
               </Text>
             </VStack>
           </Box>
+
+          {/* Delete Button - Only for Admins */}
+          {isCurrentUserAdmin && (
+            <Box mt={8} pt={6} borderTop="1px solid" borderColor="gray.200">
+              <HStack justify="center">
+                <DeleteChildDialog
+                  trigger={
+                    <Button
+                      colorScheme="red"
+                      variant="outline"
+                      size="sm"
+                    >
+                      🗑️ Slet barn
+                    </Button>
+                  }
+                  childName={childData.child.name}
+                  onConfirm={handleDeleteChild}
+                  isLoading={deleting}
+                />
+              </HStack>
+            </Box>
+          )}
 
         </VStack>
       </Box>
