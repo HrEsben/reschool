@@ -10,10 +10,13 @@ export default function Dashboard() {
   const user = useUser();
   const router = useRouter();
 
-  // Redirect to home if not authenticated
+  // Redirect based on user state
   useEffect(() => {
     if (user === null) {
       router.push("/");
+    } else if (user && (!user.displayName || user.displayName.trim() === '')) {
+      // User doesn't have a name set - redirect to settings
+      router.push("/settings?firstTime=true");
     }
   }, [user, router]);
 

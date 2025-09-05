@@ -15,7 +15,7 @@ import {
   Portal,
   CloseButton
 } from "@chakra-ui/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { Header } from "@/components/ui/header";
 import { Avatar } from "@chakra-ui/react";
@@ -23,7 +23,11 @@ import { Avatar } from "@chakra-ui/react";
 export default function Settings() {
   const user = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Check if this is a first-time user
+  const isFirstTime = searchParams.get('firstTime') === 'true';
   
   // Form state
   const [displayName, setDisplayName] = useState("");
@@ -79,14 +83,27 @@ export default function Settings() {
   };
 
   const handleSaveProfile = async () => {
+    // Validate required fields
+    if (!displayName || displayName.trim() === '') {
+      showMessage('error', 'Navn er påkrævet');
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Update display name
       if (displayName !== user.displayName) {
-        await user.update({ displayName });
+        await user.update({ displayName: displayName.trim() });
       }
 
       showMessage('success', 'Profil opdateret succesfuldt');
+      
+      // If this is a first-time user, redirect to dashboard after successful update
+      if (isFirstTime && displayName.trim() !== '') {
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 1500); // Wait 1.5 seconds to show success message
+      }
     } catch (_error) {
       showMessage('error', 'Der opstod en fejl ved opdatering af profilen');
     } finally {
@@ -190,10 +207,13 @@ export default function Settings() {
           {/* Page Header */}
           <VStack align="start" gap={2}>
             <Heading size="xl" color="blue.600">
-              Indstillinger
+              {isFirstTime ? 'Velkommen!' : 'Indstillinger'}
             </Heading>
             <Text color="gray.600">
-              Administrer din profil og kontoindstillinger
+              {isFirstTime 
+                ? 'Først skal du angive dit navn for at komme i gang'
+                : 'Administrer din profil og kontoindstillinger'
+              }
             </Text>
           </VStack>
 
@@ -248,13 +268,21 @@ export default function Settings() {
                 
                 <VStack gap={4} align="stretch" width="100%">
                   <Field.Root>
-                    <Field.Label htmlFor="displayName">Navn</Field.Label>
+                    <Field.Label htmlFor="displayName">
+                      Navn {isFirstTime && <Text as="span" color="red.500">*</Text>}
+                    </Field.Label>
                     <Input
                       id="displayName"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder="Indtast dit navn"
+                      placeholder={isFirstTime ? "Indtast dit navn (påkrævet)" : "Indtast dit navn"}
+                      borderColor={isFirstTime && !displayName ? "red.300" : undefined}
                     />
+                    {isFirstTime && (
+                      <Field.HelperText>
+                        Du skal angive dit navn for at komme videre til dashboard
+                      </Field.HelperText>
+                    )}
                   </Field.Root>
                   
                   <Field.Root>
@@ -277,23 +305,26 @@ export default function Settings() {
                   onClick={handleSaveProfile}
                   loading={isLoading}
                   loadingText="Gemmer..."
+                  size={isFirstTime ? "lg" : "md"}
+                  width={isFirstTime ? "100%" : "auto"}
                 >
-                  Gem ændringer
+                  {isFirstTime ? "Gem navn og fortsæt" : "Gem ændringer"}
                 </Button>
               </VStack>
             </Card.Body>
           </Card.Root>
 
-          {/* Danger Zone */}
-          <Card.Root borderColor="red.200">
-            <Card.Body>
-              <VStack gap={4} align="start">
-                <VStack gap={1} align="start">
-                  <Heading size="md" color="red.600">Farezone</Heading>
-                  <Text fontSize="sm" color="gray.600">
-                    Disse handlinger kan ikke fortrydes
-                  </Text>
-                </VStack>
+          {/* Danger Zone - Hide for first-time users */}
+          {!isFirstTime && (
+            <Card.Root borderColor="red.200">
+              <Card.Body>
+                <VStack gap={4} align="start">
+                  <VStack gap={1} align="start">
+                    <Heading size="md" color="red.600">Farezone</Heading>
+                    <Text fontSize="sm" color="gray.600">
+                      Disse handlinger kan ikke fortrydes
+                    </Text>
+                  </VStack>
                 
                 <Dialog.Root 
                   open={isDeleteDialogOpen} 
@@ -354,6 +385,7 @@ export default function Settings() {
               </VStack>
             </Card.Body>
           </Card.Root>
+          )}
         </VStack>
       </Box>
     </Box>

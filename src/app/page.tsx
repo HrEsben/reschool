@@ -10,10 +10,17 @@ export default function Home() {
   const user = useUser();
   const router = useRouter();
 
-  // Redirect to dashboard if authenticated
+  // Redirect based on user state
   useEffect(() => {
     if (user) {
-      router.push("/dashboard");
+      // Check if user has a display name set
+      if (!user.displayName || user.displayName.trim() === '') {
+        // First time user - redirect to settings to set name
+        router.push("/settings?firstTime=true");
+      } else {
+        // User has name set - go to dashboard
+        router.push("/dashboard");
+      }
     }
   }, [user, router]);
 
