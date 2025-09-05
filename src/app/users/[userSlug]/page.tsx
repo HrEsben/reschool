@@ -13,7 +13,14 @@ import {
   Badge,
   Button,
   Separator,
-  Table
+  Table,
+  Icon,
+  Input,
+  Field,
+  Dialog,
+  Portal,
+  CloseButton,
+  Card
 } from '@chakra-ui/react';
 import { AppLayout } from '@/components/ui/app-layout';
 
@@ -51,6 +58,13 @@ export default function UserSlugPage() {
   const [userProfileData, setUserProfileData] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Settings state (only used when viewing own profile)
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [isSettingsLoading, setIsSettingsLoading] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
   const userSlug = params.userSlug as string;
 
@@ -64,6 +78,16 @@ export default function UserSlugPage() {
       fetchUserProfileData();
     }
   }, [user, userSlug]);
+
+  // Initialize settings form when user data is available
+  useEffect(() => {
+    if (user && userProfileData && userProfileData.user.stackAuthId === user.id) {
+      if (user) {
+        setDisplayName(user.displayName || "");
+        setEmail(user.primaryEmail || "");
+      }
+    }
+  }, [user, userProfileData]);
 
   const fetchUserProfileData = async () => {
     try {
@@ -138,6 +162,53 @@ export default function UserSlugPage() {
       return `${name}´`;
     }
     return `${name}s`;
+  };
+
+  // Settings functions (only used when viewing own profile)
+  const initializeSettingsForm = () => {
+    if (user) {
+      setDisplayName(user.displayName || "");
+      setEmail(user.primaryEmail || "");
+    }
+  };
+
+  const showSettingsMessage = (type: 'success' | 'error', text: string) => {
+    setSettingsMessage({ type, text });
+    setTimeout(() => setSettingsMessage(null), 5000);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setIsSettingsLoading(true);
+    try {
+      // Update display name if changed
+      if (user.displayName !== displayName.trim()) {
+        await user.update({ displayName: displayName.trim() });
+      }
+
+      showSettingsMessage('success', 'Profil opdateret succesfuldt');
+    } catch (_error) {
+      showSettingsMessage('error', 'Der opstod en fejl ved opdatering af profilen');
+    } finally {
+      setIsSettingsLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    
+    setIsSettingsLoading(true);
+    try {
+      await user.delete();
+      showSettingsMessage('success', 'Konto slettet');
+      router.push("/");
+    } catch (_error) {
+      showSettingsMessage('error', 'Der opstod en fejl ved sletning af kontoen');
+    } finally {
+      setIsSettingsLoading(false);
+      setIsDeleteDialogOpen(false);
+    }
   };
 
   // Show loading state while checking authentication
@@ -250,7 +321,7 @@ export default function UserSlugPage() {
           >
             <VStack align="stretch" gap={4}>
               <Heading size="lg" color="fg.default" fontWeight="600">
-                {isOwnProfile ? 'Dine børn' : `${getPossessiveForm(getUserDisplayName())} børn`} ({userProfileData.children.length})
+                {isOwnProfile ? 'Tilknyttede børn' : `${getPossessiveForm(getUserDisplayName())} børn`} ({userProfileData.children.length})
               </Heading>
               <Box className="w-16 h-1 bg-cambridge-blue-500 rounded-full"></Box>
               
@@ -264,7 +335,6 @@ export default function UserSlugPage() {
                       <Table.ColumnHeader color="fg.muted" fontWeight="600">Relation</Table.ColumnHeader>
                       <Table.ColumnHeader color="fg.muted" fontWeight="600">Rolle</Table.ColumnHeader>
                       <Table.ColumnHeader color="fg.muted" fontWeight="600">Tilføjet</Table.ColumnHeader>
-                      <Table.ColumnHeader color="fg.muted" fontWeight="600">Oprettet</Table.ColumnHeader>
                     </Table.Row>
                   </Table.Header>
                   <Table.Body>
@@ -297,25 +367,20 @@ export default function UserSlugPage() {
                           </HStack>
                         </Table.Cell>
                         <Table.Cell>
-                          <Badge 
-                            colorPalette={getRelationBadgeColor(child.relation)}
-                            size="sm"
-                            fontWeight="500"
-                          >
+                          <Text color="fg.default" fontSize="sm" fontWeight="500">
                             {getRelationDisplayName(child)}
-                          </Badge>
-                        </Table.Cell>
-                        <Table.Cell>
-                          {child.isAdministrator && (
-                            <Badge colorPalette="golden" size="sm" fontWeight="500">
-                              ⭐ Admin
-                            </Badge>
-                          )}
-                        </Table.Cell>
-                        <Table.Cell>
-                          <Text color="fg.muted" fontSize="sm" fontWeight="500">
-                            {formatDate(child.createdAt)}
                           </Text>
+                        </Table.Cell>
+                        <Table.Cell>
+                          {child.isAdministrator ? (
+                            <Text color="fg.default" fontSize="sm" fontWeight="500">
+                              Administrator
+                            </Text>
+                          ) : (
+                            <Text color="fg.muted" fontSize="sm" fontWeight="400">
+                              Bruger
+                            </Text>
+                          )}
                         </Table.Cell>
                         <Table.Cell>
                           <Text color="fg.muted" fontSize="sm" fontWeight="500">
@@ -344,24 +409,167 @@ export default function UserSlugPage() {
               p={6}
             >
               <VStack align="stretch" gap={4}>
+                {/* Settings Message */}
+                {settingsMessage && (
+                  <Box
+                    p={4}
+                    borderRadius="md"
+                    bg={settingsMessage.type === 'success' ? '#f4f1de' : '#f2cc8f'}
+                    borderColor={settingsMessage.type === 'success' ? '#81b29a' : '#e07a5f'}
+                    borderWidth={1}
+                  >
+                    <Text color={settingsMessage.type === 'success' ? '#3d405b' : '#3d405b'} fontWeight="500">
+                      {settingsMessage.text}
+                    </Text>
+                  </Box>
+                )}
+
                 <Heading size="lg" color="fg.default" fontWeight="600">
                   Indstillinger
                 </Heading>
                 <Box className="w-16 h-1 bg-burnt-sienna-500 rounded-full"></Box>
                 
                 <Separator />
-                
-                <VStack align="stretch" gap={3}>
-                  <Button
-                    variant="outline"
-                    colorPalette="navy"
-                    onClick={() => router.push('/settings')}
-                    size="sm"
-                    justifyContent="start"
-                  >
-                    Rediger profil
-                  </Button>
-                </VStack>
+
+                {/* Personal Information */}
+                <Card.Root>
+                  <Card.Body>
+                    <VStack gap={4} align="start">
+                      <VStack align="start" gap={1}>
+                        <Heading size="md">Personlige oplysninger</Heading>
+                        <Box w={10} h={1} bg="#81b29a" borderRadius="full"></Box>
+                      </VStack>
+                      
+                      <VStack gap={4} align="stretch" width="100%">
+                        <Field.Root>
+                          <Field.Label htmlFor="displayName">Navn</Field.Label>
+                          <Input
+                            id="displayName"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            placeholder="Indtast dit navn"
+                            _focus={{
+                              borderColor: '#81b29a',
+                              shadow: '0 0 0 1px #81b29a',
+                              outline: 'none'
+                            }}
+                          />
+                        </Field.Root>
+                        
+                        <Field.Root>
+                          <Field.Label htmlFor="email">E-mail</Field.Label>
+                          <Input
+                            id="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Indtast din e-mail"
+                            type="email"
+                            _focus={{
+                              borderColor: '#81b29a',
+                              shadow: '0 0 0 1px #81b29a',
+                              outline: 'none'
+                            }}
+                          />
+                          <Field.HelperText>
+                            Ændring af e-mail kræver bekræftelse
+                          </Field.HelperText>
+                        </Field.Root>
+                      </VStack>
+                      
+                      <Button
+                        bg="#81b29a"
+                        color="#f4f1de"
+                        _hover={{ bg: "#6da085" }}
+                        onClick={handleSaveProfile}
+                        loading={isSettingsLoading}
+                        loadingText="Gemmer..."
+                      >
+                        Gem ændringer
+                      </Button>
+                    </VStack>
+                  </Card.Body>
+                </Card.Root>
+
+                {/* Danger Zone */}
+                <Card.Root borderColor="#e07a5f">
+                  <Card.Body>
+                    <VStack gap={4} align="start">
+                      <VStack gap={1} align="start">
+                        <Heading size="md" color="#e07a5f">Farezone</Heading>
+                        <Text fontSize="sm" color="#3d405b">
+                          Disse handlinger kan ikke fortrydes
+                        </Text>
+                      </VStack>
+                    
+                      <Dialog.Root 
+                        open={isDeleteDialogOpen} 
+                        onOpenChange={(details) => setIsDeleteDialogOpen(details.open)}
+                      >
+                        <Dialog.Trigger asChild>
+                          <Button 
+                            borderColor="#e07a5f"
+                            color="#e07a5f"
+                            variant="outline"
+                            _hover={{
+                              bg: "#e07a5f",
+                              color: "white"
+                            }}
+                            onClick={() => setIsDeleteDialogOpen(true)}
+                          >
+                            Slet konto permanent
+                          </Button>
+                        </Dialog.Trigger>
+                        
+                        <Portal>
+                          <Dialog.Backdrop />
+                          <Dialog.Positioner>
+                            <Dialog.Content maxW="md" mx={4}>
+                              <Dialog.Header>
+                                <Dialog.Title fontSize="lg" fontWeight="bold">
+                                  Slet konto
+                                </Dialog.Title>
+                              </Dialog.Header>
+                              
+                              <Dialog.Body>
+                                <Text>
+                                  Er du sikker på, at du vil slette din konto? Alle dine data vil blive permanent fjernet. 
+                                  Denne handling kan ikke fortrydes.
+                                </Text>
+                              </Dialog.Body>
+                              
+                              <Dialog.Footer>
+                                <Dialog.ActionTrigger asChild>
+                                  <Button 
+                                    variant="outline"
+                                    borderColor="#81b29a" 
+                                    color="#3d405b" 
+                                    _hover={{ bg: "#81b29a", color: "#f4f1de" }}
+                                    onClick={() => setIsDeleteDialogOpen(false)}
+                                  >
+                                    Annuller
+                                  </Button>
+                                </Dialog.ActionTrigger>
+                                <Button 
+                                  bg="#e07a5f"
+                                  color="#f4f1de"
+                                  _hover={{ bg: "#d06749" }}
+                                  onClick={handleDeleteAccount}
+                                  loading={isSettingsLoading}
+                                >
+                                  Slet konto
+                                </Button>
+                              </Dialog.Footer>
+                              
+                              <Dialog.CloseTrigger asChild>
+                                <CloseButton size="sm" />
+                              </Dialog.CloseTrigger>
+                            </Dialog.Content>
+                          </Dialog.Positioner>
+                        </Portal>
+                      </Dialog.Root>
+                    </VStack>
+                  </Card.Body>
+                </Card.Root>
               </VStack>
             </Box>
           )}

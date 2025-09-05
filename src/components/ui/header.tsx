@@ -36,10 +36,6 @@ export const Header = memo(function Header() {
         // User profile page (e.g., /users/esben-stephansen)
         const username = pathname.split('/')[2]; // Get username from path
         crumbs.push({ label: user?.displayName || "Bruger", href: pathname });
-      } else if (pathname === '/settings') {
-        // Settings page (accessed from "Rediger profil")
-        crumbs.push({ label: user?.displayName || "Bruger", href: `/users/${user?.primaryEmail?.split('@')[0] || 'profile'}` });
-        crumbs.push({ label: "Indstillinger", href: "/settings" });
       } else if (pathname?.match(/^\/[^\/]+$/)) {
         // Child profile page (e.g., /mads, /hilda)
         const slug = pathname.slice(1); // Remove leading slash

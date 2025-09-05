@@ -88,9 +88,6 @@ export function UserAvatar() {
         {/* User info section */}
         <Box p={3} borderBottomWidth={1} borderColor="gray.100" mb={2}>
           <VStack gap={1} align="start">
-            <Text fontSize="sm" fontWeight="semibold" color="gray.900">
-              {user.displayName || "Ingen navn"}
-            </Text>
             <Text fontSize="xs" color="gray.600">
               {user.primaryEmail}
             </Text>
@@ -112,13 +109,13 @@ export function UserAvatar() {
           }}
           transition="all 0.15s"
         >
-          Dashboard
+          Børn
         </MenuItem>
         
-        {/* Settings option */}
+        {/* Profile option */}
         <MenuItem 
-          value="settings"
-          onClick={() => router.push("/settings")}
+          value="profile"
+          onClick={() => router.push(`/users/${user.primaryEmail?.split('@')[0] || 'profile'}`)}
           fontSize="sm"
           borderRadius="sm"
           p={2}
@@ -130,7 +127,7 @@ export function UserAvatar() {
           }}
           transition="all 0.15s"
         >
-          Indstillinger
+          Din profil
         </MenuItem>
         
         {/* Logout option */}

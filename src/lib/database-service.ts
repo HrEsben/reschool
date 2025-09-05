@@ -250,6 +250,23 @@ export async function addUserToChild(
   }
 }
 
+export async function removeUserFromChild(
+  childId: number,
+  userId: number
+): Promise<boolean> {
+  try {
+    const result = await query(
+      'DELETE FROM user_child_relations WHERE child_id = $1 AND user_id = $2',
+      [childId, userId]
+    );
+
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Error removing user from child:', error);
+    return false;
+  }
+}
+
 export async function getChildById(childId: number): Promise<Child | null> {
   try {
     const result = await query(

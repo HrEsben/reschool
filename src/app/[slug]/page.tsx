@@ -13,10 +13,12 @@ import {
   Badge,
   Button,
   Separator,
-  Table
+  Table,
+  Icon
 } from '@chakra-ui/react';
 import { AuthenticatedLayout } from '@/components/layouts/authenticated-layout';
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
+import { RemoveUserDialog } from '@/components/ui/remove-user-dialog';
 
 interface UserWithRelation {
   id: number;
@@ -50,6 +52,7 @@ export default function ChildSlugPage() {
   const [childData, setChildData] = useState<ChildData | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [removingUser, setRemovingUser] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const slug = params.slug as string;
@@ -175,6 +178,32 @@ export default function ChildSlugPage() {
     }
   };
 
+  const handleRemoveUser = async (userId: number) => {
+    if (!childData) return;
+    
+    setRemovingUser(true);
+    
+    try {
+      const response = await fetch(`/api/children/${childData.child.id}/users/${userId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        alert(errorData.error || 'Der opstod en fejl ved fjernelse af brugeren');
+        return;
+      }
+      
+      // Refresh the child data to show updated user list
+      await fetchChildData();
+    } catch (error) {
+      console.error('Error removing user:', error);
+      alert('Der opstod en netværksfejl ved fjernelse af brugeren');
+    } finally {
+      setRemovingUser(false);
+    }
+  };
+
   // Show loading state while fetching data
   if (loading) {
     return (
@@ -270,6 +299,9 @@ export default function ChildSlugPage() {
                     <Table.ColumnHeader color="fg.muted" fontWeight="600">Relation</Table.ColumnHeader>
                     <Table.ColumnHeader color="fg.muted" fontWeight="600">Rolle</Table.ColumnHeader>
                     <Table.ColumnHeader color="fg.muted" fontWeight="600">Tilføjet</Table.ColumnHeader>
+                    {isCurrentUserAdmin && (
+                      <Table.ColumnHeader color="fg.muted" fontWeight="600">Handlinger</Table.ColumnHeader>
+                    )}
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
@@ -307,19 +339,19 @@ export default function ChildSlugPage() {
                         </Text>
                       </Table.Cell>
                       <Table.Cell>
-                        <Badge 
-                          colorPalette={getRelationBadgeColor(userData.relation)}
-                          size="sm"
-                          fontWeight="500"
-                        >
+                        <Text color="fg.default" fontSize="sm" fontWeight="500">
                           {getRelationDisplayName(userData)}
-                        </Badge>
+                        </Text>
                       </Table.Cell>
                       <Table.Cell>
-                        {userData.isAdministrator && (
-                          <Badge colorPalette="golden" size="sm" fontWeight="500">
-                            ⭐ Admin
-                          </Badge>
+                        {userData.isAdministrator ? (
+                          <Text color="fg.default" fontSize="sm" fontWeight="500">
+                            Administrator
+                          </Text>
+                        ) : (
+                          <Text color="fg.muted" fontSize="sm" fontWeight="400">
+                            Bruger
+                          </Text>
                         )}
                       </Table.Cell>
                       <Table.Cell>
@@ -327,6 +359,59 @@ export default function ChildSlugPage() {
                           {formatDate(userData.createdAt)}
                         </Text>
                       </Table.Cell>
+                      {isCurrentUserAdmin && (
+                        <Table.Cell>
+                          {(() => {
+                            // Current user data
+                            const currentUserData = childData.users.find(u => u.stackAuthId === user?.id);
+                            
+                            // Count administrators
+                            const adminCount = childData.users.filter(u => u.isAdministrator).length;
+                            
+                            // Don't show remove button if:
+                            // 1. This is the current user and they are the last admin
+                            const isCurrentUser = userData.stackAuthId === user?.id;
+                            const isLastAdmin = userData.isAdministrator && adminCount <= 1;
+                            
+                            if (isCurrentUser && isLastAdmin) {
+                              return (
+                                <Text color="fg.muted" fontSize="xs" fontStyle="italic">
+                                  Sidste admin
+                                </Text>
+                              );
+                            }
+                            
+                            return (
+                              <RemoveUserDialog
+                                trigger={
+                                  <Button
+                                    variant="subtle"
+                                    size="sm"
+                                    colorPalette="red"
+                                    _hover={{
+                                      bg: "#e07a5f",
+                                      color: "white"
+                                    }}
+                                    bg="rgba(224, 122, 95, 0.1)"
+                                    color="#e07a5f"
+                                    border="1px solid rgba(224, 122, 95, 0.3)"
+                                  >
+                                    <Icon boxSize={4}>
+                                      <svg fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53L15.986 5.952l.149.022a.75.75 0 00.23-1.482A48.16 48.16 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                                      </svg>
+                                    </Icon>
+                                  </Button>
+                                }
+                                userName={userData.displayName || ''}
+                                userEmail={userData.email}
+                                onConfirm={() => handleRemoveUser(userData.id)}
+                                isLoading={removingUser}
+                              />
+                            );
+                          })()}
+                        </Table.Cell>
+                      )}
                     </Table.Row>
                   ))}
                 </Table.Body>
@@ -369,12 +454,24 @@ export default function ChildSlugPage() {
                 <DeleteChildDialog
                   trigger={
                     <Button
-                      colorPalette="coral"
-                      variant="outline"
+                      variant="subtle"
                       size="sm"
+                      colorPalette="red"
+                      _hover={{
+                        bg: "#e07a5f",
+                        color: "white"
+                      }}
+                      bg="rgba(224, 122, 95, 0.1)"
+                      color="#e07a5f"
+                      border="1px solid rgba(224, 122, 95, 0.3)"
                       fontWeight="500"
                     >
-                      🗑️ Slet barn
+                      <Icon mr={2}>
+                        <svg fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53L15.986 5.952l.149.022a.75.75 0 00.23-1.482A48.16 48.16 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                        </svg>
+                      </Icon>
+                      Slet barn
                     </Button>
                   }
                   childName={childData.child.name}
