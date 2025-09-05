@@ -125,12 +125,27 @@ export default function ChildSlugPage() {
 
   const getRelationBadgeColor = (relation: string) => {
     switch (relation) {
-      case 'Mor': return 'pink';
-      case 'Far': return 'blue';
-      case 'Underviser': return 'green';
-      case 'Ressourceperson': return 'orange';
+      case 'Mor': return 'coral';
+      case 'Far': return 'navy';
+      case 'Underviser': return 'sage';
+      case 'Ressourceperson': return 'golden';
       default: return 'gray';
     }
+  };
+
+  const generateUserSlug = (userData: UserWithRelation) => {
+    const generateSlug = (text: string) => {
+      return text.toLowerCase()
+        .replace(/[æå]/g, 'a')
+        .replace(/[ø]/g, 'o')
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    };
+
+    return userData.displayName 
+      ? generateSlug(userData.displayName)
+      : generateSlug(userData.email.split('@')[0]);
   };
 
   const formatDate = (dateString: string) => {
@@ -191,9 +206,10 @@ export default function ChildSlugPage() {
         justifyContent="center"
         flexDirection="column"
         gap={4}
+        bg="bg.canvas"
       >
-        <Spinner size="xl" color="blue.500" />
-        <Text color="gray.600" fontSize="lg">
+        <Spinner size="xl" colorPalette="navy" />
+        <Text color="fg.muted" fontSize="lg" fontWeight="500">
           Indlæser barnets profil...
         </Text>
       </Box>
@@ -207,7 +223,7 @@ export default function ChildSlugPage() {
 
   if (error) {
     return (
-      <Box minH="100vh">
+      <Box minH="100vh" bg="bg.canvas">
         <Header />
         <Box p={8}>
           <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
@@ -215,18 +231,19 @@ export default function ChildSlugPage() {
               variant="ghost"
               onClick={() => router.push('/dashboard')}
               alignSelf="flex-start"
+              colorPalette="navy"
             >
               ← Tilbage til Dashboard
             </Button>
             
             <Box 
-              bg="red.50" 
+              bg="coral.50" 
               border="1px solid" 
-              borderColor="red.200" 
-              borderRadius="md" 
+              borderColor="coral.200" 
+              borderRadius="lg" 
               p={4}
             >
-              <Text color="red.600" fontWeight="medium">
+              <Text color="coral.600" fontWeight="500">
                 {error}
               </Text>
             </Box>
@@ -244,27 +261,27 @@ export default function ChildSlugPage() {
   const isCurrentUserAdmin = currentUserRelation?.isAdministrator || false;
 
   return (
-    <Box minH="100vh">
+    <Box minH="100vh" bg="bg.canvas">
       <Header />
       
       <Box p={8}>
         <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
           {/* Child Header - simplified */}
-          <Heading size="xl" color="blue.600" mb={4}>
+          <Heading size="xl" color="navy.800" mb={4} fontWeight="700">
             {childData.child.name}
           </Heading>
 
           {/* Connected Users Section */}
           <Box 
-            bg="white" 
-            borderRadius="lg" 
+            bg="bg.surface" 
+            borderRadius="xl" 
             border="1px solid" 
-            borderColor="gray.200" 
+            borderColor="border.muted" 
             p={6}
-            shadow="sm"
+            shadow="lg"
           >
             <VStack align="stretch" gap={4}>
-              <Heading size="lg" color="gray.700">
+              <Heading size="lg" color="fg.default" fontWeight="600">
                 {getPossessiveForm(childData.child.name)} voksne ({childData.users.length})
               </Heading>
               
@@ -273,26 +290,27 @@ export default function ChildSlugPage() {
               <Table.Root size="md" variant="line" striped>
                 <Table.Header>
                   <Table.Row>
-                    <Table.ColumnHeader>Navn</Table.ColumnHeader>
-                    <Table.ColumnHeader>Email</Table.ColumnHeader>
-                    <Table.ColumnHeader>Relation</Table.ColumnHeader>
-                    <Table.ColumnHeader>Rolle</Table.ColumnHeader>
-                    <Table.ColumnHeader>Tilføjet</Table.ColumnHeader>
+                    <Table.ColumnHeader color="fg.muted" fontWeight="600">Navn</Table.ColumnHeader>
+                    <Table.ColumnHeader color="fg.muted" fontWeight="600">Email</Table.ColumnHeader>
+                    <Table.ColumnHeader color="fg.muted" fontWeight="600">Relation</Table.ColumnHeader>
+                    <Table.ColumnHeader color="fg.muted" fontWeight="600">Rolle</Table.ColumnHeader>
+                    <Table.ColumnHeader color="fg.muted" fontWeight="600">Tilføjet</Table.ColumnHeader>
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
                   {childData.users.map((userData) => (
                     <Table.Row 
                       key={userData.id}
-                      _hover={{ bg: "blue.50", cursor: "pointer" }}
-                      onClick={() => router.push(`/users/${userData.stackAuthId}`)}
+                      _hover={{ bg: "cream.100", cursor: "pointer" }}
+                      onClick={() => router.push(`/users/${generateUserSlug(userData)}`)}
+                      transition="background-color 0.2s ease"
                     >
                       <Table.Cell>
                         <HStack gap={3}>
                           <Box
                             w={8}
                             h={8}
-                            bg="blue.500"
+                            bg="navy.500"
                             borderRadius="full"
                             display="flex"
                             alignItems="center"
@@ -303,33 +321,34 @@ export default function ChildSlugPage() {
                           >
                             {(userData.displayName || userData.email).charAt(0).toUpperCase()}
                           </Box>
-                          <Text fontWeight="medium">
+                          <Text fontWeight="500" color="fg.default">
                             {userData.displayName || 'Navn ikke angivet'}
                           </Text>
                         </HStack>
                       </Table.Cell>
                       <Table.Cell>
-                        <Text color="gray.600" fontSize="sm">
+                        <Text color="fg.muted" fontSize="sm" fontWeight="500">
                           {userData.email}
                         </Text>
                       </Table.Cell>
                       <Table.Cell>
                         <Badge 
-                          colorScheme={getRelationBadgeColor(userData.relation)}
+                          colorPalette={getRelationBadgeColor(userData.relation)}
                           size="sm"
+                          fontWeight="500"
                         >
                           {getRelationDisplayName(userData)}
                         </Badge>
                       </Table.Cell>
                       <Table.Cell>
                         {userData.isAdministrator && (
-                          <Badge colorScheme="blue" size="sm">
+                          <Badge colorPalette="golden" size="sm" fontWeight="500">
                             ⭐ Admin
                           </Badge>
                         )}
                       </Table.Cell>
                       <Table.Cell>
-                        <Text color="gray.500" fontSize="sm">
+                        <Text color="fg.muted" fontSize="sm" fontWeight="500">
                           {formatDate(userData.createdAt)}
                         </Text>
                       </Table.Cell>
@@ -339,7 +358,7 @@ export default function ChildSlugPage() {
               </Table.Root>
 
               {childData.users.length === 0 && (
-                <Text color="gray.500" textAlign="center" py={8}>
+                <Text color="fg.muted" textAlign="center" py={8} fontWeight="500">
                   Ingen brugere er tilknyttet dette barn endnu
                 </Text>
               )}
@@ -348,21 +367,21 @@ export default function ChildSlugPage() {
 
           {/* Tools Section Placeholder */}
           <Box 
-            bg="white" 
-            borderRadius="lg" 
+            bg="bg.surface" 
+            borderRadius="xl" 
             border="1px solid" 
-            borderColor="gray.200" 
+            borderColor="border.muted" 
             p={6}
-            shadow="sm"
+            shadow="lg"
           >
             <VStack align="stretch" gap={4}>
-              <Heading size="lg" color="gray.700">
+              <Heading size="lg" color="fg.default" fontWeight="600">
                 Værktøjer
               </Heading>
               
               <Separator />
               
-              <Text color="gray.500" textAlign="center" py={8}>
+              <Text color="fg.muted" textAlign="center" py={8} fontWeight="500">
                 Værktøjssektionen kommer snart...
               </Text>
             </VStack>
@@ -370,14 +389,15 @@ export default function ChildSlugPage() {
 
           {/* Delete Button - Only for Admins */}
           {isCurrentUserAdmin && (
-            <Box mt={8} pt={6} borderTop="1px solid" borderColor="gray.200">
+            <Box mt={8} pt={6} borderTop="1px solid" borderColor="border.muted">
               <HStack justify="center">
                 <DeleteChildDialog
                   trigger={
                     <Button
-                      colorScheme="red"
+                      colorPalette="coral"
                       variant="outline"
                       size="sm"
+                      fontWeight="500"
                     >
                       🗑️ Slet barn
                     </Button>

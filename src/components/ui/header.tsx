@@ -53,18 +53,20 @@ export function Header() {
   return (
     <Box 
       borderBottomWidth={1} 
-      borderColor="gray.200" 
-      bg="white" 
+      borderColor="border.muted" 
+      bg="bg.surface" 
       px={8} 
       py={4}
       position="sticky"
       top={0}
       zIndex={100}
       width="100%"
+      backdropFilter="blur(8px)"
+      shadow="sm"
     >
       <HStack justify="space-between" maxW="7xl" mx="auto" position="relative">
         {/* Logo */}
-        <Heading size="lg" color="blue.600">
+        <Heading size="lg" color="navy.800" fontWeight="700" letterSpacing="-0.02em">
           ReSchool
         </Heading>
         
@@ -75,14 +77,23 @@ export function Header() {
               key={item.href}
               onClick={() => router.push(item.href)}
               fontSize="sm"
-              fontWeight="medium"
-              color="gray.600"
+              fontWeight="500"
+              color="fg.muted"
               _hover={{ 
-                color: "blue.600",
-                textDecoration: "none"
+                color: "navy.700",
+                textDecoration: "none",
+                transform: "translateY(-1px)"
               }}
               cursor="pointer"
-              transition="color 0.2s"
+              transition="all 0.2s ease"
+              px={3}
+              py={2}
+              borderRadius="md"
+              _focus={{
+                outline: "none",
+                bg: "cream.100",
+                color: "navy.800"
+              }}
             >
               {item.label}
             </Link>
@@ -98,6 +109,7 @@ export function Header() {
               onClick={() => setIsMenuOpen(true)}
               variant="ghost"
               display={{ base: "flex", md: "none" }}
+              colorPalette="navy"
               size="sm"
             >
               <HamburgerIcon />
@@ -118,10 +130,10 @@ export function Header() {
         placement="end"
       >
         <DrawerBackdrop />
-        <DrawerContent maxW="280px">
-          <DrawerHeader borderBottomWidth={1} borderColor="gray.200">
+        <DrawerContent maxW="280px" bg="bg.surface">
+          <DrawerHeader borderBottomWidth={1} borderColor="border.muted">
             <HStack justify="space-between" align="center">
-              <Heading size="md" color="blue.600">
+              <Heading size="md" color="navy.800" fontWeight="600">
                 Menu
               </Heading>
               <IconButton
@@ -129,6 +141,7 @@ export function Header() {
                 onClick={() => setIsMenuOpen(false)}
                 variant="ghost"
                 size="sm"
+                colorPalette="gray"
               >
                 <CloseIcon />
               </IconButton>
@@ -146,16 +159,16 @@ export function Header() {
                   h="auto"
                   p={4}
                   borderRadius={0}
-                  fontWeight="medium"
+                  fontWeight="500"
                   fontSize="md"
-                  color="gray.700"
+                  color="fg.default"
                   _hover={{ 
-                    bg: "gray.50",
-                    color: "blue.600"
+                    bg: "cream.100",
+                    color: "navy.700"
                   }}
-                  _active={{ bg: "gray.100" }}
+                  _active={{ bg: "cream.200" }}
                   borderBottomWidth={1}
-                  borderColor="gray.100"
+                  borderColor="border.muted"
                 >
                   {item.label}
                 </Button>
@@ -172,14 +185,14 @@ export function Header() {
                 h="auto"
                 p={4}
                 borderRadius={0}
-                fontWeight="medium"
+                fontWeight="500"
                 fontSize="md"
-                color="red.600"
+                color="coral.600"
                 _hover={{ 
-                  bg: "red.50",
-                  color: "red.700"
+                  bg: "coral.50",
+                  color: "coral.700"
                 }}
-                _active={{ bg: "red.100" }}
+                _active={{ bg: "coral.100" }}
               >
                 Log ud
               </Button>

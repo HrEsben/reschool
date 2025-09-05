@@ -101,10 +101,10 @@ export default function ChildProfilePage() {
 
   const getRelationBadgeColor = (relation: string) => {
     switch (relation) {
-      case 'Mor': return 'pink';
-      case 'Far': return 'blue';
-      case 'Underviser': return 'green';
-      case 'Ressourceperson': return 'orange';
+      case 'Mor': return 'coral';
+      case 'Far': return 'navy';
+      case 'Underviser': return 'sage';
+      case 'Ressourceperson': return 'golden';
       default: return 'gray';
     }
   };
@@ -129,6 +129,21 @@ export default function ChildProfilePage() {
       return `${name}´`;
     }
     return `${name}s`;
+  };
+
+  const generateUserSlug = (userData: UserWithRelation) => {
+    const generateSlug = (text: string) => {
+      return text.toLowerCase()
+        .replace(/[æå]/g, 'a')
+        .replace(/[ø]/g, 'o')
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    };
+
+    return userData.displayName 
+      ? generateSlug(userData.displayName)
+      : generateSlug(userData.email.split('@')[0]);
   };
 
   const handleDeleteChild = async () => {
@@ -220,27 +235,27 @@ export default function ChildProfilePage() {
   const isCurrentUserAdmin = currentUserRelation?.isAdministrator || false;
 
   return (
-    <Box minH="100vh">
+    <Box minH="100vh" bg="bg.canvas">
       <Header />
       
       <Box p={8}>
         <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
           {/* Child Header - simplified */}
-          <Heading size="xl" color="blue.600" mb={4}>
+          <Heading size="xl" color="navy.800" mb={4} fontWeight="700">
             {childData.child.name}
           </Heading>
 
           {/* Connected Users Section */}
           <Box 
-            bg="white" 
-            borderRadius="lg" 
+            bg="bg.surface" 
+            borderRadius="xl" 
             border="1px solid" 
-            borderColor="gray.200" 
+            borderColor="border.muted" 
             p={6}
-            shadow="sm"
+            shadow="lg"
           >
             <VStack align="stretch" gap={4}>
-              <Heading size="lg" color="gray.700">
+              <Heading size="lg" color="fg.default" fontWeight="600">
                 {getPossessiveForm(childData.child.name)} voksne ({childData.users.length})
               </Heading>
               
@@ -260,15 +275,15 @@ export default function ChildProfilePage() {
                   {childData.users.map((userData) => (
                     <Table.Row 
                       key={userData.id}
-                      _hover={{ bg: "blue.50", cursor: "pointer" }}
-                      onClick={() => router.push(`/users/${userData.stackAuthId}`)}
+                      _hover={{ bg: "cream.100", cursor: "pointer" }}
+                      onClick={() => router.push(`/users/${generateUserSlug(userData)}`)}
                     >
                       <Table.Cell>
                         <HStack gap={3}>
                           <Box
                             w={8}
                             h={8}
-                            bg="blue.500"
+                            bg="navy.500"
                             borderRadius="full"
                             display="flex"
                             alignItems="center"

@@ -115,12 +115,12 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
         <Box
           mb={4}
           p={3}
-          borderRadius="md"
-          bg={message.type === 'success' ? 'green.50' : 'red.50'}
+          borderRadius="lg"
+          bg={message.type === 'success' ? 'success.50' : 'error.50'}
           borderLeft="4px solid"
-          borderColor={message.type === 'success' ? 'green.400' : 'red.400'}
+          borderColor={message.type === 'success' ? 'success.400' : 'error.400'}
         >
-          <Text color={message.type === 'success' ? 'green.700' : 'red.700'}>
+          <Text color={message.type === 'success' ? 'success.700' : 'error.700'} fontWeight="500">
             {message.text}
           </Text>
         </Box>
@@ -128,12 +128,23 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
 
       <DialogRoot open={open} onOpenChange={(e) => setOpen(e.open)} placement="center">
         <DialogTrigger asChild>
-          <Button colorPalette="blue" size="lg">
+          <Button 
+            colorPalette="navy" 
+            size="lg"
+            fontWeight="600"
+            px={6}
+            shadow="md"
+            _hover={{
+              transform: "translateY(-1px)",
+              shadow: "lg"
+            }}
+            transition="all 0.2s ease"
+          >
             Tilføj barn
           </Button>
         </DialogTrigger>
 
-        <DialogBackdrop />
+        <DialogBackdrop bg="navy.900/60" backdropFilter="blur(4px)" />
 
         <DialogContent 
           maxW="lg" 
@@ -143,37 +154,44 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
           left="50%"
           transform="translate(-50%, -50%)"
           zIndex="modal"
-          bg="white"
+          bg="cream.50"
           borderRadius="xl"
-          boxShadow="2xl"
+          shadow="2xl"
+          border="1px solid"
+          borderColor="cream.200"
           p={0}
           maxH="90vh"
           overflow="hidden"
         >
-          <DialogHeader p={6} pb={0}>
-            <DialogTitle>Tilføj barn</DialogTitle>
+          <DialogHeader p={6} pb={0} bg="cream.100" borderTopRadius="xl">
+            <DialogTitle color="navy.800" fontWeight="600" fontSize="xl">Tilføj barn</DialogTitle>
           </DialogHeader>
 
-          <DialogBody p={6} overflowY="auto">
+          <DialogBody p={6} overflowY="auto" bg="cream.50">
             <form onSubmit={handleSubmit} id="add-child-form">
               <VStack gap={4} align="stretch">
                 <Box>
-                  <Text mb={2} fontWeight="medium">Barnets navn</Text>
+                  <Text mb={2} fontWeight="500" color="fg.default">Barnets navn</Text>
                   <Input
                     value={childName}
                     onChange={(e) => setChildName(e.target.value)}
                     placeholder="Indtast barnets navn"
-                    borderColor={errors.childName ? 'red.400' : undefined}
+                    borderColor={errors.childName ? 'coral.400' : 'border.default'}
+                    bg="bg.subtle"
+                    _focus={{
+                      borderColor: 'navy.500',
+                      shadow: '0 0 0 1px token(colors.navy.500)'
+                    }}
                   />
                   {errors.childName && (
-                    <Text color="red.500" fontSize="sm" mt={1}>
+                    <Text color="coral.500" fontSize="sm" mt={1} fontWeight="500">
                       {errors.childName}
                     </Text>
                   )}
                 </Box>
 
                 <Box>
-                  <Text mb={2} fontWeight="medium">Din relation til barnet</Text>
+                  <Text mb={2} fontWeight="500" color="fg.default">Din relation til barnet</Text>
                   <VStack gap={2} align="start">
                     {[
                       { value: 'Mor', label: 'Mor' },
@@ -191,7 +209,7 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
                           onChange={(e) => setRelation(e.target.value as RelationType)}
                           style={{ marginRight: '8px' }}
                         />
-                        <label htmlFor={option.value}>
+                        <label htmlFor={option.value} style={{ color: 'var(--colors-fg-default)', fontWeight: '500' }}>
                           {option.label}
                         </label>
                       </Box>
@@ -201,15 +219,20 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
 
                 {relation === 'Ressourceperson' && (
                   <Box>
-                    <Text mb={2} fontWeight="medium">Type af ressourceperson</Text>
+                    <Text mb={2} fontWeight="500" color="fg.default">Type af ressourceperson</Text>
                     <Input
                       value={customRelationName}
                       onChange={(e) => setCustomRelationName(e.target.value)}
                       placeholder="f.eks. Psykolog, Talepædagog, etc."
-                      borderColor={errors.customRelationName ? 'red.400' : undefined}
+                      borderColor={errors.customRelationName ? 'coral.400' : 'border.default'}
+                      bg="bg.subtle"
+                      _focus={{
+                        borderColor: 'navy.500',
+                        shadow: '0 0 0 1px token(colors.navy.500)'
+                      }}
                     />
                     {errors.customRelationName && (
-                      <Text color="red.500" fontSize="sm" mt={1}>
+                      <Text color="coral.500" fontSize="sm" mt={1} fontWeight="500">
                         {errors.customRelationName}
                       </Text>
                     )}
@@ -219,16 +242,17 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
             </form>
           </DialogBody>
 
-          <DialogFooter p={6} pt={0}>
+          <DialogFooter p={6} pt={4} bg="cream.100" borderBottomRadius="xl" borderTop="1px solid" borderColor="cream.200">
             <DialogActionTrigger asChild>
-              <Button variant="outline">Annuller</Button>
+              <Button variant="outline" colorPalette="gray">Annuller</Button>
             </DialogActionTrigger>
             <Button
               type="submit"
               form="add-child-form"
-              colorPalette="blue"
+              colorPalette="navy"
               loading={isLoading}
               disabled={isLoading}
+              fontWeight="600"
             >
               {isLoading ? 'Tilføjer...' : 'Tilføj barn'}
             </Button>

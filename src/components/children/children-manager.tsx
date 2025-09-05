@@ -20,12 +20,12 @@ export function ChildrenManager() {
   };
 
   return (
-    <Card.Root>
+    <Card.Root bg="bg.surface" shadow="lg" borderRadius="xl" border="1px solid" borderColor="border.muted">
       <Card.Header>
         <HStack justify="space-between" align="center">
           <VStack align="start" gap={1}>
-            <Heading size="lg">Børneadministration</Heading>
-            <Text color="gray.600" fontSize="sm">
+            <Heading size="lg" color="fg.default" fontWeight="600">Børneadministration</Heading>
+            <Text color="fg.muted" fontSize="sm" fontWeight="500">
               Administrer og tilføj børn til din profil
             </Text>
           </VStack>

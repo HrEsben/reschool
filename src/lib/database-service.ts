@@ -7,8 +7,8 @@ export interface User {
   email: string;
   displayName?: string;
   profileImageUrl?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // Changed from Date to string for consistency
+  updatedAt: string; // Changed from Date to string for consistency
 }
 
 export interface Child {
@@ -72,9 +72,60 @@ export async function getUserByStackAuthId(stackAuthId: string): Promise<User | 
       [stackAuthId]
     );
 
-    return result.rows[0] as User || null;
+    const row = result.rows[0];
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      stackAuthId: row.stack_auth_id,
+      email: row.email,
+      displayName: row.display_name,
+      profileImageUrl: row.profile_image_url,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    } as User;
   } catch (error) {
     console.error('Error getting user by Stack Auth ID:', error);
+    return null;
+  }
+}
+
+export async function getUserBySlug(userSlug: string): Promise<User | null> {
+  try {
+    // Function to generate slug from name or email
+    const generateUserSlug = (text: string) => {
+      return text.toLowerCase()
+        .replace(/[æå]/g, 'a')
+        .replace(/[ø]/g, 'o')
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    };
+
+    // Get all users to check slug matches
+    const result = await query('SELECT * FROM users', []);
+    
+    // Find user by comparing generated slugs
+    for (const dbUser of result.rows) {
+      const nameSlug = dbUser.display_name ? generateUserSlug(dbUser.display_name) : null;
+      const emailSlug = generateUserSlug(dbUser.email.split('@')[0]); // Use part before @
+      
+      if (nameSlug === userSlug || emailSlug === userSlug) {
+        return {
+          id: dbUser.id,
+          stackAuthId: dbUser.stack_auth_id,
+          email: dbUser.email,
+          displayName: dbUser.display_name,
+          profileImageUrl: dbUser.profile_image_url,
+          createdAt: new Date(dbUser.created_at).toISOString(),
+          updatedAt: new Date(dbUser.updated_at).toISOString()
+        } as User;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error getting user by slug:', error);
     return null;
   }
 }

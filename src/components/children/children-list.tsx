@@ -97,13 +97,13 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
   const getRelationColor = (relation: string) => {
     switch (relation) {
       case 'Mor':
-        return 'pink';
+        return 'coral';
       case 'Far':
-        return 'blue';
+        return 'navy';
       case 'Underviser':
-        return 'green';
+        return 'sage';
       case 'Ressourceperson':
-        return 'orange';
+        return 'golden';
       default:
         return 'gray';
     }
@@ -112,7 +112,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
   if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" py={8}>
-        <Spinner size="lg" color="blue.500" />
+        <Spinner size="lg" colorPalette="primary" />
       </Box>
     );
   }
@@ -121,12 +121,12 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
     return (
       <Box
         p={4}
-        bg="red.50"
-        borderRadius="md"
+        bg="coral.50"
+        borderRadius="lg"
         borderLeft="4px solid"
-        borderColor="red.400"
+        borderColor="coral.400"
       >
-        <Text color="red.700">{error}</Text>
+        <Text color="coral.700" fontWeight="500">{error}</Text>
       </Box>
     );
   }
@@ -134,10 +134,10 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
   if (children.length === 0) {
     return (
       <Box textAlign="center" py={8}>
-        <Text color="gray.500" fontSize="lg" mb={2}>
+        <Text color="fg.muted" fontSize="lg" mb={2} fontWeight="500">
           Ingen børn tilføjet endnu
         </Text>
-        <Text color="gray.400" fontSize="sm">
+        <Text color="fg.subtle" fontSize="sm">
           Klik på "Tilføj barn" knappen ovenfor for at komme i gang.
         </Text>
       </Box>
@@ -147,34 +147,49 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
   return (
     <Box>
       <Box mb={4} display="flex" alignItems="center" gap={2}>
-        <Heading size="sm" color="gray.700">
+        <Heading size="sm" color="fg.default" fontWeight="600">
           Mine børn ({children.length})
         </Heading>
       </Box>
       
       <VStack gap={3} align="stretch">
         {children.map((child) => (
-          <Card.Root key={child.id} variant="outline" _hover={{ shadow: "md", cursor: "pointer" }}>
+          <Card.Root 
+            key={child.id} 
+            variant="outline" 
+            borderColor="border.muted"
+            bg="bg.surface"
+            shadow="sm"
+            _hover={{ 
+              shadow: "md", 
+              cursor: "pointer",
+              transform: "translateY(-1px)",
+              borderColor: "primary.200"
+            }}
+            transition="all 0.2s ease"
+            borderRadius="lg"
+          >
             <Card.Body p={4}>
               <Box display="flex" justifyContent="space-between" alignItems="start">
                 <VStack align="start" gap={2} flex={1}>
-                  <Heading size="sm" color="gray.700">
+                  <Heading size="sm" color="fg.default" fontWeight="600">
                     {child.name}
                   </Heading>
                   <Box display="flex" gap={2} flexWrap="wrap">
                     <Badge
                       colorPalette={getRelationColor(child.relation)}
                       variant="solid"
+                      fontWeight="500"
                     >
                       {getRelationDisplay(child)}
                     </Badge>
                     {child.isAdministrator && (
-                      <Badge colorPalette="gold" variant="solid">
+                      <Badge colorPalette="golden" variant="solid" fontWeight="500">
                         Administrator
                       </Badge>
                     )}
                   </Box>
-                  <Text fontSize="xs" color="gray.500">
+                  <Text fontSize="xs" color="fg.muted" fontWeight="500">
                     Tilføjet: {new Date(child.createdAt).toLocaleDateString('da-DK')}
                   </Text>
                 </VStack>
@@ -182,7 +197,14 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                   <Button
                     size="sm"
                     variant="outline"
+                    colorPalette="navy"
                     onClick={() => router.push(`/${generateSlug(child.name)}`)}
+                    fontWeight="500"
+                    _hover={{
+                      transform: "translateY(-1px)",
+                      shadow: "sm"
+                    }}
+                    transition="all 0.2s ease"
                   >
                     Se profil
                   </Button>
@@ -191,8 +213,9 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                       trigger={
                         <Button
                           size="sm"
-                          colorScheme="red"
+                          colorPalette="coral"
                           variant="outline"
+                          fontWeight="500"
                         >
                           🗑️ Slet
                         </Button>
