@@ -16,7 +16,7 @@ import {
   CloseButton
 } from "@chakra-ui/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Header } from "@/components/ui/header";
 import { Avatar } from "@chakra-ui/react";
 
@@ -24,8 +24,6 @@ export default function Settings() {
   const user = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
   // Check if this is a first-time user
   const isFirstTime = searchParams.get('firstTime') === 'true';
   
@@ -111,46 +109,6 @@ export default function Settings() {
     }
   };
 
-  const handleProfileImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      showMessage('error', 'Vælg venligst en billedfil (JPG, PNG, etc.)');
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      showMessage('error', 'Billedet må maksimalt være 5MB');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Convert file to base64
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64 = e.target?.result as string;
-        
-        try {
-          // Update profile image
-          await user.update({ profileImageUrl: base64 });
-          showMessage('success', 'Profilbillede opdateret');
-        } catch (_error) {
-          showMessage('error', 'Der opstod en fejl ved upload af billedet');
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      reader.readAsDataURL(file);
-    } catch (_error) {
-      showMessage('error', 'Der opstod en fejl ved læsning af filen');
-      setIsLoading(false);
-    }
-  };
-
   const handleDeleteAccount = async () => {
     setIsLoading(true);
     try {
@@ -216,49 +174,6 @@ export default function Settings() {
               }
             </Text>
           </VStack>
-
-          {/* Profile Picture Section */}
-          <Card.Root>
-            <Card.Body>
-              <VStack gap={4} align="start">
-                <Heading size="md">Profilbillede</Heading>
-                
-                <HStack gap={4} align="center">
-                  <Avatar.Root size="lg">
-                    <Avatar.Image 
-                      src={user.profileImageUrl || undefined}
-                      alt={user.displayName || "Bruger"}
-                    />
-                    <Avatar.Fallback>
-                      {initials}
-                    </Avatar.Fallback>
-                  </Avatar.Root>
-                  
-                  <VStack gap={2} align="start">
-                    <Button 
-                      size="sm" 
-                      colorScheme="blue"
-                      onClick={() => fileInputRef.current?.click()}
-                      loading={isLoading}
-                    >
-                      Upload nyt billede
-                    </Button>
-                    <Text fontSize="xs" color="gray.500">
-                      JPG, PNG eller GIF. Maks. 5MB.
-                    </Text>
-                  </VStack>
-                </HStack>
-                
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProfileImageUpload}
-                  style={{ display: 'none' }}
-                />
-              </VStack>
-            </Card.Body>
-          </Card.Root>
 
           {/* Personal Information */}
           <Card.Root>

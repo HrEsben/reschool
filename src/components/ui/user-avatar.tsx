@@ -98,6 +98,24 @@ export function UserAvatar() {
           </VStack>
         </Box>
         
+        {/* Dashboard option */}
+        <MenuItem 
+          value="dashboard"
+          onClick={() => router.push("/dashboard")}
+          fontSize="sm"
+          borderRadius="sm"
+          p={2}
+          _hover={{ 
+            bg: "gray.50"
+          }}
+          _focus={{
+            bg: "gray.50"
+          }}
+          transition="all 0.15s"
+        >
+          Dashboard
+        </MenuItem>
+        
         {/* Settings option */}
         <MenuItem 
           value="settings"
