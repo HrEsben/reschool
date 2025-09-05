@@ -211,9 +211,12 @@ export default function UserSlugPage() {
         <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
           {/* User Header - simplified */}
           <VStack align="start" gap={2}>
-            <Heading size="xl" color="navy.800" mb={2} fontWeight="700">
-              {getUserDisplayName()}
-            </Heading>
+            <VStack align="start" gap={1}>
+              <Heading size="xl" color="navy.800" fontWeight="700">
+                {getUserDisplayName()}
+              </Heading>
+              <Box className="w-20 h-1 bg-delft-blue-500 rounded-full"></Box>
+            </VStack>
             <HStack gap={3}>
               <Box
                 w={12}
@@ -253,6 +256,7 @@ export default function UserSlugPage() {
               <Heading size="lg" color="fg.default" fontWeight="600">
                 {isOwnProfile ? 'Dine børn' : `${getPossessiveForm(getUserDisplayName())} børn`} ({userProfileData.children.length})
               </Heading>
+              <Box className="w-16 h-1 bg-cambridge-blue-500 rounded-full"></Box>
               
               <Separator />
 
@@ -348,6 +352,7 @@ export default function UserSlugPage() {
                 <Heading size="lg" color="fg.default" fontWeight="600">
                   Indstillinger
                 </Heading>
+                <Box className="w-16 h-1 bg-burnt-sienna-500 rounded-full"></Box>
                 
                 <Separator />
                 

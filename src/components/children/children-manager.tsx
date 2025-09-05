@@ -20,11 +20,12 @@ export function ChildrenManager() {
   };
 
   return (
-    <Card.Root bg="bg.surface" shadow="lg" borderRadius="xl" border="1px solid" borderColor="border.muted">
+    <Card.Root className="bg-white shadow-lg border-l-4 border-cambridge-blue-500 border-t border-r border-b border-eggshell-300" borderRadius="xl">
       <Card.Header>
         <HStack justify="space-between" align="center">
           <VStack align="start" gap={1}>
-            <Heading size="lg" color="fg.default" fontWeight="600">Børn i forløb</Heading>
+            <Heading size="lg" className="text-delft-blue-500" fontWeight="600">Børn i forløb</Heading>
+            <Box className="w-12 h-1 bg-sunset-500 rounded-full"></Box>
           </VStack>
           <AddChildForm onChildAdded={handleChildAdded} />
         </HStack>

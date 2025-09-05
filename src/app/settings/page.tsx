@@ -170,10 +170,11 @@ export default function Settings() {
 
           {/* Page Header */}
           <VStack align="start" gap={2}>
-            <Heading size="xl" color="blue.600">
+            <Heading size="xl" className="text-delft-blue-500">
               {isFirstTime ? 'Velkommen!' : 'Indstillinger'}
             </Heading>
-            <Text color="gray.600">
+            <Box className="w-16 h-1 bg-burnt-sienna-500 rounded-full"></Box>
+            <Text className="text-delft-blue-600">
               {isFirstTime 
                 ? 'Først skal du angive dit navn for at komme i gang'
                 : 'Administrer din profil og kontoindstillinger'
@@ -185,7 +186,10 @@ export default function Settings() {
           <Card.Root>
             <Card.Body>
               <VStack gap={4} align="start">
-                <Heading size="md">Personlige oplysninger</Heading>
+                <VStack align="start" gap={1}>
+                  <Heading size="md">Personlige oplysninger</Heading>
+                  <Box className="w-10 h-1 bg-cambridge-blue-500 rounded-full"></Box>
+                </VStack>
                 
                 <VStack gap={4} align="stretch" width="100%">
                   <Field.Root>

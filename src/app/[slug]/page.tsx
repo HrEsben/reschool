@@ -267,9 +267,12 @@ export default function ChildSlugPage() {
       <Box p={8}>
         <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
           {/* Child Header - simplified */}
-          <Heading size="xl" color="navy.800" mb={4} fontWeight="700">
-            {childData.child.name}
-          </Heading>
+          <VStack align="start" gap={2}>
+            <Heading size="xl" color="navy.800" mb={4} fontWeight="700">
+              {childData.child.name}
+            </Heading>
+            <Box className="w-20 h-1 bg-sunset-500 rounded-full"></Box>
+          </VStack>
 
           {/* Connected Users Section */}
           <Box 
@@ -284,6 +287,7 @@ export default function ChildSlugPage() {
               <Heading size="lg" color="fg.default" fontWeight="600">
                 {getPossessiveForm(childData.child.name)} voksne ({childData.users.length})
               </Heading>
+              <Box className="w-16 h-1 bg-cambridge-blue-500 rounded-full"></Box>
               
               <Separator />
 
@@ -378,6 +382,7 @@ export default function ChildSlugPage() {
               <Heading size="lg" color="fg.default" fontWeight="600">
                 Værktøjer
               </Heading>
+              <Box className="w-16 h-1 bg-delft-blue-500 rounded-full"></Box>
               
               <Separator />
               

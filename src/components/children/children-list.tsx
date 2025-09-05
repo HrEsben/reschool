@@ -97,15 +97,30 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
   const getRelationColor = (relation: string) => {
     switch (relation) {
       case 'Mor':
-        return 'coral';
+        return 'burnt-sienna'; // Using new color name
       case 'Far':
-        return 'navy';
+        return 'delft-blue'; // Using new color name
       case 'Underviser':
-        return 'sage';
+        return 'cambridge-blue'; // Using new color name
       case 'Ressourceperson':
-        return 'golden';
+        return 'sunset'; // Using new color name
       default:
         return 'gray';
+    }
+  };
+
+  const getCardBgColor = (relation: string) => {
+    switch (relation) {
+      case 'Mor':
+        return 'bg-burnt-sienna-900 hover:bg-burnt-sienna-800 border-burnt-sienna-400'; 
+      case 'Far':
+        return 'bg-delft-blue-900 hover:bg-delft-blue-800 border-delft-blue-400';
+      case 'Underviser':
+        return 'bg-cambridge-blue-900 hover:bg-cambridge-blue-800 border-cambridge-blue-400';
+      case 'Ressourceperson':
+        return 'bg-sunset-900 hover:bg-sunset-800 border-sunset-400';
+      default:
+        return 'bg-white hover:bg-eggshell-900 border-eggshell-300';
     }
   };
 
@@ -121,12 +136,10 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
     return (
       <Box
         p={4}
-        bg="coral.50"
+        className="bg-burnt-sienna-900 border-l-4 border-burnt-sienna-400"
         borderRadius="lg"
-        borderLeft="4px solid"
-        borderColor="coral.400"
       >
-        <Text color="coral.700" fontWeight="500">{error}</Text>
+        <Text className="text-burnt-sienna-600" fontWeight="500">{error}</Text>
       </Box>
     );
   }
@@ -134,10 +147,10 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
   if (children.length === 0) {
     return (
       <Box textAlign="center" py={8}>
-        <Text color="fg.muted" fontSize="lg" mb={2} fontWeight="500">
+        <Text className="text-delft-blue-600" fontSize="lg" mb={2} fontWeight="500">
           Ingen børn tilføjet endnu
         </Text>
-        <Text color="fg.subtle" fontSize="sm">
+        <Text className="text-delft-blue-400" fontSize="sm">
           Klik på "Tilføj barn" knappen ovenfor for at komme i gang.
         </Text>
       </Box>
@@ -154,14 +167,11 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
           <Card.Root 
             key={child.id} 
             variant="outline" 
-            borderColor="border.muted"
-            bg="bg.surface"
+            className={`${getCardBgColor(child.relation)} hover:shadow-lg`}
             shadow="sm"
             _hover={{ 
-              shadow: "md", 
               cursor: "pointer",
               transform: "translateY(-1px)",
-              borderColor: "primary.200"
             }}
             transition="all 0.2s ease"
             borderRadius="lg"
@@ -169,7 +179,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
             <Card.Body p={4}>
               <Box display="flex" justifyContent="space-between" alignItems="start">
                 <VStack align="start" gap={2} flex={1}>
-                  <Heading size="sm" color="fg.default" fontWeight="600">
+                  <Heading size="sm" className="text-delft-blue-500" fontWeight="600">
                     {child.name}
                   </Heading>
                   <Box display="flex" gap={2} flexWrap="wrap">
@@ -181,7 +191,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                       {getRelationDisplay(child)}
                     </Badge>
                     {child.isAdministrator && (
-                      <Badge colorPalette="golden" variant="solid" fontWeight="500">
+                      <Badge colorPalette="sunset" variant="solid" fontWeight="500">
                         Administrator
                       </Badge>
                     )}
@@ -191,7 +201,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                   <Button
                     size="sm"
                     variant="outline"
-                    colorPalette="navy"
+                    className="border-delft-blue-400 text-delft-blue-500 hover:bg-delft-blue-800 hover:text-delft-blue-500"
                     onClick={() => router.push(`/${generateSlug(child.name)}`)}
                     fontWeight="500"
                     _hover={{
@@ -207,7 +217,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                       trigger={
                         <Button
                           size="sm"
-                          colorPalette="coral"
+                          className="border-burnt-sienna-400 text-burnt-sienna-500 hover:bg-burnt-sienna-800 hover:text-burnt-sienna-500"
                           variant="outline"
                           fontWeight="500"
                         >

@@ -31,29 +31,30 @@ export default function Home() {
       alignItems="center" 
       justifyContent="center" 
       p={8}
+      className="bg-eggshell-900"
     >
       <VStack gap={8} textAlign="center">
-        <Heading size="2xl" color="blue.600">
+        <Heading size="2xl" className="text-delft-blue-500">
           Velkommen til ReSchool
         </Heading>
         
         {user === undefined ? (
           // Loading state
           <VStack gap={4}>
-            <Spinner size="lg" color="blue.500" />
-            <Text color="gray.600">Indlæser...</Text>
+            <Spinner size="lg" className="text-delft-blue-500" />
+            <Text className="text-delft-blue-600">Indlæser...</Text>
           </VStack>
         ) : user === null ? (
           // Not authenticated - show login/signup
           <VStack gap={4}>
-            <Text fontSize="lg" color="gray.600">
+            <Text fontSize="lg" className="text-delft-blue-600">
               Log ind eller opret en konto for at komme i gang.
             </Text>
             
             <HStack gap={4}>
               <Link href="/handler/sign-in">
                 <Button 
-                  colorScheme="blue" 
+                  className="bg-cambridge-blue-500 text-white hover:bg-cambridge-blue-400 shadow-md hover:shadow-lg"
                   size="lg"
                 >
                   Log ind
@@ -63,7 +64,7 @@ export default function Home() {
               <Link href="/handler/sign-up">
                 <Button 
                   variant="outline" 
-                  colorScheme="blue" 
+                  className="border-sunset-500 text-sunset-600 hover:bg-sunset-900 hover:text-sunset-600"
                   size="lg"
                 >
                   Opret bruger

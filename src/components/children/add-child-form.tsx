@@ -116,11 +116,9 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
           mb={4}
           p={3}
           borderRadius="lg"
-          bg={message.type === 'success' ? 'success.50' : 'error.50'}
-          borderLeft="4px solid"
-          borderColor={message.type === 'success' ? 'success.400' : 'error.400'}
+          className={message.type === 'success' ? 'bg-cambridge-blue-900 border-l-4 border-cambridge-blue-400' : 'bg-burnt-sienna-900 border-l-4 border-burnt-sienna-400'}
         >
-          <Text color={message.type === 'success' ? 'success.700' : 'error.700'} fontWeight="500">
+          <Text className={message.type === 'success' ? 'text-cambridge-blue-600' : 'text-burnt-sienna-600'} fontWeight="500">
             {message.text}
           </Text>
         </Box>
@@ -129,14 +127,12 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
       <DialogRoot open={open} onOpenChange={(e) => setOpen(e.open)} placement="center">
         <DialogTrigger asChild>
           <Button 
-            colorPalette="navy" 
+            className="bg-delft-blue-500 text-white hover:bg-delft-blue-400 shadow-md hover:shadow-lg"
             size="lg"
             fontWeight="600"
             px={6}
-            shadow="md"
             _hover={{
               transform: "translateY(-1px)",
-              shadow: "lg"
             }}
             transition="all 0.2s ease"
           >
@@ -144,7 +140,7 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
           </Button>
         </DialogTrigger>
 
-        <DialogBackdrop bg="navy.900/60" backdropFilter="blur(4px)" />
+        <DialogBackdrop className="bg-delft-blue-900/60" backdropFilter="blur(4px)" />
 
         <DialogContent 
           maxW="lg" 
@@ -154,44 +150,41 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
           left="50%"
           transform="translate(-50%, -50%)"
           zIndex="modal"
-          bg="cream.50"
+          className="bg-eggshell-900 border border-eggshell-300"
           borderRadius="xl"
           shadow="2xl"
-          border="1px solid"
-          borderColor="cream.200"
           p={0}
           maxH="90vh"
           overflow="hidden"
         >
-          <DialogHeader p={6} pb={0} bg="cream.100" borderTopRadius="xl">
-            <DialogTitle color="navy.800" fontWeight="600" fontSize="xl">Tilføj barn</DialogTitle>
+          <DialogHeader p={6} pb={0} className="bg-eggshell-800" borderTopRadius="xl">
+            <DialogTitle className="text-delft-blue-500" fontWeight="600" fontSize="xl">Tilføj barn</DialogTitle>
           </DialogHeader>
 
-          <DialogBody p={6} overflowY="auto" bg="cream.50">
+          <DialogBody p={6} overflowY="auto" className="bg-eggshell-900">
             <form onSubmit={handleSubmit} id="add-child-form">
               <VStack gap={4} align="stretch">
                 <Box>
-                  <Text mb={2} fontWeight="500" color="fg.default">Barnets navn</Text>
+                  <Text mb={2} fontWeight="500" className="text-delft-blue-600">Barnets navn</Text>
                   <Input
                     value={childName}
                     onChange={(e) => setChildName(e.target.value)}
                     placeholder="Indtast barnets navn"
-                    borderColor={errors.childName ? 'coral.400' : 'border.default'}
-                    bg="bg.subtle"
+                    className={errors.childName ? 'border-burnt-sienna-400 bg-white' : 'border-eggshell-400 bg-white'}
                     _focus={{
-                      borderColor: 'navy.500',
-                      shadow: '0 0 0 1px token(colors.navy.500)'
+                      borderColor: 'delft-blue.500',
+                      shadow: '0 0 0 1px token(colors.delft-blue.500)'
                     }}
                   />
                   {errors.childName && (
-                    <Text color="coral.500" fontSize="sm" mt={1} fontWeight="500">
+                    <Text className="text-burnt-sienna-500" fontSize="sm" mt={1} fontWeight="500">
                       {errors.childName}
                     </Text>
                   )}
                 </Box>
 
                 <Box>
-                  <Text mb={2} fontWeight="500" color="fg.default">Din relation til barnet</Text>
+                  <Text mb={2} fontWeight="500" className="text-delft-blue-600">Din relation til barnet</Text>
                   <VStack gap={2} align="start">
                     {[
                       { value: 'Mor', label: 'Mor' },
@@ -219,20 +212,19 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
 
                 {relation === 'Ressourceperson' && (
                   <Box>
-                    <Text mb={2} fontWeight="500" color="fg.default">Type af ressourceperson</Text>
+                    <Text mb={2} fontWeight="500" className="text-delft-blue-600">Type af ressourceperson</Text>
                     <Input
                       value={customRelationName}
                       onChange={(e) => setCustomRelationName(e.target.value)}
                       placeholder="f.eks. Psykolog, Talepædagog, etc."
-                      borderColor={errors.customRelationName ? 'coral.400' : 'border.default'}
-                      bg="bg.subtle"
+                      className={errors.customRelationName ? 'border-burnt-sienna-400 bg-white' : 'border-eggshell-400 bg-white'}
                       _focus={{
-                        borderColor: 'navy.500',
-                        shadow: '0 0 0 1px token(colors.navy.500)'
+                        borderColor: 'delft-blue.500',
+                        shadow: '0 0 0 1px token(colors.delft-blue.500)'
                       }}
                     />
                     {errors.customRelationName && (
-                      <Text color="coral.500" fontSize="sm" mt={1} fontWeight="500">
+                      <Text className="text-burnt-sienna-500" fontSize="sm" mt={1} fontWeight="500">
                         {errors.customRelationName}
                       </Text>
                     )}
@@ -242,14 +234,14 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
             </form>
           </DialogBody>
 
-          <DialogFooter p={6} pt={4} bg="cream.100" borderBottomRadius="xl" borderTop="1px solid" borderColor="cream.200">
+          <DialogFooter p={6} pt={4} className="bg-eggshell-800 border-t border-eggshell-300" borderBottomRadius="xl">
             <DialogActionTrigger asChild>
-              <Button variant="outline" colorPalette="gray">Annuller</Button>
+              <Button variant="outline" className="border-delft-blue-400 text-delft-blue-600 hover:bg-delft-blue-900">Annuller</Button>
             </DialogActionTrigger>
             <Button
               type="submit"
               form="add-child-form"
-              colorPalette="navy"
+              className="bg-cambridge-blue-500 text-white hover:bg-cambridge-blue-400"
               loading={isLoading}
               disabled={isLoading}
               fontWeight="600"

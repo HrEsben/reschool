@@ -31,10 +31,10 @@ export default function Dashboard() {
         justifyContent="center"
         flexDirection="column"
         gap={4}
-        bg="bg.canvas"
+        className="bg-eggshell-900"
       >
-        <Spinner size="xl" colorPalette="navy" />
-        <Text color="fg.muted" fontSize="lg" fontWeight="500">
+        <Spinner size="xl" className="text-delft-blue-500" />
+        <Text className="text-delft-blue-600" fontSize="lg" fontWeight="500">
           Indlæser...
         </Text>
       </Box>
@@ -47,15 +47,18 @@ export default function Dashboard() {
   }
 
   return (
-    <Box minH="100vh" bg="bg.canvas">
+    <Box minH="100vh" className="bg-eggshell-900">
       <Header />
       
       <Box p={8}>
         {/* Welcome Section */}
         <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
-          <Heading size="xl" color="navy.800" mb={4} fontWeight="700">
-            Dashboard
-          </Heading>
+          <Box>
+            <Heading size="xl" className="text-delft-blue-500" mb={2} fontWeight="700">
+              Dashboard
+            </Heading>
+            <Box className="w-16 h-1 bg-cambridge-blue-500 rounded-full"></Box>
+          </Box>
           
           
 

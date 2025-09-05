@@ -53,8 +53,7 @@ export function Header() {
   return (
     <Box 
       borderBottomWidth={1} 
-      borderColor="border.muted" 
-      bg="bg.surface" 
+      className="border-eggshell-400 bg-white shadow-sm"
       px={8} 
       py={4}
       position="sticky"
@@ -62,11 +61,10 @@ export function Header() {
       zIndex={100}
       width="100%"
       backdropFilter="blur(8px)"
-      shadow="sm"
     >
       <HStack justify="space-between" maxW="7xl" mx="auto" position="relative">
         {/* Logo */}
-        <Heading size="lg" color="navy.800" fontWeight="700" letterSpacing="-0.02em">
+        <Heading size="lg" className="text-delft-blue-500" fontWeight="700" letterSpacing="-0.02em">
           ReSchool
         </Heading>
         
@@ -78,9 +76,8 @@ export function Header() {
               onClick={() => router.push(item.href)}
               fontSize="sm"
               fontWeight="500"
-              color="fg.muted"
+              className="text-delft-blue-600 hover:text-delft-blue-500 hover:bg-cambridge-blue-900 focus:bg-cambridge-blue-800 focus:text-delft-blue-500"
               _hover={{ 
-                color: "navy.700",
                 textDecoration: "none",
                 transform: "translateY(-1px)"
               }}
@@ -89,11 +86,6 @@ export function Header() {
               px={3}
               py={2}
               borderRadius="md"
-              _focus={{
-                outline: "none",
-                bg: "cream.100",
-                color: "navy.800"
-              }}
             >
               {item.label}
             </Link>
@@ -109,7 +101,7 @@ export function Header() {
               onClick={() => setIsMenuOpen(true)}
               variant="ghost"
               display={{ base: "flex", md: "none" }}
-              colorPalette="navy"
+              className="text-delft-blue-500 hover:bg-cambridge-blue-900"
               size="sm"
             >
               <HamburgerIcon />
