@@ -9,6 +9,7 @@ import {
   HStack,
   Input,
   Text,
+  Icon,
   DialogActionTrigger,
   DialogBackdrop,
   DialogBody,
@@ -129,16 +130,23 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
       <DialogRoot open={open} onOpenChange={(e) => setOpen(e.open)} placement="center">
         <DialogTrigger asChild>
           <Button 
-            className="bg-delft-blue-500 text-white hover:bg-delft-blue-400"
+            bg="#81b29a"
+            color="#f4f1de"
             size="lg"
             fontWeight="600"
             px={6}
             _hover={{
+              bg: "#6da085",
               transform: "translateY(-1px)",
             }}
             transition="all 0.2s ease"
           >
-            Tilføj barn
+            <Icon mr={2} boxSize={5}>
+              <svg fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+            </Icon>
+            Tilføj
           </Button>
         </DialogTrigger>
 
@@ -161,19 +169,19 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
           <DialogHeader 
             p={6} 
             pb={4} 
-            bg="#f8f9fc" 
+            bg="linear-gradient(135deg, #81b29a, #f4f1de)"
             borderBottom="1px solid" 
-            borderBottomColor="#e1e5f0" 
+            borderBottomColor="#81b29a" 
             borderTopRadius="xl"
           >
-            <DialogTitle color="#2a3a5c" fontWeight="600" fontSize="xl">Tilføj barn</DialogTitle>
+            <DialogTitle color="white" fontWeight="600" fontSize="xl">Tilføj barn</DialogTitle>
           </DialogHeader>
 
-          <DialogBody p={6} overflowY="auto" className="bg-eggshell-900">
+          <DialogBody p={6} overflowY="auto" bg="#f4f1de">
             <form onSubmit={handleSubmit} id="add-child-form">
               <VStack gap={4} align="stretch">
                 <Box>
-                  <Text mb={2} fontWeight="500" className="text-delft-blue-600">Barnets navn</Text>
+                  <Text mb={2} fontWeight="500" color="#3d405b">Barnets navn</Text>
                   <Input
                     value={childName}
                     onChange={(e) => setChildName(e.target.value)}
@@ -181,8 +189,9 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
                     bg="white"
                     className={errors.childName ? 'border-burnt-sienna-400' : 'border-eggshell-400'}
                     _focus={{
-                      borderColor: 'delft-blue.500',
-                      shadow: '0 0 0 1px token(colors.delft-blue.500)'
+                      borderColor: '#81b29a',
+                      shadow: '0 0 0 1px #81b29a',
+                      outline: 'none'
                     }}
                   />
                   {errors.childName && (
@@ -193,7 +202,7 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
                 </Box>
 
                 <Box>
-                  <Text mb={3} fontWeight="500" className="text-delft-blue-600">Din relation til barnet</Text>
+                  <Text mb={3} fontWeight="500" color="#3d405b">Din relation til barnet</Text>
                   <Card.Root 
                     variant="outline" 
                     className="border-eggshell-400"
@@ -217,12 +226,15 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
                             <RadioGroup.Item
                               key={option.value}
                               value={option.value}
-                              className="hover:bg-eggshell-900 rounded-sm px-2 py-1 cursor-pointer w-full transition-colors duration-200"
+                              className="hover:bg-[#f4f1de] rounded-sm px-2 py-1 cursor-pointer w-full transition-colors duration-200"
                             >
                               <HStack gap={3}>
                                 <RadioGroup.ItemHiddenInput />
-                                <RadioGroup.ItemIndicator className="border-delft-blue-500 data-[checked]:bg-delft-blue-500" />
-                                <RadioGroup.ItemText fontWeight="500" className="text-delft-blue-700">
+                                <RadioGroup.ItemIndicator 
+                                  borderColor="#81b29a" 
+                                  _checked={{ bg: "#81b29a", borderColor: "#81b29a" }}
+                                />
+                                <RadioGroup.ItemText fontWeight="500" color="#3d405b">
                                   {option.label}
                                 </RadioGroup.ItemText>
                               </HStack>
@@ -243,7 +255,7 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
                   }}
                 >
                   <Box pt={relation === 'Ressourceperson' ? 2 : 0} px={1} pb={2}>
-                    <Text mb={2} fontWeight="500" className="text-delft-blue-600">Type af ressourceperson</Text>
+                    <Text mb={2} fontWeight="500" color="#3d405b">Type af ressourceperson</Text>
                     <Box px={1} pb={1}>
                       <Input
                         value={customRelationName}
@@ -252,8 +264,9 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
                         bg="white"
                         className={errors.customRelationName ? 'border-burnt-sienna-400' : 'border-eggshell-400'}
                         _focus={{
-                          borderColor: 'delft-blue.500',
-                          shadow: '0 0 0 1px token(colors.delft-blue.500)'
+                          borderColor: '#81b29a',
+                          shadow: '0 0 0 1px #81b29a',
+                          outline: 'none'
                         }}
                       />
                     </Box>
@@ -277,12 +290,14 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
             borderBottomRadius="xl"
           >
             <DialogActionTrigger asChild>
-              <Button variant="outline" className="border-delft-blue-400 text-delft-blue-600 hover:bg-delft-blue-900">Annuller</Button>
+              <Button variant="outline" borderColor="#81b29a" color="#3d405b" _hover={{ bg: "#81b29a", color: "#f4f1de" }}>Annuller</Button>
             </DialogActionTrigger>
             <Button
               type="submit"
               form="add-child-form"
-              className="bg-cambridge-blue-500 text-white hover:bg-cambridge-blue-400"
+              bg="#81b29a"
+              color="#f4f1de"
+              _hover={{ bg: "#6da085" }}
               loading={isLoading}
               disabled={isLoading}
               fontWeight="600"

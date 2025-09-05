@@ -110,29 +110,32 @@ export const Header = memo(function Header() {
         position="relative"
       >
         {/* Logo */}
-        <Heading 
-          size={{ base: "xl", md: "lg" }}
-          fontWeight="700" 
-          letterSpacing="-0.02em"
-          style={{
-            background: 'linear-gradient(135deg, #e07a5f 0%, #3d405b 25%, #81b29a 75%, #f2cc8f 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}
-          order={{ base: 0, md: 0 }}
-        >
-          ReSchool<Text 
-            as="sup" 
-            fontSize="2xs" 
-            ml={0.5}
-            fontWeight="300"
+        <Link href="/dashboard" _hover={{ textDecoration: "none" }}>
+          <Heading 
+            size={{ base: "xl", md: "lg" }}
+            fontWeight="700" 
+            letterSpacing="-0.02em"
             style={{
-              color: '#81b29a',
-              WebkitTextFillColor: '#81b29a'
+              background: 'linear-gradient(135deg, #e07a5f 0%, #3d405b 25%, #81b29a 75%, #f2cc8f 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
             }}
-          >©</Text>
-        </Heading>
+            order={{ base: 0, md: 0 }}
+            cursor="pointer"
+          >
+            ReSchool<Text 
+              as="sup" 
+              fontSize="2xs" 
+              ml={0.5}
+              fontWeight="300"
+              style={{
+                color: '#81b29a',
+                WebkitTextFillColor: '#81b29a'
+              }}
+            >©</Text>
+          </Heading>
+        </Link>
         
         {/* Desktop Navigation - Breadcrumb Style */}
         <HStack gap={2} display={{ base: "none", md: "flex" }}>

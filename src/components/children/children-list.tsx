@@ -176,22 +176,21 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
         {children.map((child) => (
           <Card.Root 
             key={child.id} 
-            variant="elevated"
-            bg="white"
+            variant="outline"
+            bg="#f4f1de"
             borderRadius="xl"
             borderWidth={1}
-            borderColor="gray.200"
+            borderColor="#81b29a"
             _hover={{ 
-              shadow: "lg",
-              borderColor: "blue.300"
+              borderColor: "#3d405b"
             }}
             transition="all 0.3s ease"
             overflow="hidden"
           >
             <Card.Body p={0}>
-              {/* Header section with solid color */}
+              {/* Header section with soft gradient */}
               <Box 
-                bg="#3d405b"
+                bg="linear-gradient(135deg, #81b29a, #f4f1de)"
                 px={6}
                 py={4}
               >
@@ -202,23 +201,24 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                   <HStack gap={2}>
                     {getBadgeInfo(child).map((badge, index) => (
                       badge.type === 'icon' ? (
-                        <Box
+                        <HStack
                           key={index}
-                          bg="whiteAlpha.200"
-                          p={1.5}
-                          borderRadius="full"
-                          display="flex"
-                          alignItems="center"
-                          justifyContent="center"
-                          border="1px solid"
-                          borderColor="whiteAlpha.300"
+                          bg="rgba(255, 255, 255, 0.9)"
+                          px={2}
+                          py={0.5}
+                          borderRadius="sm"
+                          gap={1}
+                          align="center"
                         >
-                          <Icon color="whiteAlpha.800" boxSize={3}>
+                          <Icon color="#3d405b" boxSize={3}>
                             <svg fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 2L13 7l5.5 1-4 4 1 5.5L10 15l-5.5 2.5 1-5.5-4-4L7 7l3-5z" clipRule="evenodd" />
                             </svg>
                           </Icon>
-                        </Box>
+                          <Text fontSize="xs" color="#3d405b" fontWeight="500">
+                            Administrator
+                          </Text>
+                        </HStack>
                       ) : (
                         <Badge
                           key={index}
@@ -226,13 +226,13 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                           variant={badge.variant}
                           size="sm"
                           fontWeight="500"
-                          px={3}
-                          py={1}
-                          borderRadius="full"
-                          bg="whiteAlpha.200"
-                          color="white"
-                          borderWidth={1}
-                          borderColor="whiteAlpha.300"
+                          px={2}
+                          py={0.5}
+                          borderRadius="sm"
+                          bg="rgba(255, 255, 255, 0.9)"
+                          color="#3d405b"
+                          borderWidth={0}
+                          fontSize="xs"
                         >
                           {badge.label}
                         </Badge>
@@ -247,14 +247,14 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                 <HStack justify="space-between" align="center">
                   {/* Future tools section */}
                   <HStack gap={2}>
-                    <Text fontSize="sm" color="gray.600" fontWeight="500">
+                    <Text fontSize="sm" color="#3d405b" fontWeight="500">
                       Værktøjer kommer snart
                     </Text>
                     {/* Placeholder for future tool icons */}
                     <Box display="flex" gap={1}>
-                      <Box w={6} h={6} bg="gray.100" borderRadius="sm" />
-                      <Box w={6} h={6} bg="gray.100" borderRadius="sm" />
-                      <Box w={6} h={6} bg="gray.100" borderRadius="sm" />
+                      <Box w={6} h={6} bg="#e07a5f" opacity={0.3} borderRadius="sm" />
+                      <Box w={6} h={6} bg="#81b29a" opacity={0.3} borderRadius="sm" />
+                      <Box w={6} h={6} bg="#f2cc8f" opacity={0.3} borderRadius="sm" />
                     </Box>
                   </HStack>
                   
@@ -282,17 +282,25 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                         trigger={
                           <Button
                             size="sm"
-                            colorPalette="red"
+                            borderColor="#e07a5f"
+                            color="#e07a5f"
                             variant="outline"
                             fontWeight="500"
-                            px={4}
+                            p={2}
                             borderRadius="full"
                             _hover={{
+                              bg: "#e07a5f",
+                              color: "white",
                               shadow: "md"
                             }}
                             transition="all 0.2s ease"
+                            aria-label="Slet barn"
                           >
-                            Slet
+                            <Icon boxSize={4}>
+                              <svg fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53L15.986 5.952l.149.022a.75.75 0 00.23-1.482A48.16 48.16 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                              </svg>
+                            </Icon>
                           </Button>
                         }
                         childName={child.name}
