@@ -1,10 +1,11 @@
 "use client";
 
 import { useUser } from "@stackframe/stack";
-import { Box, Heading, Text, VStack, Card } from "@chakra-ui/react";
+import { Box, Heading, Text, VStack, Spinner } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Header } from "@/components/ui/header";
+import { ChildrenManager } from "@/components/children/children-manager";
 
 export default function Dashboard() {
   const user = useUser();
@@ -28,8 +29,13 @@ export default function Dashboard() {
         display="flex" 
         alignItems="center" 
         justifyContent="center"
+        flexDirection="column"
+        gap={4}
       >
-        <Text>Loading...</Text>
+        <Spinner size="xl" color="blue.500" />
+        <Text color="gray.600" fontSize="lg">
+          Indlæser...
+        </Text>
       </Box>
     );
   }
@@ -50,32 +56,12 @@ export default function Dashboard() {
             Dashboard
           </Heading>
           
-          <Card.Root>
-            <Card.Body>
-              <VStack align="start" gap={2}>
-                <Heading size="lg">
-                  Velkommen, {user.displayName || user.primaryEmail}!
-                </Heading>
-                <Text color="gray.600">
-                  Dette er dit dashboard. Her kan du administrere dine kurser og aktiviteter.
-                </Text>
-              </VStack>
-            </Card.Body>
-          </Card.Root>
+          
 
-          {/* Dashboard Content - Empty for now */}
-          <Card.Root>
-            <Card.Body>
-              <VStack gap={4} py={8}>
-                <Heading size="md" color="gray.500">
-                  Dashboard indhold kommer snart
-                </Heading>
-                <Text color="gray.400" textAlign="center">
-                  Her vil du kunne se dine kurser, opgaver og fremskridt.
-                </Text>
-              </VStack>
-            </Card.Body>
-          </Card.Root>
+          {/* Child Management Section */}
+          <ChildrenManager />
+
+        
         </VStack>
       </Box>
     </Box>

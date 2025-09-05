@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser } from "@stackframe/stack";
-import { Box, Button, Heading, Text, VStack, HStack } from "@chakra-ui/react";
+import { Box, Button, Heading, Text, VStack, HStack, Spinner } from "@chakra-ui/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -39,7 +39,10 @@ export default function Home() {
         
         {user === undefined ? (
           // Loading state
-          <Text>Loading...</Text>
+          <VStack gap={4}>
+            <Spinner size="lg" color="blue.500" />
+            <Text color="gray.600">Indlæser...</Text>
+          </VStack>
         ) : user === null ? (
           // Not authenticated - show login/signup
           <VStack gap={4}>

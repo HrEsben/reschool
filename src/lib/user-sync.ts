@@ -1,40 +1,39 @@
-// Example: How to sync user data to your Neon database when needed
-// This would go in a utils file or API route
+// User sync service - syncs Stack Auth users to Neon database
 
 import { stackServerApp } from "@/stack";
+import { syncUserToDatabase, getUserByStackAuthId } from "./database-service";
 
-export async function syncUserToDatabase() {
+export async function ensureUserInDatabase() {
   try {
     // Get current user from Stack Auth
     const user = await stackServerApp.getUser();
     
     if (!user) return null;
 
-    // Sync to your Neon database (you'll need to set up your DB schema)
-    // Example with a hypothetical database client:
-    /*
-    const dbUser = await db.user.upsert({
-      where: { stackAuthId: user.id },
-      update: {
-        email: user.primaryEmail,
-        displayName: user.displayName,
-        profileImageUrl: user.profileImageUrl,
-        updatedAt: new Date(),
-      },
-      create: {
-        stackAuthId: user.id,
-        email: user.primaryEmail,
-        displayName: user.displayName,
-        profileImageUrl: user.profileImageUrl,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    });
-    */
+    // Check if user already exists in database
+    let dbUser = await getUserByStackAuthId(user.id);
+    
+    // If user doesn't exist, sync them to database
+    if (!dbUser) {
+      dbUser = await syncUserToDatabase(user);
+    }
 
-    return user;
+    return dbUser;
   } catch (error) {
-    console.error('Error syncing user to database:', error);
+    console.error('Error ensuring user in database:', error);
+    return null;
+  }
+}
+
+// Alternative function for manual syncing
+export async function syncCurrentUser() {
+  try {
+    const user = await stackServerApp.getUser();
+    if (!user) return null;
+
+    return await syncUserToDatabase(user);
+  } catch (error) {
+    console.error('Error syncing current user:', error);
     return null;
   }
 }

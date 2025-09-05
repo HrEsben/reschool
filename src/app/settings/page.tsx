@@ -13,7 +13,8 @@ import {
   Field,
   Dialog,
   Portal,
-  CloseButton
+  CloseButton,
+  Spinner
 } from "@chakra-ui/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -65,8 +66,13 @@ export default function Settings() {
         display="flex" 
         alignItems="center" 
         justifyContent="center"
+        flexDirection="column"
+        gap={4}
       >
-        <Text>Loading...</Text>
+        <Spinner size="xl" color="blue.500" />
+        <Text color="gray.600" fontSize="lg">
+          Indlæser...
+        </Text>
       </Box>
     );
   }
