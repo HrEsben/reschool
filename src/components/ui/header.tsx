@@ -75,7 +75,16 @@ export function Header() {
             backgroundClip: 'text'
           }}
         >
-          ReSchool
+          ReSchool<Text 
+            as="sup" 
+            fontSize="2xs" 
+            ml={0.5}
+            fontWeight="300"
+            style={{
+              color: '#81b29a',
+              WebkitTextFillColor: '#81b29a'
+            }}
+          >©</Text>
         </Heading>
         
         {/* Desktop Navigation */}
