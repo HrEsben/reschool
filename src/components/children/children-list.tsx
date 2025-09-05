@@ -12,6 +12,7 @@ import {
   Spinner,
   Button
 } from '@chakra-ui/react';
+import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 
 interface Child {
   id: string;
@@ -30,10 +31,35 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
   const [children, setChildren] = useState<Child[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingChildId, setDeletingChildId] = useState<string | null>(null);
   const router = useRouter();
 
   const generateSlug = (name: string) => {
     return name.toLowerCase().replace(/\s+/g, '-');
+  };
+
+  const handleDeleteChild = async (child: Child) => {
+    setDeletingChildId(child.id);
+    
+    try {
+      const response = await fetch(`/api/children/${child.id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || 'Der opstod en fejl ved sletning af barnet');
+        return;
+      }
+      
+      // Refresh the children list
+      fetchChildren();
+    } catch (error) {
+      console.error('Error deleting child:', error);
+      setError('Der opstod en netværksfejl ved sletning af barnet');
+    } finally {
+      setDeletingChildId(null);
+    }
   };
 
   const fetchChildren = async () => {
@@ -63,7 +89,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
 
   const getRelationDisplay = (child: Child) => {
     if (child.relation === 'Ressourceperson' && child.customRelationName) {
-      return `${child.relation} (${child.customRelationName})`;
+      return child.customRelationName;
     }
     return child.relation;
   };
@@ -77,7 +103,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
       case 'Underviser':
         return 'green';
       case 'Ressourceperson':
-        return 'purple';
+        return 'orange';
       default:
         return 'gray';
     }
@@ -95,8 +121,8 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
     return (
       <Box
         p={4}
-        borderRadius="md"
         bg="red.50"
+        borderRadius="md"
         borderLeft="4px solid"
         borderColor="red.400"
       >
@@ -126,7 +152,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
         </Heading>
       </Box>
       
-            <VStack gap={3} align="stretch">
+      <VStack gap={3} align="stretch">
         {children.map((child) => (
           <Card.Root key={child.id} variant="outline" _hover={{ shadow: "md", cursor: "pointer" }}>
             <Card.Body p={4}>
@@ -152,13 +178,31 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
                     Tilføjet: {new Date(child.createdAt).toLocaleDateString('da-DK')}
                   </Text>
                 </VStack>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => router.push(`/${generateSlug(child.name)}`)}
-                >
-                  Se profil
-                </Button>
+                <VStack gap={2}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => router.push(`/${generateSlug(child.name)}`)}
+                  >
+                    Se profil
+                  </Button>
+                  {child.isAdministrator && (
+                    <DeleteChildDialog
+                      trigger={
+                        <Button
+                          size="sm"
+                          colorScheme="red"
+                          variant="outline"
+                        >
+                          🗑️ Slet
+                        </Button>
+                      }
+                      childName={child.name}
+                      onConfirm={() => handleDeleteChild(child)}
+                      isLoading={deletingChildId === child.id}
+                    />
+                  )}
+                </VStack>
               </Box>
             </Card.Body>
           </Card.Root>

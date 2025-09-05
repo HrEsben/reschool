@@ -80,6 +80,16 @@ export async function getUserByStackAuthId(stackAuthId: string): Promise<User | 
 }
 
 // Child service functions
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-æøå]/g, '') // Remove special characters but keep Danish characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+}
+
 export async function createChild(
   name: string,
   createdByUserId: number,
@@ -91,10 +101,12 @@ export async function createChild(
   try {
     await client.query('BEGIN');
 
+    const slug = generateSlug(name);
+
     // Create the child
     const childResult = await client.query(
-      'INSERT INTO children (name, created_by) VALUES ($1, $2) RETURNING *',
-      [name, createdByUserId]
+      'INSERT INTO children (name, slug, created_by) VALUES ($1, $2, $3) RETURNING *',
+      [name, slug, createdByUserId]
     );
 
     const child = childResult.rows[0] as Child;
@@ -139,6 +151,7 @@ export async function getChildrenForUser(userId: number): Promise<ChildWithRelat
     return result.rows.map(row => ({
       id: row.id,
       name: row.name,
+      slug: row.slug,
       createdBy: row.created_by,
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString(),
@@ -186,12 +199,37 @@ export async function getChildById(childId: number): Promise<Child | null> {
     return {
       id: row.id,
       name: row.name,
+      slug: row.slug,
       createdBy: row.created_by,
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString()
     };
   } catch (error) {
     console.error('Error getting child by ID:', error);
+    return null;
+  }
+}
+
+export async function getChildBySlug(slug: string): Promise<Child | null> {
+  try {
+    const result = await query(
+      'SELECT * FROM children WHERE slug = $1',
+      [slug]
+    );
+
+    if (result.rows.length === 0) return null;
+    
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      createdBy: row.created_by,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error getting child by slug:', error);
     return null;
   }
 }
@@ -256,5 +294,60 @@ export async function getChildWithUsers(childId: number): Promise<{child: Child;
   } catch (error) {
     console.error('Error getting child with users:', error);
     return null;
+  }
+}
+
+export async function isUserAdministratorForChild(userId: number, childId: number): Promise<boolean> {
+  try {
+    const result = await query(
+      'SELECT is_administrator FROM user_child_relations WHERE user_id = $1 AND child_id = $2',
+      [userId, childId]
+    );
+
+    return result.rows.length > 0 && result.rows[0].is_administrator;
+  } catch (error) {
+    console.error('Error checking administrator status:', error);
+    return false;
+  }
+}
+
+export async function deleteChild(childId: number, requestingUserId: number): Promise<boolean> {
+  const client = await getClient();
+  
+  try {
+    // First check if the requesting user is an administrator for this child
+    const isAdmin = await isUserAdministratorForChild(requestingUserId, childId);
+    if (!isAdmin) {
+      console.error('User is not authorized to delete this child');
+      return false;
+    }
+
+    await client.query('BEGIN');
+
+    // Delete all user-child relations first (due to foreign key constraints)
+    await client.query(
+      'DELETE FROM user_child_relations WHERE child_id = $1',
+      [childId]
+    );
+
+    // Delete the child
+    const result = await client.query(
+      'DELETE FROM children WHERE id = $1',
+      [childId]
+    );
+
+    if (result.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return false;
+    }
+
+    await client.query('COMMIT');
+    return true;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting child:', error);
+    return false;
+  } finally {
+    client.release();
   }
 }

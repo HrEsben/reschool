@@ -17,6 +17,7 @@ import {
   Table
 } from '@chakra-ui/react';
 import { Header } from '@/components/ui/header';
+import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 
 interface UserWithRelation {
   id: number;
@@ -50,6 +51,7 @@ export default function ChildProfilePage() {
   const [childData, setChildData] = useState<ChildData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const childId = params.childId as string;
 
@@ -127,6 +129,32 @@ export default function ChildProfilePage() {
       return `${name}´`;
     }
     return `${name}s`;
+  };
+
+  const handleDeleteChild = async () => {
+    if (!childData) return;
+    
+    setDeleting(true);
+    
+    try {
+      const response = await fetch(`/api/children/${childData.child.id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        alert(errorData.error || 'Der opstod en fejl ved sletning af barnet');
+        return;
+      }
+      
+      // Redirect to dashboard after successful deletion
+      router.push('/dashboard');
+    } catch (error) {
+      console.error('Error deleting child:', error);
+      alert('Der opstod en netværksfejl ved sletning af barnet');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // Show loading state while checking authentication
@@ -233,12 +261,28 @@ export default function ChildProfilePage() {
               </VStack>
               
               {isCurrentUserAdmin && (
-                <Button
-                  colorScheme="blue"
-                  variant="outline"
-                >
-                  ⚙️ Indstillinger
-                </Button>
+                <HStack gap={3}>
+                  <Button
+                    colorScheme="blue"
+                    variant="outline"
+                  >
+                    ⚙️ Indstillinger
+                  </Button>
+                  
+                  <DeleteChildDialog
+                    trigger={
+                      <Button
+                        colorScheme="red"
+                        variant="outline"
+                      >
+                        🗑️ Slet barn
+                      </Button>
+                    }
+                    childName={childData.child.name}
+                    onConfirm={handleDeleteChild}
+                    isLoading={deleting}
+                  />
+                </HStack>
               )}
             </HStack>
           </Box>
