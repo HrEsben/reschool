@@ -34,8 +34,19 @@ export default function Home() {
       className="bg-eggshell-900"
     >
       <VStack gap={8} textAlign="center">
-        <Heading size="2xl" className="text-delft-blue-500">
-          Velkommen til ReSchool
+        <Heading 
+          size="4xl" 
+          fontWeight="900"
+          letterSpacing="-0.05em"
+          style={{
+            background: 'linear-gradient(135deg, #e07a5f 0%, #3d405b 25%, #81b29a 75%, #f2cc8f 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            fontStretch: 'condensed'
+          }}
+        >
+          ReSchool
         </Heading>
         
         {user === undefined ? (
@@ -46,26 +57,36 @@ export default function Home() {
           </VStack>
         ) : user === null ? (
           // Not authenticated - show login/signup
-          <VStack gap={4}>
-            <Text fontSize="lg" className="text-delft-blue-600">
-              Log ind eller opret en konto for at komme i gang.
+          <VStack gap={6}>
+            <Text fontSize="lg" className="text-delft-blue-600" maxW="md" textAlign="center" lineHeight="1.6">
+              En tryg vej tilbage i skole for børn med ufrivilligt skolefravær
             </Text>
             
             <HStack gap={4}>
-              <Link href="/handler/sign-in">
+              <Link href="/login">
                 <Button 
-                  className="bg-cambridge-blue-500 text-white hover:bg-cambridge-blue-400"
+                  bg="#81b29a"
+                  color="white"
+                  _hover={{ bg: "#6da085" }}
                   size="lg"
+                  fontWeight="600"
                 >
                   Log ind
                 </Button>
               </Link>
               
-              <Link href="/handler/sign-up">
+              <Link href="/signup">
                 <Button 
-                  variant="outline" 
-                  className="border-sunset-500 text-sunset-600 hover:bg-sunset-900 hover:text-sunset-600"
+                  variant="outline"
+                  borderColor="#f2cc8f"
+                  color="#d4a574"
+                  _hover={{ 
+                    bg: "#f2cc8f", 
+                    color: "#8b6914",
+                    borderColor: "#f2cc8f"
+                  }}
                   size="lg"
+                  fontWeight="600"
                 >
                   Opret bruger
                 </Button>
