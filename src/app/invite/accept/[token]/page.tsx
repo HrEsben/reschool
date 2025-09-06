@@ -179,7 +179,7 @@ export default function InviteAcceptPage() {
                 </svg>
               </Icon>
               <Heading size="xl" color="white" textAlign="center" fontWeight="700">
-                You're Invited!
+                You&apos;re Invited!
               </Heading>
             </VStack>
           </Box>
@@ -188,10 +188,14 @@ export default function InviteAcceptPage() {
           <Card.Body p={8}>
             <VStack gap={6} align="stretch">
               <Alert.Root status="info" colorPalette="blue">
-                <Alert.Icon />
+                <Icon color="blue.500" boxSize={5}>
+                  <svg fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                </Icon>
                 <Alert.Title>Join ReSchool</Alert.Title>
                 <Alert.Description>
-                  You've been invited to connect with <strong>{invitation.childName}</strong> by{' '}
+                  You&apos;ve been invited to connect with <strong>{invitation.childName}</strong> by{' '}
                   <strong>{invitation.inviterName}</strong> ({invitation.inviterRelation}).
                 </Alert.Description>
               </Alert.Root>
@@ -206,8 +210,7 @@ export default function InviteAcceptPage() {
 
                 <HStack gap={3} justify="center">
                   <Button
-                    as="a"
-                    href="/handler/sign-up"
+                    onClick={() => router.push('/handler/sign-up')}
                     bg="#81b29a"
                     color="white"
                     _hover={{ bg: "#6d9985" }}
@@ -216,8 +219,7 @@ export default function InviteAcceptPage() {
                     Sign Up
                   </Button>
                   <Button
-                    as="a"
-                    href="/handler/sign-in"
+                    onClick={() => router.push('/handler/sign-in')}
                     variant="outline"
                     colorPalette="green"
                     size="lg"
@@ -266,10 +268,14 @@ export default function InviteAcceptPage() {
         <Card.Body p={8}>
           <VStack gap={6} align="stretch">
             <Alert.Root status="success" colorPalette="green">
-              <Alert.Icon />
+              <Icon color="green.500" boxSize={5}>
+                <svg fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </Icon>
               <Alert.Title>Welcome, {user.displayName || user.primaryEmail}!</Alert.Title>
               <Alert.Description>
-                You've been invited to connect with <strong>{invitation.childName}</strong> as their{' '}
+                You&apos;ve been invited to connect with <strong>{invitation.childName}</strong> as their{' '}
                 <strong>{invitation.customRelationName || invitation.relation}</strong>.
               </Alert.Description>
             </Alert.Root>
