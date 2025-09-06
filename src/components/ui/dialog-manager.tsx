@@ -158,6 +158,9 @@ export function DialogManager({
         p={0}
         maxH="90vh"
         overflow="hidden"
+        margin={0}
+        marginBlock={0}
+        marginInline={0}
       >
         {/* Header */}
         <DialogHeader 

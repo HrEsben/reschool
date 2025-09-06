@@ -52,6 +52,34 @@ export interface ChildWithRelation extends Child {
   isAdministrator: boolean;
 }
 
+export interface Barometer {
+  id: number;
+  childId: number;
+  createdBy: number;
+  topic: string;
+  scaleMin: number;
+  scaleMax: number;
+  displayType: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BarometerEntry {
+  id: number;
+  barometerId: number;
+  recordedBy: number;
+  entryDate: string; // YYYY-MM-DD format
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BarometerWithLatestEntry extends Barometer {
+  latestEntry?: BarometerEntry;
+  recordedByName?: string;
+}
+
 interface StackAuthUser {
   id: string;
   primaryEmail: string | null;
@@ -746,6 +774,269 @@ export async function checkUserIsChildAdmin(userId: number, childId: number): Pr
     return result.rows.length > 0 && result.rows[0].is_administrator;
   } catch (error) {
     console.error('Error checking admin status:', error);
+    return false;
+  }
+}
+
+// ================== BAROMETER FUNCTIONS ==================
+
+// Create a new barometer
+export async function createBarometer(
+  childId: number,
+  createdBy: number,
+  topic: string,
+  scaleMin: number = 1,
+  scaleMax: number = 5,
+  displayType: string = 'numbers'
+): Promise<Barometer | null> {
+  try {
+    const result = await query(
+      `INSERT INTO barometers (child_id, created_by, topic, scale_min, scale_max, display_type)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [childId, createdBy, topic, scaleMin, scaleMax, displayType]
+    );
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      childId: row.child_id,
+      createdBy: row.created_by,
+      topic: row.topic,
+      scaleMin: row.scale_min,
+      scaleMax: row.scale_max,
+      displayType: row.display_type,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error creating barometer:', error);
+    return null;
+  }
+}
+
+// Get all barometers for a child
+export async function getBarometersForChild(childId: number): Promise<BarometerWithLatestEntry[]> {
+  try {
+    const result = await query(
+      `SELECT 
+         b.*,
+         be.id as latest_entry_id,
+         be.entry_date as latest_entry_date,
+         be.rating as latest_rating,
+         be.comment as latest_comment,
+         be.recorded_by as latest_recorded_by,
+         be.created_at as latest_entry_created_at,
+         u.display_name as recorded_by_name
+       FROM barometers b
+       LEFT JOIN LATERAL (
+         SELECT * FROM barometer_entries 
+         WHERE barometer_id = b.id 
+         ORDER BY entry_date DESC 
+         LIMIT 1
+       ) be ON true
+       LEFT JOIN users u ON be.recorded_by = u.id
+       WHERE b.child_id = $1
+       ORDER BY b.created_at DESC`,
+      [childId]
+    );
+
+    return result.rows.map(row => {
+      const barometer: BarometerWithLatestEntry = {
+        id: row.id,
+        childId: row.child_id,
+        createdBy: row.created_by,
+        topic: row.topic,
+        scaleMin: row.scale_min,
+        scaleMax: row.scale_max,
+        displayType: row.display_type || 'numbers',
+        createdAt: new Date(row.created_at).toISOString(),
+        updatedAt: new Date(row.updated_at).toISOString()
+      };
+
+      if (row.latest_entry_id) {
+        barometer.latestEntry = {
+          id: row.latest_entry_id,
+          barometerId: row.id,
+          recordedBy: row.latest_recorded_by,
+          entryDate: row.latest_entry_date,
+          rating: row.latest_rating,
+          comment: row.latest_comment,
+          createdAt: new Date(row.latest_entry_created_at).toISOString(),
+          updatedAt: new Date(row.latest_entry_created_at).toISOString()
+        };
+        barometer.recordedByName = row.recorded_by_name;
+      }
+
+      return barometer;
+    });
+  } catch (error) {
+    console.error('Error getting barometers for child:', error);
+    return [];
+  }
+}
+
+// Get a single barometer by ID
+export async function getBarometerById(barometerId: number): Promise<Barometer | null> {
+  try {
+    const result = await query(
+      'SELECT * FROM barometers WHERE id = $1',
+      [barometerId]
+    );
+
+    if (result.rows.length === 0) return null;
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      childId: row.child_id,
+      createdBy: row.created_by,
+      topic: row.topic,
+      scaleMin: row.scale_min,
+      scaleMax: row.scale_max,
+      displayType: row.display_type || 'numbers',
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error getting barometer by ID:', error);
+    return null;
+  }
+}
+
+// Create or update a barometer entry for today
+export async function recordBarometerEntry(
+  barometerId: number,
+  recordedBy: number,
+  rating: number,
+  comment?: string,
+  entryDate?: string // Optional, defaults to today
+): Promise<BarometerEntry | null> {
+  try {
+    const date = entryDate || new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+    const result = await query(
+      `INSERT INTO barometer_entries (barometer_id, recorded_by, entry_date, rating, comment)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (barometer_id, entry_date)
+       DO UPDATE SET
+         rating = EXCLUDED.rating,
+         comment = EXCLUDED.comment,
+         recorded_by = EXCLUDED.recorded_by,
+         updated_at = NOW()
+       RETURNING *`,
+      [barometerId, recordedBy, date, rating, comment]
+    );
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      barometerId: row.barometer_id,
+      recordedBy: row.recorded_by,
+      entryDate: row.entry_date,
+      rating: row.rating,
+      comment: row.comment,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error recording barometer entry:', error);
+    return null;
+  }
+}
+
+// Get barometer entries for a specific barometer
+export async function getBarometerEntries(
+  barometerId: number,
+  limit: number = 30
+): Promise<(BarometerEntry & { recordedByName?: string })[]> {
+  try {
+    const result = await query(
+      `SELECT 
+         be.*,
+         u.display_name as recorded_by_name
+       FROM barometer_entries be
+       LEFT JOIN users u ON be.recorded_by = u.id
+       WHERE be.barometer_id = $1
+       ORDER BY be.entry_date DESC
+       LIMIT $2`,
+      [barometerId, limit]
+    );
+
+    return result.rows.map(row => ({
+      id: row.id,
+      barometerId: row.barometer_id,
+      recordedBy: row.recorded_by,
+      entryDate: row.entry_date,
+      rating: row.rating,
+      comment: row.comment,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString(),
+      recordedByName: row.recorded_by_name
+    }));
+  } catch (error) {
+    console.error('Error getting barometer entries:', error);
+    return [];
+  }
+}
+
+// Delete a barometer (and all its entries)
+export async function deleteBarometer(barometerId: number): Promise<boolean> {
+  try {
+    const result = await query(
+      'DELETE FROM barometers WHERE id = $1',
+      [barometerId]
+    );
+
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Error deleting barometer:', error);
+    return false;
+  }
+}
+
+// Get a barometer entry by ID with child information
+export async function getBarometerEntryById(entryId: number): Promise<(BarometerEntry & { childId: number }) | null> {
+  try {
+    const result = await query(
+      `SELECT be.*, b.child_id 
+       FROM barometer_entries be
+       JOIN barometers b ON be.barometer_id = b.id
+       WHERE be.id = $1`,
+      [entryId]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      barometerId: row.barometer_id,
+      recordedBy: row.recorded_by,
+      entryDate: row.entry_date,
+      rating: row.rating,
+      comment: row.comment,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString(),
+      childId: row.child_id
+    };
+  } catch (error) {
+    console.error('Error getting barometer entry:', error);
+    return null;
+  }
+}
+
+// Delete a barometer entry
+export async function deleteBarometerEntry(entryId: number): Promise<boolean> {
+  try {
+    const result = await query(
+      'DELETE FROM barometer_entries WHERE id = $1',
+      [entryId]
+    );
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Error deleting barometer entry:', error);
     return false;
   }
 }

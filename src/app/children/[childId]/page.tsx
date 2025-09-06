@@ -18,6 +18,7 @@ import {
 } from '@chakra-ui/react';
 import { AppLayout } from '@/components/ui/app-layout';
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
+import { BarometerManager } from '@/components/barometer/barometer-manager';
 
 interface UserWithRelation {
   id: number;
@@ -334,7 +335,7 @@ export default function ChildProfilePage() {
             </VStack>
           </Box>
 
-          {/* Tools Section Placeholder */}
+          {/* Tools Section - Barometer */}
           <Box 
             bg="white" 
             borderRadius="lg" 
@@ -345,14 +346,15 @@ export default function ChildProfilePage() {
           >
             <VStack align="stretch" gap={4}>
               <Heading size="lg" color="gray.700">
-                Værktøjer
+                Værktøjer - Barometer
               </Heading>
               
               <Separator />
               
-              <Text color="gray.500" textAlign="center" py={8}>
-                Værktøjssektionen kommer snart...
-              </Text>
+              <BarometerManager 
+                childId={childData.child.id} 
+                isUserAdmin={isCurrentUserAdmin}
+              />
             </VStack>
           </Box>
 

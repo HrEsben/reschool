@@ -23,6 +23,7 @@ import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 import { RemoveUserDialog } from '@/components/ui/remove-user-dialog';
 import { InviteUserDialog } from '@/components/ui/invite-user-dialog';
 import { DeleteInvitationDialog } from '@/components/ui/delete-invitation-dialog';
+import { ToolsManager } from '@/components/tools/tools-manager';
 
 interface UserWithRelation {
   id: number;
@@ -354,6 +355,20 @@ export default function ChildSlugPage() {
             <Box className="w-20 h-1 bg-sunset-500 rounded-full"></Box>
           </VStack>
 
+          {/* Tools Section */}
+          <Box 
+            bg="bg.surface" 
+            borderRadius="xl" 
+            border="1px solid" 
+            borderColor="border.muted" 
+            p={6}
+          >
+            <ToolsManager 
+              childId={childData.child.id} 
+              isUserAdmin={isCurrentUserAdmin}
+            />
+          </Box>
+
           {/* Connected Users Section */}
           <Box 
             bg="bg.surface" 
@@ -653,28 +668,6 @@ export default function ChildSlugPage() {
                   Ingen brugere er tilknyttet dette barn endnu
                 </Text>
               )}
-            </VStack>
-          </Box>
-
-          {/* Tools Section Placeholder */}
-          <Box 
-            bg="bg.surface" 
-            borderRadius="xl" 
-            border="1px solid" 
-            borderColor="border.muted" 
-            p={6}
-          >
-            <VStack align="stretch" gap={4}>
-              <Heading size="lg" color="fg.default" fontWeight="600">
-                Værktøjer
-              </Heading>
-              <Box className="w-16 h-1 bg-delft-blue-500 rounded-full"></Box>
-              
-              <Separator />
-              
-              <Text color="fg.muted" textAlign="center" py={8} fontWeight="500">
-                Værktøjssektionen kommer snart...
-              </Text>
             </VStack>
           </Box>
 
