@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stackServerApp } from '@/stack';
-import { getChildBySlug, getChildWithUsers, getUserByStackAuthId } from '@/lib/database-service';
+import { getChildBySlug, getChildWithUsersAndInvitations, getUserByStackAuthId } from '@/lib/database-service';
 
 export async function GET(
   request: NextRequest,
@@ -31,17 +31,17 @@ export async function GET(
       return NextResponse.json({ error: 'Child not found' }, { status: 404 });
     }
 
-    // Get child with all connected users
-    const childData = await getChildWithUsers(child.id);
+    // Get child with all connected users and pending invitations
+    const childData = await getChildWithUsersAndInvitations(child.id);
     if (!childData) {
       console.log('Child data not found:', child.id);
       return NextResponse.json({ error: 'Child not found' }, { status: 404 });
     }
 
-    console.log('Child found:', childData.child.name, 'with', childData.users.length, 'users');
+    console.log('Child found:', childData.child.name, 'with', childData.users.length, 'users and', childData.invitations.length, 'pending invitations');
 
     // Check if current user has access to this child
-    const userHasAccess = childData.users.some(u => u.id === currentUser.id);
+    const userHasAccess = childData.users.some((u: any) => u.id === currentUser.id);
     if (!userHasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }

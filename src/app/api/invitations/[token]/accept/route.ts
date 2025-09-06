@@ -1,0 +1,96 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { stackServerApp } from '@/stack';
+import { 
+  getUserByStackAuthId, 
+  getInvitationWithDetails,
+  addUserToChild,
+  getChildById,
+  updateInvitationStatus
+} from '@/lib/database-service';
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ token: string }> }
+) {
+  try {
+    const user = await stackServerApp.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const resolvedParams = await params;
+    const token = resolvedParams.token;
+
+    if (!token) {
+      return NextResponse.json({ error: 'Token is required' }, { status: 400 });
+    }
+
+    // Get invitation details
+    const invitationData = await getInvitationWithDetails(token);
+    if (!invitationData) {
+      return NextResponse.json({ error: 'Invitation not found' }, { status: 404 });
+    }
+
+    const { invitation } = invitationData;
+
+    // Check if invitation is expired
+    if (new Date(invitation.expiresAt) < new Date()) {
+      return NextResponse.json({ error: 'Invitation has expired' }, { status: 410 });
+    }
+
+    // Check if invitation is still pending
+    if (invitation.status !== 'pending') {
+      return NextResponse.json({ error: 'Invitation is no longer valid' }, { status: 410 });
+    }
+
+    // Check if the user's email matches the invitation
+    if (user.primaryEmail !== invitation.email) {
+      return NextResponse.json({ 
+        error: 'Your email address does not match the invitation' 
+      }, { status: 400 });
+    }
+
+    // Get current user from database
+    const currentUser = await getUserByStackAuthId(user.id);
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found in database' }, { status: 404 });
+    }
+
+    // Add user to child with the specified relation
+    const userChildRelation = await addUserToChild(
+      currentUser.id,
+      invitation.childId,
+      invitation.relation,
+      invitation.customRelationName
+    );
+
+    if (!userChildRelation) {
+      return NextResponse.json({ error: 'Failed to add user to child' }, { status: 500 });
+    }
+
+    // Update invitation status to accepted
+    const updated = await updateInvitationStatus(invitation.id, 'accepted');
+    if (!updated) {
+      console.error('Failed to update invitation status, but user was added successfully');
+    }
+
+    // Get child details for redirect
+    const child = await getChildById(invitation.childId);
+    if (!child) {
+      return NextResponse.json({ error: 'Child not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      message: 'Invitation accepted successfully',
+      childSlug: child.slug,
+      childName: child.name
+    });
+
+  } catch (error) {
+    console.error('Error accepting invitation:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

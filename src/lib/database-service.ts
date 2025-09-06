@@ -1,4 +1,5 @@
 import { query, getClient } from './db';
+import crypto from 'crypto';
 
 // User management
 export interface User {
@@ -27,6 +28,20 @@ export interface UserChildRelation {
   relation: 'Mor' | 'Far' | 'Underviser' | 'Ressourceperson';
   customRelationName?: string;
   isAdministrator: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Invitation {
+  id: number;
+  email: string;
+  childId: number;
+  invitedBy: number;
+  relation: 'Mor' | 'Far' | 'Underviser' | 'Ressourceperson';
+  customRelationName?: string;
+  token: string;
+  status: 'pending' | 'accepted' | 'expired';
+  expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -267,6 +282,228 @@ export async function removeUserFromChild(
   }
 }
 
+// Invitation functions
+export async function createInvitation(
+  email: string,
+  childId: number,
+  invitedBy: number,
+  relation: Invitation['relation'],
+  customRelationName?: string
+): Promise<Invitation | null> {
+  try {
+    // Generate unique token
+    const token = crypto.randomUUID();
+    
+    // Set expiration to 7 days from now
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    const result = await query(
+      `INSERT INTO invitations 
+       (email, child_id, invited_by, relation, custom_relation_name, token, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+       ON CONFLICT (email, child_id) 
+       DO UPDATE SET 
+         relation = EXCLUDED.relation,
+         custom_relation_name = EXCLUDED.custom_relation_name,
+         token = EXCLUDED.token,
+         expires_at = EXCLUDED.expires_at,
+         status = 'pending',
+         updated_at = NOW()
+       RETURNING *`,
+      [email, childId, invitedBy, relation, customRelationName, token, expiresAt]
+    );
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      email: row.email,
+      childId: row.child_id,
+      invitedBy: row.invited_by,
+      relation: row.relation,
+      customRelationName: row.custom_relation_name,
+      token: row.token,
+      status: row.status,
+      expiresAt: new Date(row.expires_at),
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    };
+  } catch (error) {
+    console.error('Error creating invitation:', error);
+    return null;
+  }
+}
+
+export async function getInvitationByToken(token: string): Promise<Invitation | null> {
+  try {
+    const result = await query(
+      'SELECT * FROM invitations WHERE token = $1',
+      [token]
+    );
+
+    if (result.rows.length === 0) return null;
+    
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      email: row.email,
+      childId: row.child_id,
+      invitedBy: row.invited_by,
+      relation: row.relation,
+      customRelationName: row.custom_relation_name,
+      token: row.token,
+      status: row.status,
+      expiresAt: new Date(row.expires_at),
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    };
+  } catch (error) {
+    console.error('Error getting invitation by token:', error);
+    return null;
+  }
+}
+
+export async function getInvitationWithDetails(token: string): Promise<{
+  invitation: Invitation;
+  childName: string;
+  inviterName: string;
+  inviterRelation: string;
+} | null> {
+  try {
+    const result = await query(
+      `SELECT 
+        i.*,
+        c.name as child_name,
+        u.display_name as inviter_name,
+        u.email as inviter_email,
+        ucr.relation as inviter_relation,
+        ucr.custom_relation_name as inviter_custom_relation
+       FROM invitations i
+       JOIN children c ON i.child_id = c.id
+       JOIN users u ON i.invited_by = u.id
+       JOIN user_child_relations ucr ON ucr.user_id = i.invited_by AND ucr.child_id = i.child_id
+       WHERE i.token = $1`,
+      [token]
+    );
+
+    if (result.rows.length === 0) return null;
+    
+    const row = result.rows[0];
+    
+    const invitation: Invitation = {
+      id: row.id,
+      email: row.email,
+      childId: row.child_id,
+      invitedBy: row.invited_by,
+      relation: row.relation,
+      customRelationName: row.custom_relation_name,
+      token: row.token,
+      status: row.status,
+      expiresAt: new Date(row.expires_at),
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    };
+
+    return {
+      invitation,
+      childName: row.child_name,
+      inviterName: row.inviter_name || row.inviter_email,
+      inviterRelation: row.inviter_custom_relation || row.inviter_relation
+    };
+  } catch (error) {
+    console.error('Error getting invitation with details:', error);
+    return null;
+  }
+}
+
+export async function updateInvitationStatus(
+  invitationId: number, 
+  status: 'pending' | 'accepted' | 'expired'
+): Promise<boolean> {
+  try {
+    const result = await query(
+      'UPDATE invitations SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [status, invitationId]
+    );
+
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Error updating invitation status:', error);
+    return false;
+  }
+}
+
+export async function getInvitationsForChild(childId: number): Promise<Invitation[]> {
+  try {
+    const result = await query(
+      'SELECT * FROM invitations WHERE child_id = $1 AND status = $2 ORDER BY created_at DESC',
+      [childId, 'pending']
+    );
+
+    return result.rows.map(row => ({
+      id: row.id,
+      email: row.email,
+      childId: row.child_id,
+      invitedBy: row.invited_by,
+      relation: row.relation,
+      customRelationName: row.custom_relation_name,
+      token: row.token,
+      status: row.status,
+      expiresAt: new Date(row.expires_at),
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    }));
+  } catch (error) {
+    console.error('Error getting invitations for child:', error);
+    return [];
+  }
+}
+
+export async function acceptInvitation(token: string, userId: number): Promise<boolean> {
+  const client = await getClient();
+  
+  try {
+    await client.query('BEGIN');
+
+    // Get invitation
+    const invitationResult = await client.query(
+      'SELECT * FROM invitations WHERE token = $1 AND status = $2 AND expires_at > NOW()',
+      [token, 'pending']
+    );
+
+    if (invitationResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return false;
+    }
+
+    const invitation = invitationResult.rows[0];
+
+    // Create user-child relation
+    await client.query(
+      `INSERT INTO user_child_relations 
+       (user_id, child_id, relation, custom_relation_name, is_administrator)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id, child_id) DO NOTHING`,
+      [userId, invitation.child_id, invitation.relation, invitation.custom_relation_name, false]
+    );
+
+    // Mark invitation as accepted
+    await client.query(
+      'UPDATE invitations SET status = $1, updated_at = NOW() WHERE token = $2',
+      ['accepted', token]
+    );
+
+    await client.query('COMMIT');
+    return true;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error accepting invitation:', error);
+    return false;
+  } finally {
+    client.release();
+  }
+}
+
 export async function getChildById(childId: number): Promise<Child | null> {
   try {
     const result = await query(
@@ -378,6 +615,25 @@ export async function getChildWithUsers(childId: number): Promise<{child: Child;
   }
 }
 
+export async function getChildWithUsersAndInvitations(childId: number): Promise<{
+  child: Child; 
+  users: UserWithRelation[];
+  invitations: Invitation[];
+} | null> {
+  try {
+    const child = await getChildById(childId);
+    if (!child) return null;
+
+    const users = await getUsersForChild(childId);
+    const invitations = await getInvitationsForChild(childId);
+    
+    return { child, users, invitations };
+  } catch (error) {
+    console.error('Error getting child with users and invitations:', error);
+    return null;
+  }
+}
+
 export async function isUserAdministratorForChild(userId: number, childId: number): Promise<boolean> {
   try {
     const result = await query(
@@ -430,5 +686,66 @@ export async function deleteChild(childId: number, requestingUserId: number): Pr
     return false;
   } finally {
     client.release();
+  }
+}
+
+// Get invitation by ID
+export async function getInvitationById(invitationId: number): Promise<Invitation | null> {
+  try {
+    const result = await query(
+      'SELECT * FROM invitations WHERE id = $1',
+      [invitationId]
+    );
+
+    if (result.rows.length === 0) return null;
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      email: row.email,
+      childId: row.child_id,
+      invitedBy: row.invited_by,
+      relation: row.relation,
+      customRelationName: row.custom_relation_name,
+      token: row.token,
+      status: row.status,
+      expiresAt: new Date(row.expires_at),
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    };
+  } catch (error) {
+    console.error('Error getting invitation by ID:', error);
+    return null;
+  }
+}
+
+// Delete invitation
+export async function deleteInvitation(invitationId: number): Promise<boolean> {
+  try {
+    const result = await query(
+      'DELETE FROM invitations WHERE id = $1',
+      [invitationId]
+    );
+
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Error deleting invitation:', error);
+    return false;
+  }
+}
+
+// Check if user is admin of a child
+export async function checkUserIsChildAdmin(userId: number, childId: number): Promise<boolean> {
+  try {
+    const result = await query(
+      `SELECT is_administrator FROM user_child_relations 
+       WHERE user_id = $1 AND child_id = $2`,
+      [userId, childId]
+    );
+    
+    return result.rows.length > 0 && result.rows[0].is_administrator;
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
   }
 }

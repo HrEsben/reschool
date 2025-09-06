@@ -16,9 +16,13 @@ import {
   Table,
   Icon
 } from '@chakra-ui/react';
+import { toaster } from '@/components/ui/toaster';
+import { showToast } from '@/components/ui/simple-toast';
 import { AuthenticatedLayout } from '@/components/layouts/authenticated-layout';
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 import { RemoveUserDialog } from '@/components/ui/remove-user-dialog';
+import { InviteUserDialog } from '@/components/ui/invite-user-dialog';
+import { DeleteInvitationDialog } from '@/components/ui/delete-invitation-dialog';
 
 interface UserWithRelation {
   id: number;
@@ -40,9 +44,20 @@ interface Child {
   updatedAt: string;
 }
 
+interface Invitation {
+  id: number;
+  email: string;
+  relation: string;
+  customRelationName?: string;
+  status: 'pending' | 'accepted' | 'expired';
+  createdAt: string;
+  token: string;
+}
+
 interface ChildData {
   child: Child;
   users: UserWithRelation[];
+  invitations: Invitation[];
 }
 
 export default function ChildSlugPage() {
@@ -52,10 +67,74 @@ export default function ChildSlugPage() {
   const [childData, setChildData] = useState<ChildData | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [deletingInvitation, setDeletingInvitation] = useState(false);
   const [removingUser, setRemovingUser] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const slug = params.slug as string;
+
+  const copyInviteLink = async (invitation: Invitation) => {
+    const currentUrl = new URL(window.location.href);
+    const inviteUrl = `${currentUrl.protocol}//${currentUrl.host}/invite/${invitation.token}`;
+    
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      showToast({
+        title: 'Link kopieret!',
+        description: `Invitations-link til ${invitation.email} er kopieret til udklipsholderen`,
+        type: 'success',
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      showToast({
+        title: 'Fejl',
+        description: 'Kunne ikke kopiere linket til udklipsholderen',
+        type: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
+  const deleteInvitation = async (invitationId: number, invitationEmail: string) => {
+    setDeletingInvitation(true);
+    try {
+      const response = await fetch(`/api/invitations/delete/${invitationId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        showToast({
+          title: 'Fejl',
+          description: data.error || 'Kunne ikke slette invitationen',
+          type: 'error',
+          duration: 3000,
+        });
+        return;
+      }
+
+      showToast({
+        title: 'Invitation slettet',
+        description: `Invitationen til ${invitationEmail} er blevet slettet`,
+        type: 'success',
+        duration: 3000,
+      });
+
+      // Refresh data to show updated invitation list
+      fetchChildData();
+    } catch (error) {
+      console.error('Error deleting invitation:', error);
+      showToast({
+        title: 'Fejl',
+        description: 'Der opstod en netværksfejl',
+        type: 'error',
+        duration: 3000,
+      });
+    } finally {
+      setDeletingInvitation(false);
+    }
+  };
 
   const fetchChildData = useCallback(async () => {
     try {
@@ -284,10 +363,42 @@ export default function ChildSlugPage() {
             p={6}
           >
             <VStack align="stretch" gap={4}>
-              <Heading size="lg" color="fg.default" fontWeight="600">
-                {getPossessiveForm(childData.child.name)} voksne ({childData.users.length})
-              </Heading>
-              <Box className="w-16 h-1 bg-cambridge-blue-500 rounded-full"></Box>
+              <HStack justify="space-between" align="center">
+                <VStack align="start" gap={2}>
+                  <Heading size="lg" color="fg.default" fontWeight="600">
+                    {getPossessiveForm(childData.child.name)} voksne ({childData.users.length + childData.invitations.length})
+                  </Heading>
+                  <Box className="w-16 h-1 bg-cambridge-blue-500 rounded-full"></Box>
+                </VStack>
+                
+                {isCurrentUserAdmin && (
+                  <InviteUserDialog
+                    trigger={
+                      <Button
+                        bg="#81b29a"
+                        color="white"
+                        size="md"
+                        _hover={{
+                          bg: "#6a9b82"
+                        }}
+                      >
+                        <Icon mr={2}>
+                          <svg fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+                          </svg>
+                        </Icon>
+                        Invitér
+                      </Button>
+                    }
+                    childId={childData.child.id}
+                    childName={childData.child.name}
+                    onInviteSuccess={() => {
+                      // Refresh the child data to show new invitations
+                      fetchChildData();
+                    }}
+                  />
+                )}
+              </HStack>
               
               <Separator />
 
@@ -305,9 +416,10 @@ export default function ChildSlugPage() {
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
+                  {/* Existing Users */}
                   {childData.users.map((userData) => (
                     <Table.Row 
-                      key={userData.id}
+                      key={`user-${userData.id}`}
                       _hover={{ bg: "cream.100", cursor: "pointer" }}
                       onClick={() => router.push(`/users/${generateUserSlug(userData)}`)}
                       transition="background-color 0.2s ease"
@@ -414,10 +526,129 @@ export default function ChildSlugPage() {
                       )}
                     </Table.Row>
                   ))}
+                  
+                  {/* Pending Invitations */}
+                  {childData.invitations.map((invitation) => (
+                    <Table.Row 
+                      key={`invitation-${invitation.id}`}
+                      bg="rgba(129, 178, 154, 0.05)"
+                      border="1px solid rgba(129, 178, 154, 0.2)"
+                    >
+                      <Table.Cell>
+                        <HStack gap={3}>
+                          <Box
+                            w={8}
+                            h={8}
+                            bg="rgba(129, 178, 154, 0.3)"
+                            borderRadius="full"
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                            color="#3d405b"
+                            fontWeight="bold"
+                            fontSize="sm"
+                            border="2px dashed rgba(129, 178, 154, 0.5)"
+                          >
+                            <Icon boxSize={4}>
+                              <svg fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                              </svg>
+                            </Icon>
+                          </Box>
+                          <VStack align="start" gap={0}>
+                            <Text fontWeight="500" color="#3d405b" fontSize="sm">
+                              Invitation sendt
+                            </Text>
+                            <Text color="fg.muted" fontSize="xs">
+                              Afventer svar
+                            </Text>
+                          </VStack>
+                        </HStack>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Text color="fg.muted" fontSize="sm" fontWeight="500">
+                          {invitation.email}
+                        </Text>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Text color="#81b29a" fontSize="sm" fontWeight="500">
+                          {invitation.customRelationName || invitation.relation}
+                        </Text>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Text color="#81b29a" fontSize="sm" fontWeight="500" fontStyle="italic">
+                          Inviteret
+                        </Text>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Text color="fg.muted" fontSize="sm" fontWeight="500">
+                          {formatDate(invitation.createdAt)}
+                        </Text>
+                      </Table.Cell>
+                      {isCurrentUserAdmin && (
+                        <Table.Cell>
+                          <HStack gap={2}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => copyInviteLink(invitation)}
+                              bg="#f4f1de"
+                              borderColor="#81b29a"
+                              color="#3d405b"
+                              _hover={{
+                                bg: "#81b29a",
+                                color: "white",
+                                borderColor: "#81b29a"
+                              }}
+                              minW="auto"
+                              p={2}
+                              aspectRatio="1"
+                            >
+                              <Icon boxSize={4}>
+                                <svg fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+                                  <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
+                                </svg>
+                              </Icon>
+                            </Button>
+                            <DeleteInvitationDialog
+                              trigger={
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  bg="#f4f1de"
+                                  borderColor="#e07a5f"
+                                  color="#e07a5f"
+                                  _hover={{
+                                    bg: "#e07a5f",
+                                    color: "white",
+                                    borderColor: "#e07a5f"
+                                  }}
+                                  minW="auto"
+                                  p={2}
+                                  aspectRatio="1"
+                                >
+                                  <Icon boxSize={4}>
+                                    <svg fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
+                                    </svg>
+                                  </Icon>
+                                </Button>
+                              }
+                              invitationEmail={invitation.email}
+                              onConfirm={() => deleteInvitation(invitation.id, invitation.email)}
+                              isLoading={deletingInvitation}
+                            />
+                          </HStack>
+                        </Table.Cell>
+                      )}
+                    </Table.Row>
+                  ))}
                 </Table.Body>
               </Table.Root>
 
-              {childData.users.length === 0 && (
+              {childData.users.length === 0 && childData.invitations.length === 0 && (
                 <Text color="fg.muted" textAlign="center" py={8} fontWeight="500">
                   Ingen brugere er tilknyttet dette barn endnu
                 </Text>

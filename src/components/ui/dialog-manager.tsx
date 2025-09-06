@@ -22,12 +22,13 @@ export type DialogType = 'default' | 'warning' | 'error' | 'success' | 'info';
 
 export interface DialogAction {
   label: string;
-  onClick: () => void;
+  onClick: () => void | Promise<void>;
   variant?: 'solid' | 'outline' | 'ghost';
   colorScheme?: string;
   isLoading?: boolean;
   loadingText?: string;
   isDisabled?: boolean;
+  preventAutoClose?: boolean; // New prop to prevent auto-closing
 }
 
 export interface DialogManagerProps {
@@ -210,9 +211,9 @@ export function DialogManager({
                   key={index}
                   variant={action.variant || 'solid'}
                   colorScheme={action.colorScheme}
-                  onClick={() => {
-                    action.onClick();
-                    if (!action.isLoading) {
+                  onClick={async () => {
+                    await action.onClick();
+                    if (!action.isLoading && !action.preventAutoClose) {
                       setOpen(false);
                     }
                   }}
