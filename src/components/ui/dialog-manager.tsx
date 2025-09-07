@@ -211,7 +211,7 @@ export function DialogManager({
             <HStack gap={3} width="full" justify="flex-end">
               {allActions.map((action, index) => {
                 // Determine button colors based on action type and position
-                let buttonProps: any = {
+                const buttonProps: Record<string, unknown> = {
                   variant: action.variant || 'solid'
                 };
                 

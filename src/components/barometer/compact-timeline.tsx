@@ -9,11 +9,12 @@ import {
   Timeline,
   Spinner,
   Button,
-  Textarea,
   Icon,
+  Card,
+  Span,
+  Badge,
 } from '@chakra-ui/react';
 import { Avatar } from '@chakra-ui/react';
-import { MdEdit, MdSave, MdClose } from 'react-icons/md';
 import { TrashIcon } from '@/components/ui/icons';
 import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
@@ -227,12 +228,78 @@ export const CompactTimeline = forwardRef<CompactTimelineRef, CompactTimelinePro
     return rating.toString();
   };
 
+  // Group entries by date
+  const groupEntriesByDate = (entries: BarometerEntry[]) => {
+    const grouped: { [key: string]: BarometerEntry[] } = {};
+    entries.forEach(entry => {
+      const dateKey = entry.entryDate;
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey].push(entry);
+    });
+    return grouped;
+  };
+
+  const formatDateForDisplay = (dateString: string) => {
+    try {
+      // Handle both date-only strings and full datetime strings
+      const date = dateString.includes('T') 
+        ? new Date(dateString)
+        : new Date(dateString + 'T12:00:00'); // Use noon to avoid timezone issues
+      
+      if (isNaN(date.getTime())) {
+        return dateString; // Return original string if parsing fails
+      }
+      
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      if (date.toDateString() === today.toDateString()) {
+        return 'I dag';
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        return 'I går';
+      } else {
+        return date.toLocaleDateString('da-DK', {
+          day: 'numeric',
+          month: 'long',
+          year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
+        });
+      }
+    } catch (error) {
+      console.warn('Error formatting date:', error);
+      return dateString; // Return original string as fallback
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    try {
+      // Handle both date-only strings and full datetime strings
+      const date = dateString.includes('T') 
+        ? new Date(dateString)
+        : new Date(dateString + 'T12:00:00'); // Use noon to avoid timezone issues
+      
+      if (isNaN(date.getTime())) {
+        return '12:00'; // Fallback time
+      }
+      
+      return date.toLocaleTimeString('da-DK', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch (error) {
+      console.warn('Error formatting time:', error);
+      return '12:00'; // Fallback time
+    }
+  };
+
   if (loading) {
     return (
-      <Box p={3} bg="gray.50" borderRadius="md">
+      <Box p={4} bg="cream.25" borderRadius="lg" border="1px solid" borderColor="cream.200">
         <HStack>
-          <Spinner size="sm" />
-          <Text fontSize="sm" color="gray.600">Henter registreringer...</Text>
+          <Spinner size="sm" color="sage.500" />
+          <Text fontSize="sm" color="navy.600">Henter registreringer...</Text>
         </HStack>
       </Box>
     );
@@ -240,120 +307,144 @@ export const CompactTimeline = forwardRef<CompactTimelineRef, CompactTimelinePro
 
   if (entries.length === 0) {
     return (
-      <Box p={3} bg="gray.50" borderRadius="md">
-        <Text fontSize="sm" color="gray.600">Ingen registreringer endnu</Text>
+      <Box p={4} bg="cream.25" borderRadius="lg" border="1px solid" borderColor="cream.200">
+        <VStack gap={2}>
+          <Icon fontSize="2xl" color="sage.400">
+            📊
+          </Icon>
+          <Text fontSize="sm" color="navy.600" textAlign="center">
+            Ingen registreringer endnu
+          </Text>
+          <Text fontSize="xs" color="gray.500" textAlign="center">
+            Start med at lave din første vurdering
+          </Text>
+        </VStack>
       </Box>
     );
   }
 
+  const groupedEntries = groupEntriesByDate(entries);
+  const sortedDates = Object.keys(groupedEntries).sort((a, b) => 
+    new Date(b).getTime() - new Date(a).getTime()
+  );
+
   return (
-    <Box p={3} bg="gray.50" borderRadius="md">
-      <Text fontSize="sm" color="gray.600" mb={3} fontWeight="medium">
+    <Box p={4} bg="cream.25" borderRadius="lg" border="1px solid" borderColor="cream.200">
+      <Text fontSize="sm" color="navy.700" mb={4} fontWeight="semibold">
         Seneste registreringer
       </Text>
-            <Timeline.Root size="sm">
-        {entries.map((entry, index) => (
-          <Timeline.Item key={entry.id}>
-            {/* Content Before - Date */}
-            <Timeline.Content width="auto">
-              <Text fontSize="xs" color="gray.500" whiteSpace="nowrap">
-                {formatDate(entry.entryDate)}
-              </Text>
-            </Timeline.Content>
-            
-            <Timeline.Separator>
-              {/* Avatar or Smiley as Indicator */}
-              <Timeline.Indicator>
-                {barometer.displayType === 'smileys' ? (
-                  <Box
-                    bg={getRatingColor(entry.rating)}
-                    borderRadius="full"
-                    w="24px"
-                    h="24px"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    fontSize="sm"
-                  >
-                    {getSmileyForRating(entry.rating)}
-                  </Box>
-                ) : (
-                  <Avatar.Root size="xs">
-                    <Avatar.Image 
-                      src={`https://i.pravatar.cc/150?u=${entry.recordedBy}`}
-                      alt={entry.recordedByName || 'Anonym'}
-                    />
-                    <Avatar.Fallback>
-                      {(entry.recordedByName || 'A').charAt(0).toUpperCase()}
-                    </Avatar.Fallback>
-                  </Avatar.Root>
-                )}
-              </Timeline.Indicator>
-              {index < entries.length - 1 && <Timeline.Connector />}
-            </Timeline.Separator>
-            
-            {/* Main Content - Rating and Comment */}
-            <Timeline.Content pb={index < entries.length - 1 ? 3 : 0}>
-              <VStack align="start" gap={1}>
-                {/* Rating and Delete Button Row */}
-                <HStack justify="space-between" w="full">
-                  <HStack>
-                    {barometer.displayType === 'smileys' ? (
-                      <Text 
-                        fontSize="lg" 
-                        lineHeight="1"
-                      >
-                        {getSmileyForRating(entry.rating)}
+      
+      <Timeline.Root size="lg" variant="subtle" maxW="full">
+        {sortedDates.map((date) => {
+          const dateEntries = groupedEntries[date].sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          
+          return dateEntries.map((entry, entryIndex) => (
+            <Timeline.Item key={`${date}-${entry.id}`}>
+              <Timeline.Connector>
+                <Timeline.Separator />
+                <Timeline.Indicator 
+                  bg={getRatingColor(entry.rating)} 
+                  color="white"
+                  border="2px solid white"
+                  boxShadow="0 0 0 1px var(--chakra-colors-cream-300)"
+                >
+                  {barometer.displayType === 'smileys' ? (
+                    <Text fontSize="xs">
+                      {getSmileyForRating(entry.rating)}
+                    </Text>
+                  ) : (
+                    <Text fontSize="xs" fontWeight="bold">
+                      {getDisplayValue()(entry.rating)}
+                    </Text>
+                  )}
+                </Timeline.Indicator>
+              </Timeline.Connector>
+              
+              <Timeline.Content gap={3}>
+                <Timeline.Title>
+                  <HStack justify="space-between" w="full">
+                    <HStack gap={2}>
+                      <Avatar.Root size="2xs">
+                        <Avatar.Fallback bg="sage.100" color="sage.700">
+                          {(entry.recordedByName || 'A').charAt(0).toUpperCase()}
+                        </Avatar.Fallback>
+                      </Avatar.Root>
+                      
+                      <Text fontWeight="semibold" color="navy.700">
+                        {entry.recordedByName || 'Anonym'}
                       </Text>
-                    ) : (
-                      <Text 
-                        fontSize="sm" 
+                      
+                      <Span color="gray.500">vurderede</Span>
+                      
+                      <Badge 
+                        colorScheme="sage" 
+                        variant="subtle"
+                        fontSize="xs"
                         fontWeight="bold"
-                        color={getRatingColor(entry.rating)}
                       >
-                        {getDisplayValue()(entry.rating)}
-                      </Text>
-                    )}
-                    {entry.recordedByName && (
-                      <Text fontSize="xs" color="gray.500">
-                        af {entry.recordedByName}
-                      </Text>
+                        {barometer.displayType === 'smileys' 
+                          ? getSmileyForRating(entry.rating)
+                          : getDisplayValue()(entry.rating)
+                        }
+                      </Badge>
+                      
+                      <Span color="gray.500">
+                        {entryIndex === 0 ? formatDateForDisplay(date) : 'samme dag'}
+                      </Span>
+                    </HStack>
+                    
+                    {/* Delete Button */}
+                    {canDeleteEntry(entry) && (
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => handleDeleteEntry(entry)}
+                        color="coral.600"
+                        _hover={{ bg: "coral.50", color: "coral.700" }}
+                        _focus={{ 
+                          bg: "coral.50",
+                          boxShadow: "0 0 0 1px var(--chakra-colors-coral-200)",
+                          outline: "none"
+                        }}
+                        title="Slet vurdering"
+                        borderRadius="md"
+                        p={1}
+                        minW="auto"
+                      >
+                        <TrashIcon size="xs" />
+                      </Button>
                     )}
                   </HStack>
-                  
-                  {/* Delete Button */}
-                  {canDeleteEntry(entry) && (
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => handleDeleteEntry(entry)}
-                      color="coral.600"
-                      _hover={{ bg: "coral.50", color: "coral.700" }}
-                      _focus={{ 
-                        bg: "coral.50",
-                        boxShadow: "0 0 0 1px var(--chakra-colors-coral-200)",
-                        outline: "none"
-                      }}
-                      title="Slet vurdering"
-                      borderRadius="md"
-                      p={1}
-                      minW="auto"
-                    >
-                      <TrashIcon size="xs" />
-                    </Button>
-                  )}
-                </HStack>
+                </Timeline.Title>
                 
-                {/* Comment below */}
+                {/* Comment Card */}
                 {entry.comment && (
-                  <Text fontSize="xs" color="gray.600" fontStyle="italic">
-                    &ldquo;{entry.comment}&rdquo;
-                  </Text>
+                  <Card.Root size="sm" variant="subtle" bg="white" borderColor="cream.300">
+                    <Card.Body>
+                      <Text fontSize="sm" lineHeight="tall" color="navy.600">
+                        &ldquo;{entry.comment}&rdquo;
+                      </Text>
+                    </Card.Body>
+                    <Card.Footer pt={2} pb={3}>
+                      <HStack gap={2}>
+                        <Text fontSize="xs" color="gray.500">
+                          {formatTime(entry.createdAt)}
+                        </Text>
+                        {entry.updatedAt !== entry.createdAt && (
+                          <Badge size="xs" variant="outline" colorScheme="golden">
+                            Redigeret
+                          </Badge>
+                        )}
+                      </HStack>
+                    </Card.Footer>
+                  </Card.Root>
                 )}
-              </VStack>
-            </Timeline.Content>
-          </Timeline.Item>
-        ))}
+              </Timeline.Content>
+            </Timeline.Item>
+          ));
+        })}
       </Timeline.Root>
       
       {/* Delete Confirmation Dialog */}
