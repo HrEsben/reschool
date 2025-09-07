@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Input,
@@ -13,20 +13,34 @@ import {
   Heading,
   SegmentGroup,
   Slider,
+  Icon,
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { showToast } from '@/components/ui/simple-toast';
 import { GoNumber } from "react-icons/go";
 
-interface CreateBarometerDialogProps {
+interface Barometer {
+  id: number;
   childId: number;
-  onBarometerCreated: () => void;
+  createdBy: number;
+  topic: string;
+  scaleMin: number;
+  scaleMax: number;
+  displayType: string;
+  smileyType?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface EditBarometerDialogProps {
+  barometer: Barometer;
+  onBarometerUpdated: () => void;
   trigger: React.ReactNode;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
 
-export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, isOpen, onOpenChange }: CreateBarometerDialogProps) {
+export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, isOpen, onOpenChange }: EditBarometerDialogProps) {
   const [topic, setTopic] = useState('');
   const [scaleMin, setScaleMin] = useState(1);
   const [scaleMax, setScaleMax] = useState(5);
@@ -35,12 +49,30 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
   const [percentageValue, setPercentageValue] = useState([50]); // For slider preview
   const [loading, setLoading] = useState(false);
 
+  // Initialize form with existing barometer data
+  useEffect(() => {
+    if (barometer) {
+      setTopic(barometer.topic);
+      setScaleMin(barometer.scaleMin);
+      setScaleMax(barometer.scaleMax);
+      setDisplayType([barometer.displayType]);
+      setSmileyType([barometer.smileyType || 'emojis']);
+      
+      // Set percentage value to middle of scale for preview
+      const midPoint = Math.floor((barometer.scaleMin + barometer.scaleMax) / 2);
+      setPercentageValue([barometer.displayType === 'percentage' ? 50 : midPoint]);
+    }
+  }, [barometer]);
+
   // Auto-set scale when display type changes
-  const handleDisplayTypeChange = (newDisplayType: string[]) => {
-    setDisplayType(newDisplayType);
-    if (newDisplayType[0] === 'smileys') {
-      setScaleMin(1);
-      setScaleMax(5);
+  const handleDisplayTypeChange = (details: { value: string | null }) => {
+    if (details.value) {
+      const newDisplayType = [details.value];
+      setDisplayType(newDisplayType);
+      if (newDisplayType[0] === 'smileys') {
+        setScaleMin(1);
+        setScaleMax(5);
+      }
     }
   };
 
@@ -366,8 +398,8 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
         finalScaleMax = 100;
       }
       
-      const response = await fetch(`/api/children/${childId}/barometers`, {
-        method: 'POST',
+      const response = await fetch(`/api/barometers/${barometer.id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -387,38 +419,31 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
 
       showToast({
         title: 'Succes',
-        description: 'Barometer oprettet',
+        description: 'Barometer opdateret',
         type: 'success',
         duration: 3000,
       });
 
-      // Reset form
-      setTopic('');
-      setScaleMin(1);
-      setScaleMax(5);
-      setDisplayType(['numbers']);
-      setSmileyType(['emojis']);
-      
       if (onOpenChange) {
         onOpenChange(false);
       }
-      onBarometerCreated();
+      onBarometerUpdated();
     } catch (error) {
-      console.error('Error creating barometer:', error);
+      console.error('Error updating barometer:', error);
       
-      let errorMessage = 'Kunne ikke oprette barometer';
+      let errorMessage = 'Kunne ikke opdatere barometer';
       
       if (error instanceof Error) {
-        if (error.message.includes('Only administrators can create barometers')) {
-          errorMessage = 'Kun administratorer kan oprette barometre';
-        } else if (error.message.includes('Failed to fetch')) {
+        if (error.message.includes('Failed to fetch')) {
           errorMessage = 'Netværksfejl - tjek din internetforbindelse';
         } else if (error.message.includes('403')) {
-          errorMessage = 'Du har ikke tilladelse til at oprette barometre for dette barn';
+          errorMessage = 'Du har ikke tilladelse til at redigere dette barometer';
         } else if (error.message.includes('401')) {
-          errorMessage = 'Du skal være logget ind for at oprette barometre';
+          errorMessage = 'Du skal være logget ind for at redigere barometre';
         } else if (error.message.includes('400')) {
           errorMessage = 'Ugyldig data - tjek dine indtastninger';
+        } else if (error.message.includes('404')) {
+          errorMessage = 'Barometer ikke fundet';
         } else {
           errorMessage = error.message;
         }
@@ -435,88 +460,70 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
     }
   };
 
-  const handleCancel = () => {
-    // Reset form
-    setTopic('');
-    setScaleMin(1);
-    setScaleMax(5);
-    setDisplayType(['numbers']);
-    
-    if (onOpenChange) {
-      onOpenChange(false);
-    }
-  };
-
   return (
     <DialogManager
       trigger={trigger}
-      title="Opret nyt barometer" 
+      title="Rediger Barometer"
       primaryAction={{
-        label: "Opret barometer",
+        label: "Gem ændringer",
         onClick: handleSubmit,
-        isDisabled: !topic.trim() || scaleMin >= scaleMax
+        isDisabled: !topic.trim() || scaleMin >= scaleMax,
+        isLoading: loading
       }}
       secondaryAction={{
         label: "Annuller",
-        onClick: handleCancel
+        onClick: () => onOpenChange?.(false)
       }}
       maxWidth="4xl"
       isOpen={isOpen}
       onOpenChange={onOpenChange}
     >
-      <HStack gap={0} align="start">
+      <HStack gap={6} align="stretch" minH="400px">
         {/* Form Section */}
-        <VStack gap={4} align="stretch" flex={1} pr={6}>
+        <VStack gap={4} align="stretch" flex={1}>
           <Box>
             <Text mb={2} fontWeight="medium">Emne</Text>
             <Input
-              placeholder="Hvad skal barometeret måle? (f.eks. 'Humør', 'Energi', 'Fokus')"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              maxLength={255}
+              placeholder="Fx: Humør, Energi, Samarbejde..."
+              maxLength={100}
             />
           </Box>
           
           <Box>
             <Text mb={2} fontWeight="medium">Visningstype</Text>
             <SegmentGroup.Root 
-              value={displayType[0]} 
-              onValueChange={(details) => {
-                if (details.value) {
-                  handleDisplayTypeChange([details.value]);
-                }
-              }}
+              value={displayType[0] || 'numbers'}
+              onValueChange={handleDisplayTypeChange}
               size="md"
             >
               <SegmentGroup.Indicator />
               <SegmentGroup.Item value="numbers">
                 <SegmentGroup.ItemText>
-                  <HStack gap={2}>
-                    <GoNumber size={18} />
-                    <Text>Tal</Text>
+                  <HStack gap={2} align="center">
+                    <Icon>
+                      <GoNumber />
+                    </Icon>
+                    <Text fontSize="sm">Tal</Text>
                   </HStack>
                 </SegmentGroup.ItemText>
                 <SegmentGroup.ItemHiddenInput />
               </SegmentGroup.Item>
               <SegmentGroup.Item value="smileys">
                 <SegmentGroup.ItemText>
-                  <HStack gap={2}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
-                      <circle cx="8" cy="10" r="1" fill="currentColor"/>
-                      <circle cx="16" cy="10" r="1" fill="currentColor"/>
-                      <path d="M8 14s1.5 2 4 2 4-2 4-2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-                    </svg>
-                    <Text>Smileys</Text>
+                  <HStack gap={2} align="center">
+                    <Text fontSize="md">😊</Text>
+                    <Text fontSize="sm">Humørikoner</Text>
                   </HStack>
                 </SegmentGroup.ItemText>
                 <SegmentGroup.ItemHiddenInput />
               </SegmentGroup.Item>
               <SegmentGroup.Item value="percentage">
                 <SegmentGroup.ItemText>
-                  <HStack gap={2}>
-                    <Text fontSize="lg" fontWeight="bold">%</Text>
-                    <Text>Procent</Text>
+                  <HStack gap={2} align="center">
+                    <Text fontSize="sm" fontWeight="bold">%</Text>
+                    <Text fontSize="sm">Procent</Text>
                   </HStack>
                 </SegmentGroup.ItemText>
                 <SegmentGroup.ItemHiddenInput />
@@ -590,23 +597,25 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
               >
                 <SegmentGroup.Indicator />
                 <SegmentGroup.Item value="1-5">
-                  <SegmentGroup.ItemText>1 til 5</SegmentGroup.ItemText>
+                  <SegmentGroup.ItemText>1-5</SegmentGroup.ItemText>
                   <SegmentGroup.ItemHiddenInput />
                 </SegmentGroup.Item>
-                {displayType[0] !== 'smileys' && (
-                  <SegmentGroup.Item value="1-10">
-                    <SegmentGroup.ItemText>1 til 10</SegmentGroup.ItemText>
-                    <SegmentGroup.ItemHiddenInput />
-                  </SegmentGroup.Item>
-                )}
+                <SegmentGroup.Item value="1-10">
+                  <SegmentGroup.ItemText>1-10</SegmentGroup.ItemText>
+                  <SegmentGroup.ItemHiddenInput />
+                </SegmentGroup.Item>
+                <SegmentGroup.Item value="1-100">
+                  <SegmentGroup.ItemText>1-100</SegmentGroup.ItemText>
+                  <SegmentGroup.ItemHiddenInput />
+                </SegmentGroup.Item>
               </SegmentGroup.Root>
             </Box>
           )}
           
           {displayType[0] === 'percentage' && (
             <Box>
-              <Text mb={2} fontWeight="medium">Slider Preview</Text>
-              <VStack gap={4} align="stretch">
+              <Text mb={2} fontWeight="medium">Procent slider</Text>
+              <VStack gap={3} align="stretch">
                 <Box textAlign="center">
                   <Text fontSize="4xl" fontWeight="bold" color="gray.800">
                     {percentageValue[0]}%
@@ -636,7 +645,6 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
           )}
         </VStack>
 
-        {/* Vertical Divider */}
         <Box w="1px" bg="gray.200" alignSelf="stretch" minH="400px" />
 
         {/* Preview Section */}

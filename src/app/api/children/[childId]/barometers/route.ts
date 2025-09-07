@@ -65,7 +65,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { topic, scaleMin = 1, scaleMax = 5, displayType = 'numbers' } = body;
+    const { topic, scaleMin = 1, scaleMax = 5, displayType = 'numbers', smileyType = 'emojis' } = body;
 
     if (!topic || typeof topic !== 'string' || topic.trim().length === 0) {
       return NextResponse.json({ error: 'Topic is required' }, { status: 400 });
@@ -75,12 +75,17 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid scale range' }, { status: 400 });
     }
 
-    const validDisplayTypes = ['numbers', 'smileys'];
+    const validDisplayTypes = ['numbers', 'smileys', 'percentage'];
     if (!validDisplayTypes.includes(displayType)) {
       return NextResponse.json({ error: 'Invalid display type' }, { status: 400 });
     }
 
-    const barometer = await createBarometer(childId, dbUser.id, topic.trim(), scaleMin, scaleMax, displayType);
+    const validSmileyTypes = ['emojis', 'simple', 'subtle'];
+    if (displayType === 'smileys' && !validSmileyTypes.includes(smileyType)) {
+      return NextResponse.json({ error: 'Invalid smiley type' }, { status: 400 });
+    }
+
+    const barometer = await createBarometer(childId, dbUser.id, topic.trim(), scaleMin, scaleMax, displayType, smileyType);
     
     if (!barometer) {
       return NextResponse.json({ error: 'Failed to create barometer' }, { status: 500 });

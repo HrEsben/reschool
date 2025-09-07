@@ -26,8 +26,6 @@ export async function sendInvitationEmail({
   try {
     console.log(`Sending invitation email to ${to} for child ${childName}`);
     
-    const subject = `Invitation til at følge ${childName} på ReSchool`;
-    
     const htmlTemplate = `
 <!DOCTYPE html>
 <html>

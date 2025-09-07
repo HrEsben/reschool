@@ -60,6 +60,7 @@ export interface Barometer {
   scaleMin: number;
   scaleMax: number;
   displayType: string;
+  smileyType?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -787,13 +788,14 @@ export async function createBarometer(
   topic: string,
   scaleMin: number = 1,
   scaleMax: number = 5,
-  displayType: string = 'numbers'
+  displayType: string = 'numbers',
+  smileyType: string = 'emojis'
 ): Promise<Barometer | null> {
   try {
     const result = await query(
-      `INSERT INTO barometers (child_id, created_by, topic, scale_min, scale_max, display_type)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [childId, createdBy, topic, scaleMin, scaleMax, displayType]
+      `INSERT INTO barometers (child_id, created_by, topic, scale_min, scale_max, display_type, smiley_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [childId, createdBy, topic, scaleMin, scaleMax, displayType, smileyType]
     );
 
     const row = result.rows[0];
@@ -805,11 +807,53 @@ export async function createBarometer(
       scaleMin: row.scale_min,
       scaleMax: row.scale_max,
       displayType: row.display_type,
+      smileyType: row.smiley_type,
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString()
     };
   } catch (error) {
     console.error('Error creating barometer:', error);
+    return null;
+  }
+}
+
+// Update an existing barometer
+export async function updateBarometer(
+  barometerId: number,
+  topic: string,
+  scaleMin: number,
+  scaleMax: number,
+  displayType: string,
+  smileyType?: string
+): Promise<Barometer | null> {
+  try {
+    const result = await query(
+      `UPDATE barometers 
+       SET topic = $1, scale_min = $2, scale_max = $3, display_type = $4, smiley_type = $5, updated_at = NOW()
+       WHERE id = $6 
+       RETURNING *`,
+      [topic, scaleMin, scaleMax, displayType, smileyType, barometerId]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      childId: row.child_id,
+      createdBy: row.created_by,
+      topic: row.topic,
+      scaleMin: row.scale_min,
+      scaleMax: row.scale_max,
+      displayType: row.display_type,
+      smileyType: row.smiley_type,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error updating barometer:', error);
     return null;
   }
 }
@@ -849,6 +893,7 @@ export async function getBarometersForChild(childId: number): Promise<BarometerW
         scaleMin: row.scale_min,
         scaleMax: row.scale_max,
         displayType: row.display_type || 'numbers',
+        smileyType: row.smiley_type,
         createdAt: new Date(row.created_at).toISOString(),
         updatedAt: new Date(row.updated_at).toISOString()
       };

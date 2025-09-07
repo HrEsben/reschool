@@ -6,18 +6,18 @@ import {
   Button,
   Text,
   VStack,
-  Grid,
   Spinner,
   Center,
   Heading,
   HStack,
-  Badge,
   Icon,
   Separator,
 } from '@chakra-ui/react';
 import { useUser } from '@stackframe/stack';
 import { AddToolDialog } from './add-tool-dialog';
 import { BarometerCard } from '@/components/barometer/barometer-card';
+import { EditBarometerDialog } from '@/components/barometer/edit-barometer-dialog';
+import { showToast } from '@/components/ui/simple-toast';
 
 interface BarometerEntry {
   id: number;
@@ -38,6 +38,7 @@ interface Barometer {
   scaleMin: number;
   scaleMax: number;
   displayType: string;
+  smileyType?: string;
   createdAt: string;
   updatedAt: string;
   latestEntry?: BarometerEntry;
@@ -50,11 +51,14 @@ interface ToolsManagerProps {
 }
 
 export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
+  const [tools, setTools] = useState<Barometer[]>([]);
   const [barometers, setBarometers] = useState<Barometer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [editingBarometer, setEditingBarometer] = useState<Barometer | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const user = useUser();
-  const [error, setError] = useState<string | null>(null);
 
   // Get current user's database ID
   useEffect(() => {
@@ -105,6 +109,21 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
 
   const handleEntryRecorded = () => {
     fetchTools();
+  };
+
+  const handleBarometerDeleted = () => {
+    fetchTools();
+  };
+
+  const handleBarometerEdit = (barometer: Barometer) => {
+    setEditingBarometer(barometer);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleBarometerUpdated = () => {
+    fetchTools();
+    setEditingBarometer(null);
+    setIsEditDialogOpen(false);
   };
 
   if (loading) {
@@ -180,23 +199,19 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
               <Heading size="sm" color="gray.600" mb={4}>
                 Barometre ({barometers.length})
               </Heading>
-              <Grid
-                templateColumns={{
-                  base: "1fr",
-                  md: "repeat(auto-fit, minmax(350px, 1fr))"
-                }}
-                gap={4}
-              >
+              <VStack gap={4} align="stretch" width="100%">
                 {barometers.map((barometer) => (
                   <BarometerCard
                     key={barometer.id}
                     barometer={barometer}
                     onEntryRecorded={handleEntryRecorded}
+                    onBarometerDeleted={handleBarometerDeleted}
+                    onBarometerEdit={handleBarometerEdit}
                     currentUserId={currentUserId || undefined}
                     isUserAdmin={isUserAdmin}
                   />
                 ))}
-              </Grid>
+              </VStack>
             </Box>
           )}
 
@@ -215,6 +230,17 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
               : 'Administratorer kan tilføje værktøjer til at spore barnets udvikling'}
           </Text>
         </Box>
+      )}
+
+      {/* Edit Barometer Dialog */}
+      {editingBarometer && (
+        <EditBarometerDialog
+          barometer={editingBarometer}
+          onBarometerUpdated={handleBarometerUpdated}
+          trigger={<Button style={{ display: 'none' }}>Hidden Trigger</Button>}
+          isOpen={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+        />
       )}
     </VStack>
   );

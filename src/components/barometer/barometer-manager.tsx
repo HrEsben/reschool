@@ -10,7 +10,9 @@ import {
   Center,
 } from '@chakra-ui/react';
 import { CreateBarometerDialog } from './create-barometer-dialog';
+import { EditBarometerDialog } from './edit-barometer-dialog';
 import { BarometerCard } from './barometer-card';
+import { showToast } from '@/components/ui/simple-toast';
 
 interface BarometerEntry {
   id: number;
@@ -31,6 +33,7 @@ interface Barometer {
   scaleMin: number;
   scaleMax: number;
   displayType: string;
+  smileyType?: string;
   createdAt: string;
   updatedAt: string;
   latestEntry?: BarometerEntry;
@@ -46,6 +49,8 @@ export function BarometerManager({ childId, isUserAdmin }: BarometerManagerProps
   const [barometers, setBarometers] = useState<Barometer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingBarometer, setEditingBarometer] = useState<Barometer | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const fetchBarometers = async () => {
     try {
@@ -76,6 +81,21 @@ export function BarometerManager({ childId, isUserAdmin }: BarometerManagerProps
 
   const handleEntryRecorded = () => {
     fetchBarometers();
+  };
+
+  const handleBarometerDeleted = () => {
+    fetchBarometers();
+  };
+
+  const handleBarometerEdit = (barometer: Barometer) => {
+    setEditingBarometer(barometer);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleBarometerUpdated = () => {
+    fetchBarometers();
+    setEditingBarometer(null);
+    setIsEditDialogOpen(false);
   };
 
   if (loading) {
@@ -124,6 +144,9 @@ export function BarometerManager({ childId, isUserAdmin }: BarometerManagerProps
               key={barometer.id}
               barometer={barometer}
               onEntryRecorded={handleEntryRecorded}
+              onBarometerDeleted={handleBarometerDeleted}
+              onBarometerEdit={handleBarometerEdit}
+              isUserAdmin={isUserAdmin}
             />
           ))}
         </VStack>
@@ -140,6 +163,17 @@ export function BarometerManager({ childId, isUserAdmin }: BarometerManagerProps
             </Text>
           )}
         </Box>
+      )}
+
+      {/* Edit Barometer Dialog */}
+      {editingBarometer && (
+        <EditBarometerDialog
+          barometer={editingBarometer}
+          onBarometerUpdated={handleBarometerUpdated}
+          trigger={<Button style={{ display: 'none' }}>Hidden Trigger</Button>}
+          isOpen={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+        />
       )}
     </VStack>
   );
