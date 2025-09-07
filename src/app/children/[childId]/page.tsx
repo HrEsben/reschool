@@ -12,7 +12,6 @@ import {
   Spinner,
   Badge,
   Button,
-  Grid,
   Separator,
   Table
 } from '@chakra-ui/react';

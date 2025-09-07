@@ -10,7 +10,6 @@ import {
   VStack,
   HStack,
   Spinner,
-  Badge,
   Button,
   Separator,
   Table,

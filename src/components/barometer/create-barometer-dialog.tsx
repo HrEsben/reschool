@@ -16,7 +16,7 @@ import {
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { showToast } from '@/components/ui/simple-toast';
-import { GoNumber } from "react-icons/go";
+import { NumberIcon } from '@/components/ui/icons';
 
 interface CreateBarometerDialogProps {
   childId: number;
@@ -548,7 +548,7 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
               <SegmentGroup.Item value="numbers">
                 <SegmentGroup.ItemText>
                   <HStack gap={2}>
-                    <GoNumber size={18} />
+                    <NumberIcon size={18} />
                     <Text>Tal</Text>
                   </HStack>
                 </SegmentGroup.ItemText>

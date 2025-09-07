@@ -13,7 +13,8 @@ import {
   Icon,
 } from '@chakra-ui/react';
 import { Avatar } from '@chakra-ui/react';
-import { MdEdit, MdSave, MdClose, MdDelete } from 'react-icons/md';
+import { MdEdit, MdSave, MdClose } from 'react-icons/md';
+import { TrashIcon } from '@/components/ui/icons';
 import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
 
@@ -338,9 +339,7 @@ export const CompactTimeline = forwardRef<CompactTimelineRef, CompactTimelinePro
                       p={1}
                       minW="auto"
                     >
-                      <Icon>
-                        <MdDelete size={12} />
-                      </Icon>
+                      <TrashIcon size="xs" />
                     </Button>
                   )}
                 </HStack>
