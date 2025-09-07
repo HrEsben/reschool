@@ -73,38 +73,38 @@ const getDialogStyles = (type: DialogType) => {
   switch (type) {
     case 'warning':
       return {
-        headerBg: 'orange.50',
-        borderColor: 'orange.200',
-        titleColor: 'orange.700',
-        iconColor: 'orange.500'
+        headerBg: 'golden.50',
+        borderColor: 'golden.200',
+        titleColor: 'golden.700',
+        iconColor: 'golden.500'
       };
     case 'error':
       return {
-        headerBg: 'red.50',
-        borderColor: 'red.200',
-        titleColor: 'red.700',
-        iconColor: 'red.500'
+        headerBg: 'coral.50',
+        borderColor: 'coral.200',
+        titleColor: 'coral.700',
+        iconColor: 'coral.500'
       };
     case 'success':
       return {
-        headerBg: 'green.50',
-        borderColor: 'green.200',
-        titleColor: 'green.700',
-        iconColor: 'green.500'
+        headerBg: 'sage.50',
+        borderColor: 'sage.200',
+        titleColor: 'sage.700',
+        iconColor: 'sage.500'
       };
     case 'info':
       return {
-        headerBg: 'blue.50',
-        borderColor: 'blue.200',
-        titleColor: 'blue.700',
-        iconColor: 'blue.500'
+        headerBg: 'navy.50',
+        borderColor: 'navy.200',
+        titleColor: 'navy.700',
+        iconColor: 'navy.500'
       };
     default:
       return {
-        headerBg: 'gray.50',
-        borderColor: 'gray.200',
-        titleColor: 'gray.700',
-        iconColor: 'gray.500'
+        headerBg: 'cream.50',
+        borderColor: 'cream.200',
+        titleColor: 'navy.700',
+        iconColor: 'navy.500'
       };
   }
 };
@@ -203,30 +203,69 @@ export function DialogManager({
         {/* Footer */}
         {allActions.length > 0 && (
           <DialogFooter 
-            bg="gray.50" 
+            bg="cream.25" 
             borderTop="1px solid" 
-            borderColor="gray.200"
+            borderColor="cream.200"
             p={6}
           >
             <HStack gap={3} width="full" justify="flex-end">
-              {allActions.map((action, index) => (
-                <Button 
-                  key={index}
-                  variant={action.variant || 'solid'}
-                  colorScheme={action.colorScheme}
-                  onClick={async () => {
-                    await action.onClick();
-                    if (!action.isLoading && !action.preventAutoClose) {
-                      setOpen(false);
-                    }
-                  }}
-                  loading={action.isLoading}
-                  loadingText={action.loadingText}
-                  disabled={action.isDisabled}
-                >
-                  {action.label}
-                </Button>
-              ))}
+              {allActions.map((action, index) => {
+                // Determine button colors based on action type and position
+                let buttonProps: any = {
+                  variant: action.variant || 'solid'
+                };
+                
+                if (action.colorScheme === 'sage') {
+                  buttonProps.bg = 'sage.500';
+                  buttonProps.color = 'white';
+                  buttonProps._hover = { bg: 'sage.600' };
+                } else if (action.colorScheme === 'coral') {
+                  buttonProps.bg = 'coral.500';
+                  buttonProps.color = 'white';
+                  buttonProps._hover = { bg: 'coral.600' };
+                } else if (action.colorScheme === 'navy') {
+                  buttonProps.bg = 'navy.500';
+                  buttonProps.color = 'white';
+                  buttonProps._hover = { bg: 'navy.600' };
+                } else if (action.colorScheme === 'gray') {
+                  buttonProps.variant = 'outline';
+                  buttonProps.borderColor = 'gray.300';
+                  buttonProps.color = 'gray.700';
+                  buttonProps._hover = { bg: 'gray.50' };
+                } else {
+                  // Default colors for primary/secondary based on position
+                  if (index === allActions.length - 1) {
+                    // Primary action (last button)
+                    buttonProps.bg = 'sage.500';
+                    buttonProps.color = 'white';
+                    buttonProps._hover = { bg: 'sage.600' };
+                  } else {
+                    // Secondary action
+                    buttonProps.variant = 'outline';
+                    buttonProps.borderColor = 'gray.300';
+                    buttonProps.color = 'gray.700';
+                    buttonProps._hover = { bg: 'gray.50' };
+                  }
+                }
+                
+                return (
+                  <Button 
+                    key={index}
+                    {...buttonProps}
+                    onClick={async () => {
+                      await action.onClick();
+                      if (!action.isLoading && !action.preventAutoClose) {
+                        setOpen(false);
+                      }
+                    }}
+                    loading={action.isLoading}
+                    loadingText={action.loadingText}
+                    disabled={action.isDisabled}
+                  >
+                    {action.label}
+                  </Button>
+                );
+              })}
             </HStack>
           </DialogFooter>
         )}

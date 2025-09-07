@@ -28,6 +28,7 @@ interface CreateBarometerDialogProps {
 
 export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, isOpen, onOpenChange }: CreateBarometerDialogProps) {
   const [topic, setTopic] = useState('');
+  const [description, setDescription] = useState('');
   const [scaleMin, setScaleMin] = useState(1);
   const [scaleMax, setScaleMax] = useState(5);
   const [displayType, setDisplayType] = useState(['numbers']);
@@ -38,9 +39,21 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
   // Auto-set scale when display type changes
   const handleDisplayTypeChange = (newDisplayType: string[]) => {
     setDisplayType(newDisplayType);
+    
     if (newDisplayType[0] === 'smileys') {
+      // For smileys, default to 1-5 scale
       setScaleMin(1);
       setScaleMax(5);
+    } else if (newDisplayType[0] === 'numbers') {
+      // For numbers, ensure we have a valid scale (1-5 or 1-10 only)
+      if (scaleMax > 10) {
+        setScaleMin(1);
+        setScaleMax(5);
+      }
+    } else if (newDisplayType[0] === 'percentage') {
+      // For percentage, scale is fixed at 0-100
+      setScaleMin(0);
+      setScaleMax(100);
     }
   };
 
@@ -373,6 +386,7 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
         },
         body: JSON.stringify({
           topic: topic.trim(),
+          description: description.trim() || undefined,
           scaleMin: finalScaleMin,
           scaleMax: finalScaleMax,
           displayType: displayType[0] || 'numbers',
@@ -394,6 +408,7 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
 
       // Reset form
       setTopic('');
+      setDescription('');
       setScaleMin(1);
       setScaleMax(5);
       setDisplayType(['numbers']);
@@ -454,11 +469,14 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
       primaryAction={{
         label: "Opret barometer",
         onClick: handleSubmit,
-        isDisabled: !topic.trim() || scaleMin >= scaleMax
+        isDisabled: !topic.trim() || scaleMin >= scaleMax,
+        isLoading: loading,
+        colorScheme: "sage"
       }}
       secondaryAction={{
         label: "Annuller",
-        onClick: handleCancel
+        onClick: handleCancel,
+        colorScheme: "gray"
       }}
       maxWidth="4xl"
       isOpen={isOpen}
@@ -474,6 +492,44 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               maxLength={255}
+              borderColor="cream.300"
+              borderRadius="lg"
+              bg="cream.25"
+              _hover={{ borderColor: "cream.400" }}
+              _focus={{ 
+                borderColor: "sage.400", 
+                boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
+                outline: "none"
+              }}
+              _focusVisible={{
+                borderColor: "sage.400", 
+                boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
+                outline: "none"
+              }}
+            />
+          </Box>
+
+          <Box>
+            <Text mb={2} fontWeight="medium">Beskrivelse (valgfri)</Text>
+            <Input
+              placeholder="Beskriv hvad brugeren skal vurdere (f.eks. 'Hvordan har dit humør været i dag?')"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={500}
+              borderColor="cream.300"
+              borderRadius="lg"
+              bg="cream.25"
+              _hover={{ borderColor: "cream.400" }}
+              _focus={{ 
+                borderColor: "sage.400", 
+                boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
+                outline: "none"
+              }}
+              _focusVisible={{
+                borderColor: "sage.400", 
+                boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
+                outline: "none"
+              }}
             />
           </Box>
           
@@ -574,7 +630,7 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
             </Box>
           )}
           
-          {displayType[0] !== 'percentage' && (
+          {(displayType[0] === 'numbers') && (
             <Box>
               <Text mb={2} fontWeight="medium">Skala</Text>
               <SegmentGroup.Root 
@@ -593,12 +649,10 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
                   <SegmentGroup.ItemText>1 til 5</SegmentGroup.ItemText>
                   <SegmentGroup.ItemHiddenInput />
                 </SegmentGroup.Item>
-                {displayType[0] !== 'smileys' && (
-                  <SegmentGroup.Item value="1-10">
-                    <SegmentGroup.ItemText>1 til 10</SegmentGroup.ItemText>
-                    <SegmentGroup.ItemHiddenInput />
-                  </SegmentGroup.Item>
-                )}
+                <SegmentGroup.Item value="1-10">
+                  <SegmentGroup.ItemText>1 til 10</SegmentGroup.ItemText>
+                  <SegmentGroup.ItemHiddenInput />
+                </SegmentGroup.Item>
               </SegmentGroup.Root>
             </Box>
           )}
@@ -617,7 +671,7 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
                   onValueChange={(details) => setPercentageValue(details.value)}
                   min={0}
                   max={100}
-                  step={10}
+                  step={1}
                   colorPalette="green"
                   size="lg"
                 >

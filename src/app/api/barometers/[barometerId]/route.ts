@@ -77,7 +77,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { topic, scaleMin, scaleMax, displayType, smileyType } = body;
+    const { topic, description, scaleMin, scaleMax, displayType, smileyType } = body;
 
     // Validate required fields
     if (!topic || typeof topic !== 'string' || topic.trim().length === 0) {
@@ -94,6 +94,19 @@ export async function PUT(
 
     if (scaleMax > 100) {
       return NextResponse.json({ error: 'Scale max cannot exceed 100' }, { status: 400 });
+    }
+
+    // Validate scale range based on display type
+    if (displayType === 'percentage') {
+      // For percentage barometers, scale should be 0-100
+      if (scaleMin !== 0 || scaleMax !== 100) {
+        return NextResponse.json({ error: 'Percentage barometers must use 0-100 scale' }, { status: 400 });
+      }
+    } else {
+      // For numbers and smileys, ensure minimum is at least 1
+      if (scaleMin < 1) {
+        return NextResponse.json({ error: 'Scale minimum must be at least 1 for non-percentage barometers' }, { status: 400 });
+      }
     }
 
     if (!displayType || !['numbers', 'smileys', 'percentage'].includes(displayType)) {
@@ -121,7 +134,8 @@ export async function PUT(
       scaleMin,
       scaleMax,
       displayType,
-      displayType === 'smileys' ? smileyType : null
+      displayType === 'smileys' ? smileyType : null,
+      description?.trim()
     );
 
     if (!updatedBarometer) {

@@ -156,7 +156,7 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
       <HStack justify="space-between" align="start">
         <VStack align="start" gap={2}>
           <Heading size="lg" color="fg.default" fontWeight="600">
-            Værktøjer ({totalTools})
+            Værktøjer
           </Heading>
           <Box className="w-16 h-1 bg-delft-blue-500 rounded-full"></Box>
         </VStack>
@@ -196,9 +196,6 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
           {/* Barometers Section */}
           {barometers.length > 0 && (
             <Box>
-              <Heading size="sm" color="gray.600" mb={4}>
-                Barometre ({barometers.length})
-              </Heading>
               <VStack gap={4} align="stretch" width="100%">
                 {barometers.map((barometer) => (
                   <BarometerCard

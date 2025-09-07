@@ -57,6 +57,7 @@ export interface Barometer {
   childId: number;
   createdBy: number;
   topic: string;
+  description?: string;
   scaleMin: number;
   scaleMax: number;
   displayType: string;
@@ -789,13 +790,14 @@ export async function createBarometer(
   scaleMin: number = 1,
   scaleMax: number = 5,
   displayType: string = 'numbers',
-  smileyType: string = 'emojis'
+  smileyType: string = 'emojis',
+  description?: string
 ): Promise<Barometer | null> {
   try {
     const result = await query(
-      `INSERT INTO barometers (child_id, created_by, topic, scale_min, scale_max, display_type, smiley_type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [childId, createdBy, topic, scaleMin, scaleMax, displayType, smileyType]
+      `INSERT INTO barometers (child_id, created_by, topic, description, scale_min, scale_max, display_type, smiley_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [childId, createdBy, topic, description || null, scaleMin, scaleMax, displayType, smileyType]
     );
 
     const row = result.rows[0];
@@ -804,6 +806,7 @@ export async function createBarometer(
       childId: row.child_id,
       createdBy: row.created_by,
       topic: row.topic,
+      description: row.description,
       scaleMin: row.scale_min,
       scaleMax: row.scale_max,
       displayType: row.display_type,
@@ -824,15 +827,16 @@ export async function updateBarometer(
   scaleMin: number,
   scaleMax: number,
   displayType: string,
-  smileyType?: string
+  smileyType?: string,
+  description?: string
 ): Promise<Barometer | null> {
   try {
     const result = await query(
       `UPDATE barometers 
-       SET topic = $1, scale_min = $2, scale_max = $3, display_type = $4, smiley_type = $5, updated_at = NOW()
-       WHERE id = $6 
+       SET topic = $1, description = $2, scale_min = $3, scale_max = $4, display_type = $5, smiley_type = $6, updated_at = NOW()
+       WHERE id = $7 
        RETURNING *`,
-      [topic, scaleMin, scaleMax, displayType, smileyType, barometerId]
+      [topic, description || null, scaleMin, scaleMax, displayType, smileyType, barometerId]
     );
 
     if (result.rows.length === 0) {
@@ -845,6 +849,7 @@ export async function updateBarometer(
       childId: row.child_id,
       createdBy: row.created_by,
       topic: row.topic,
+      description: row.description,
       scaleMin: row.scale_min,
       scaleMax: row.scale_max,
       displayType: row.display_type,
@@ -890,6 +895,7 @@ export async function getBarometersForChild(childId: number): Promise<BarometerW
         childId: row.child_id,
         createdBy: row.created_by,
         topic: row.topic,
+        description: row.description,
         scaleMin: row.scale_min,
         scaleMax: row.scale_max,
         displayType: row.display_type || 'numbers',
@@ -936,9 +942,11 @@ export async function getBarometerById(barometerId: number): Promise<Barometer |
       childId: row.child_id,
       createdBy: row.created_by,
       topic: row.topic,
+      description: row.description,
       scaleMin: row.scale_min,
       scaleMax: row.scale_max,
       displayType: row.display_type || 'numbers',
+      smileyType: row.smiley_type,
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString()
     };

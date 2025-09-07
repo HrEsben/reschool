@@ -9,7 +9,6 @@ import {
   HStack,
   Button,
   Flex,
-  Badge,
   Heading,
   SegmentGroup,
   Slider,
@@ -24,6 +23,7 @@ interface Barometer {
   childId: number;
   createdBy: number;
   topic: string;
+  description?: string;
   scaleMin: number;
   scaleMax: number;
   displayType: string;
@@ -42,25 +42,68 @@ interface EditBarometerDialogProps {
 
 export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, isOpen, onOpenChange }: EditBarometerDialogProps) {
   const [topic, setTopic] = useState('');
+  const [description, setDescription] = useState('');
   const [scaleMin, setScaleMin] = useState(1);
   const [scaleMax, setScaleMax] = useState(5);
   const [displayType, setDisplayType] = useState(['numbers']);
   const [smileyType, setSmileyType] = useState(['emojis']);
   const [percentageValue, setPercentageValue] = useState([50]); // For slider preview
   const [loading, setLoading] = useState(false);
+  const [hasExistingEntries, setHasExistingEntries] = useState(false);
+
+  // Check if barometer has existing entries
+  const checkExistingEntries = async () => {
+    try {
+      const response = await fetch(`/api/barometers/${barometer.id}/entries`);
+      if (response.ok) {
+        const data = await response.json();
+        setHasExistingEntries(data.entries && data.entries.length > 0);
+      }
+    } catch (error) {
+      console.error('Error checking existing entries:', error);
+      // Default to true to be safe - prevent changing type if we can't check
+      setHasExistingEntries(true);
+    }
+  };
 
   // Initialize form with existing barometer data
   useEffect(() => {
     if (barometer) {
       setTopic(barometer.topic);
-      setScaleMin(barometer.scaleMin);
-      setScaleMax(barometer.scaleMax);
-      setDisplayType([barometer.displayType]);
-      setSmileyType([barometer.smileyType || 'emojis']);
+      setDescription(barometer.description || '');
+      
+      // Check if barometer has existing entries
+      checkExistingEntries();
+      
+      // Ensure display type is properly set
+      const currentDisplayType = barometer.displayType || 'numbers';
+      setDisplayType([currentDisplayType]);
+      
+      // Ensure smiley type is properly set
+      const currentSmileyType = barometer.smileyType || 'emojis';
+      setSmileyType([currentSmileyType]);
+      
+      // Set scale based on display type and validate for numbers
+      if (currentDisplayType === 'numbers') {
+        // For numbers, only allow 1-5 or 1-10
+        if ((barometer.scaleMin === 1 && barometer.scaleMax === 5) || 
+            (barometer.scaleMin === 1 && barometer.scaleMax === 10)) {
+          setScaleMin(barometer.scaleMin);
+          setScaleMax(barometer.scaleMax);
+        } else {
+          // Default to 1-5 if current scale is not valid for numbers
+          setScaleMin(1);
+          setScaleMax(5);
+        }
+      } else {
+        // For smileys and percentage, use existing values
+        setScaleMin(barometer.scaleMin);
+        setScaleMax(barometer.scaleMax);
+      }
       
       // Set percentage value to middle of scale for preview
       const midPoint = Math.floor((barometer.scaleMin + barometer.scaleMax) / 2);
-      setPercentageValue([barometer.displayType === 'percentage' ? 50 : midPoint]);
+      setPercentageValue([currentDisplayType === 'percentage' ? 50 : midPoint]);
     }
   }, [barometer]);
 
@@ -69,9 +112,21 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
     if (details.value) {
       const newDisplayType = [details.value];
       setDisplayType(newDisplayType);
+      
       if (newDisplayType[0] === 'smileys') {
+        // For smileys, default to 1-5 scale
         setScaleMin(1);
         setScaleMax(5);
+      } else if (newDisplayType[0] === 'numbers') {
+        // For numbers, ensure we have a valid scale (1-5 or 1-10 only)
+        if (scaleMax > 10) {
+          setScaleMin(1);
+          setScaleMax(5);
+        }
+      } else if (newDisplayType[0] === 'percentage') {
+        // For percentage, scale is fixed at 0-100
+        setScaleMin(0);
+        setScaleMax(100);
       }
     }
   };
@@ -405,6 +460,7 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
         },
         body: JSON.stringify({
           topic: topic.trim(),
+          description: description.trim() || undefined,
           scaleMin: finalScaleMin,
           scaleMax: finalScaleMax,
           displayType: displayType[0] || 'numbers',
@@ -468,11 +524,13 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
         label: "Gem ændringer",
         onClick: handleSubmit,
         isDisabled: !topic.trim() || scaleMin >= scaleMax,
-        isLoading: loading
+        isLoading: loading,
+        colorScheme: "sage"
       }}
       secondaryAction={{
         label: "Annuller",
-        onClick: () => onOpenChange?.(false)
+        onClick: () => onOpenChange?.(false),
+        colorScheme: "gray"
       }}
       maxWidth="4xl"
       isOpen={isOpen}
@@ -488,15 +546,61 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
               onChange={(e) => setTopic(e.target.value)}
               placeholder="Fx: Humør, Energi, Samarbejde..."
               maxLength={100}
+              borderColor="cream.300"
+              borderRadius="lg"
+              bg="cream.25"
+              _hover={{ borderColor: "cream.400" }}
+              _focus={{ 
+                borderColor: "sage.400", 
+                boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
+                outline: "none"
+              }}
+              _focusVisible={{
+                borderColor: "sage.400", 
+                boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
+                outline: "none"
+              }}
+            />
+          </Box>
+
+          <Box>
+            <Text mb={2} fontWeight="medium">Beskrivelse (valgfri)</Text>
+            <Input
+              placeholder="Beskriv hvad brugeren skal vurdere (f.eks. 'Hvordan har dit humør været i dag?')"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={500}
+              borderColor="cream.300"
+              borderRadius="lg"
+              bg="cream.25"
+              _hover={{ borderColor: "cream.400" }}
+              _focus={{ 
+                borderColor: "sage.400", 
+                boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
+                outline: "none"
+              }}
+              _focusVisible={{
+                borderColor: "sage.400", 
+                boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
+                outline: "none"
+              }}
             />
           </Box>
           
           <Box>
             <Text mb={2} fontWeight="medium">Visningstype</Text>
+            {hasExistingEntries && (
+              <Text fontSize="sm" color="gray.600" mb={2}>
+                Visningstypen kan ikke ændres når der allerede er registreringer
+              </Text>
+            )}
             <SegmentGroup.Root 
               value={displayType[0] || 'numbers'}
-              onValueChange={handleDisplayTypeChange}
+              onValueChange={hasExistingEntries ? undefined : handleDisplayTypeChange}
               size="md"
+              disabled={hasExistingEntries}
+              opacity={hasExistingEntries ? 0.6 : 1}
+              cursor={hasExistingEntries ? 'not-allowed' : 'default'}
             >
               <SegmentGroup.Indicator />
               <SegmentGroup.Item value="numbers">
@@ -534,10 +638,18 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
           {displayType[0] === 'smileys' && (
             <Box>
               <Text mb={2} fontWeight="medium">Type af humørikoner</Text>
+              {hasExistingEntries && (
+                <Text fontSize="sm" color="gray.600" mb={2}>
+                  Humørikon-typen kan ikke ændres når der allerede er registreringer
+                </Text>
+              )}
               <SegmentGroup.Root 
                 value={smileyType[0]}
-                onValueChange={(details) => setSmileyType(details.value ? [details.value] : ['emojis'])}
+                onValueChange={hasExistingEntries ? undefined : (details) => setSmileyType(details.value ? [details.value] : ['emojis'])}
                 size="md"
+                disabled={hasExistingEntries}
+                opacity={hasExistingEntries ? 0.6 : 1}
+                cursor={hasExistingEntries ? 'not-allowed' : 'default'}
               >
                 <SegmentGroup.Indicator />
                 <SegmentGroup.Item value="emojis">
@@ -581,12 +693,17 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
             </Box>
           )}
           
-          {displayType[0] !== 'percentage' && (
+          {(displayType[0] === 'numbers') && (
             <Box>
               <Text mb={2} fontWeight="medium">Skala</Text>
+              {hasExistingEntries && (
+                <Text fontSize="sm" color="gray.600" mb={2}>
+                  Skalaen kan ikke ændres når der allerede er registreringer
+                </Text>
+              )}
               <SegmentGroup.Root 
                 value={`${scaleMin}-${scaleMax}`}
-                onValueChange={(details) => {
+                onValueChange={hasExistingEntries ? undefined : (details) => {
                   if (details.value) {
                     const [min, max] = details.value.split('-').map(Number);
                     setScaleMin(min);
@@ -594,6 +711,9 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
                   }
                 }}
                 size="md"
+                disabled={hasExistingEntries}
+                opacity={hasExistingEntries ? 0.6 : 1}
+                cursor={hasExistingEntries ? 'not-allowed' : 'default'}
               >
                 <SegmentGroup.Indicator />
                 <SegmentGroup.Item value="1-5">
@@ -602,10 +722,6 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
                 </SegmentGroup.Item>
                 <SegmentGroup.Item value="1-10">
                   <SegmentGroup.ItemText>1-10</SegmentGroup.ItemText>
-                  <SegmentGroup.ItemHiddenInput />
-                </SegmentGroup.Item>
-                <SegmentGroup.Item value="1-100">
-                  <SegmentGroup.ItemText>1-100</SegmentGroup.ItemText>
                   <SegmentGroup.ItemHiddenInput />
                 </SegmentGroup.Item>
               </SegmentGroup.Root>
@@ -626,7 +742,7 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
                   onValueChange={(details) => setPercentageValue(details.value)}
                   min={0}
                   max={100}
-                  step={10}
+                  step={1}
                   colorPalette="green"
                   size="lg"
                 >
@@ -672,21 +788,6 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
                   >
                     {topic.trim() || "Emne"}
                   </Heading>
-                  <HStack gap={1}>
-                    <Badge colorScheme="gray" fontSize="xs">
-                      {scaleMin}-{scaleMax}
-                    </Badge>
-                    <Badge colorScheme="blue" fontSize="xs">
-                      {displayType[0] || 'numbers'}
-                    </Badge>
-                    {displayType[0] === 'smileys' && (
-                      <Badge colorScheme="green" fontSize="xs">
-                        {smileyType[0] === 'emojis' ? 'Emojis' : 
-                         smileyType[0] === 'simple' ? 'Enkle' : 
-                         smileyType[0] === 'subtle' ? 'Diskrete' : 'Emojis'}
-                      </Badge>
-                    )}
-                  </HStack>
                 </HStack>
                 
                 {/* Rating Preview */}

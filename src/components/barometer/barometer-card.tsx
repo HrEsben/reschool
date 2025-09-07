@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Button,
@@ -12,11 +12,10 @@ import {
   Heading,
   Icon,
   Slider,
-  Badge,
 } from '@chakra-ui/react';
 import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
-import { FiEdit2 } from 'react-icons/fi';
+import { CompactTimeline, CompactTimelineRef } from './compact-timeline';
 import { MdSettings } from "react-icons/md";
 
 interface BarometerEntry {
@@ -35,6 +34,7 @@ interface Barometer {
   childId: number;
   createdBy: number;
   topic: string;
+  description?: string;
   scaleMin: number;
   scaleMax: number;
   displayType: string;
@@ -58,10 +58,9 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [deletingBarometer, setDeletingBarometer] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showDeleteEntryDialog, setShowDeleteEntryDialog] = useState(false);
+  const timelineRef = useRef<CompactTimelineRef>(null);
 
   // Calculate color based on rating position in scale using site's color palette
   const getRatingColor = (rating: number) => {
@@ -93,16 +92,49 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
   };
 
   const hasEntryToday = barometer.latestEntry && isToday(barometer.latestEntry.entryDate);
-  const canDeleteEntry = barometer.latestEntry && (
-    isUserAdmin || barometer.latestEntry.recordedBy === currentUserId
-  );
 
-  const handleRatingClick = (rating: number) => {
+  // Pre-populate form if there's an entry today
+  useEffect(() => {
+    if (hasEntryToday && barometer.latestEntry) {
+      setSelectedRating(barometer.latestEntry.rating);
+      setComment(barometer.latestEntry.comment || '');
+    }
+  }, [hasEntryToday, barometer.latestEntry]);
+
+  const handleRatingClick = async (rating: number) => {
     setSelectedRating(rating);
+    
+    // Automatically save rating change if there's already an entry today
+    if (hasEntryToday) {
+      try {
+        const response = await fetch(`/api/barometers/${barometer.id}/entries`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            rating: rating,
+            comment: comment.trim() || undefined,
+          }),
+        });
+
+        if (response.ok) {
+          // Refresh timeline to show updated rating
+          timelineRef.current?.refresh();
+          onEntryRecorded(); // Update parent component
+        }
+      } catch (error) {
+        console.error('Error auto-updating rating:', error);
+      }
+    }
   };
 
   const handleSubmit = async () => {
-    if (selectedRating === null) {
+    // Determine the rating to use - current selection or existing rating for updates
+    const ratingToUse = selectedRating !== null ? selectedRating : 
+                       (hasEntryToday && barometer.latestEntry ? barometer.latestEntry.rating : null);
+    
+    if (ratingToUse === null) {
       showToast({
         title: 'Fejl',
         description: 'Vælg venligst en vurdering',
@@ -120,7 +152,7 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          rating: selectedRating,
+          rating: ratingToUse,
           comment: comment.trim() || undefined,
         }),
       });
@@ -138,6 +170,8 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
 
       // Reset comment field after successful submission
       setComment('');
+      // Refresh timeline to show new/updated entry
+      timelineRef.current?.refresh();
       onEntryRecorded();
     } catch (error) {
       console.error('Error recording entry:', error);
@@ -149,49 +183,6 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDeleteEntry = () => {
-    if (!barometer.latestEntry) return;
-    setShowDeleteEntryDialog(true);
-  };
-
-  const confirmDeleteEntry = async () => {
-    if (!barometer.latestEntry) return;
-
-    setDeleting(true);
-    try {
-      const response = await fetch(
-        `/api/barometers/${barometer.id}/entries/${barometer.latestEntry.id}`,
-        { method: 'DELETE' }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to delete entry');
-      }
-
-      showToast({
-        title: 'Succes',
-        description: 'Vurdering slettet',
-        type: 'success',
-        duration: 3000,
-      });
-
-      setSelectedRating(null);
-      setComment('');
-      setShowDeleteEntryDialog(false);
-      onEntryRecorded();
-    } catch (error) {
-      console.error('Error deleting entry:', error);
-      showToast({
-        title: 'Fejl',
-        description: 'Kunne ikke slette vurdering',
-        type: 'error',
-        duration: 3000,
-      });
-    } finally {
-      setDeleting(false);
     }
   };
 
@@ -424,20 +415,33 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
         <Button
           key={i}
           variant={selectedRating === i ? "solid" : "outline"}
-          bg={selectedRating === i ? color : "transparent"}
-          color={selectedRating === i ? "white" : "gray.800"}
-          borderColor={color}
+          bg={selectedRating === i ? color : "white"}
+          color={selectedRating === i ? "white" : "navy.700"}
+          borderColor={selectedRating === i ? color : "cream.300"}
           size="lg"
           onClick={() => handleRatingClick(i)}
           minW="50px"
           h="50px"
           fontSize="lg"
-          fontWeight="bold"
+          fontWeight="semibold"
+          borderRadius="lg"
           _hover={{
-            bg: selectedRating === i ? color : `${color}20`,
+            bg: selectedRating === i ? color : "sage.50",
             borderColor: color,
-            color: selectedRating === i ? "white" : "gray.800"
+            color: selectedRating === i ? "white" : "navy.700",
+            transform: "scale(1.05)"
           }}
+          _focus={{
+            borderColor: color,
+            boxShadow: `0 0 0 1px ${color}`,
+            outline: "none"
+          }}
+          _focusVisible={{
+            borderColor: color,
+            boxShadow: `0 0 0 1px ${color}`,
+            outline: "none"
+          }}
+          transition="all 0.2s"
         >
           {i}
         </Button>
@@ -457,20 +461,35 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
       buttons.push(
         <Button
           key={i}
-          variant={selectedRating === i ? "solid" : "outline"}
-          bg={selectedRating === i ? color : "transparent"}
+          variant="ghost"
+          bg={selectedRating === i ? color : "cream.50"}
           color={selectedRating === i ? "white" : "gray.800"}
-          borderColor={color}
+          borderColor={selectedRating === i ? color : "cream.300"}
+          borderWidth="2px"
+          borderStyle="solid"
           size="lg"
           onClick={() => handleRatingClick(i)}
           minW="60px"
           h="60px"
           fontSize="2xl"
+          borderRadius="full"
           _hover={{
-            bg: selectedRating === i ? color : `${color}20`,
+            bg: color,
             borderColor: color,
-            color: selectedRating === i ? "white" : "gray.800"
+            color: "white",
+            transform: "scale(1.1)"
           }}
+          _focus={{
+            borderColor: color,
+            boxShadow: `0 0 0 1px ${color}`,
+            outline: "none"
+          }}
+          _focusVisible={{
+            borderColor: color,
+            boxShadow: `0 0 0 1px ${color}`,
+            outline: "none"
+          }}
+          transition="all 0.2s"
         >
           {getSmiley(i)}
         </Button>
@@ -487,12 +506,11 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
 
   const generatePercentageRating = () => {
     const currentValue = selectedRating !== null ? [selectedRating] : [50];
-    const color = getRatingColor(currentValue[0]);
     
     return (
       <VStack gap={4} align="stretch" width="100%">
         <Box textAlign="center">
-          <Text fontSize="6xl" fontWeight="bold" color="gray.800">
+          <Text fontSize="6xl" fontWeight="bold" color="sage.600">
             {currentValue[0]}%
           </Text>
         </Box>
@@ -501,15 +519,20 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
           onValueChange={(details) => setSelectedRating(details.value[0])}
           min={0}
           max={100}
-          step={10}
-          colorPalette="green"
+          step={1}
+          colorPalette="sage"
           size="lg"
         >
           <Slider.Control>
-            <Slider.Track>
-              <Slider.Range />
+            <Slider.Track bg="cream.200">
+              <Slider.Range bg="linear-gradient(to right, coral.400, golden.400, sage.400)" />
             </Slider.Track>
-            <Slider.Thumb index={0}>
+            <Slider.Thumb 
+              index={0}
+              bg="white"
+              border="3px solid"
+              borderColor="sage.500"
+            >
               <Slider.HiddenInput />
             </Slider.Thumb>
           </Slider.Control>
@@ -517,11 +540,6 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
         </Slider.Root>
       </VStack>
     );
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('da-DK');
   };
 
   const handleEditBarometer = () => {
@@ -545,11 +563,23 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
             <Button
               variant="ghost"
               size="sm"
-              colorScheme="blue"
               onClick={handleEditBarometer}
               title="Rediger barometer"
               p={1}
               minW="auto"
+              color="navy.600"
+              _hover={{ bg: "navy.50", color: "navy.700" }}
+              _focus={{ 
+                bg: "navy.50",
+                boxShadow: "0 0 0 2px var(--chakra-colors-navy-200)",
+                outline: "none"
+              }}
+              _focusVisible={{ 
+                bg: "navy.50",
+                boxShadow: "0 0 0 2px var(--chakra-colors-navy-200)",
+                outline: "none"
+              }}
+              borderRadius="md"
             >
               <Icon>
                 <MdSettings size={16} />
@@ -559,12 +589,24 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
               <Button
                 variant="ghost"
                 size="sm"
-                colorScheme="red"
                 onClick={handleDeleteBarometer}
                 loading={deletingBarometer}
                 title="Slet barometer"
                 p={1}
                 minW="auto"
+                color="coral.600"
+                _hover={{ bg: "coral.50", color: "coral.700" }}
+                _focus={{ 
+                  bg: "coral.50",
+                  boxShadow: "0 0 0 2px var(--chakra-colors-coral-200)",
+                  outline: "none"
+                }}
+                _focusVisible={{ 
+                  bg: "coral.50",
+                  boxShadow: "0 0 0 2px var(--chakra-colors-coral-200)",
+                  outline: "none"
+                }}
+                borderRadius="md"
               >
                 <Icon>
                   <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
@@ -575,23 +617,22 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
             )}
           </HStack>
         </HStack>
+        {barometer.description && (
+          <Text mt={2} fontSize="sm" color="gray.600">
+            {barometer.description}
+          </Text>
+        )}
       </Box>
       
       <Box p={4}>
         <VStack gap={4} align="stretch">
           {/* Rating Display */}
           <Box>
-            <Text mb={3} fontWeight="medium" fontSize="sm" color="gray.600">
-              Hvordan er det i dag? ({barometer.scaleMin} = lavest, {barometer.scaleMax} = højest)
-            </Text>
             {generateRatingDisplay()}
           </Box>
 
           {/* Comment */}
           <Box>
-            <Text mb={2} fontWeight="medium" fontSize="sm" color="gray.600">
-              Kommentar (valgfri)
-            </Text>
             <Textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
@@ -599,61 +640,58 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
               size="sm"
               maxLength={500}
               rows={2}
+              borderColor="cream.300"
+              borderRadius="lg"
+              bg="cream.25"
+              _hover={{ borderColor: "cream.400" }}
+              _focus={{ 
+                borderColor: "sage.400", 
+                boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
+                outline: "none"
+              }}
+              _focusVisible={{
+                borderColor: "sage.400", 
+                boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
+                outline: "none"
+              }}
             />
           </Box>
 
           {/* Action Buttons */}
           <HStack gap={2}>
             <Button
-              colorScheme="blue"
               onClick={handleSubmit}
               loading={loading}
-              disabled={selectedRating === null}
               flex={1}
+              size="md"
+              fontWeight="medium"
+              bg="sage.500"
+              color="white"
+              _hover={{ bg: "sage.600" }}
+              _active={{ bg: "sage.700" }}
+              _focus={{ 
+                boxShadow: "0 0 0 2px var(--chakra-colors-sage-200)",
+                outline: "none"
+              }}
+              _focusVisible={{ 
+                boxShadow: "0 0 0 2px var(--chakra-colors-sage-200)",
+                outline: "none"
+              }}
+              borderRadius="lg"
             >
               {hasEntryToday ? 'Opdater vurdering' : 'Registrer vurdering'}
             </Button>
-            
-            {canDeleteEntry && (
-              <Button
-                variant="outline"
-                colorScheme="red"
-                onClick={handleDeleteEntry}
-                loading={deleting}
-                size="sm"
-              >
-                <Icon>
-                  <svg fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
-                  </svg>
-                </Icon>
-              </Button>
-            )}
           </HStack>
 
-          {/* Latest Entry Info */}
-          {barometer.latestEntry && (
-            <Box mt={4} p={3} bg="gray.50" borderRadius="md">
-              <Text fontSize="sm" color="gray.600" mb={1}>
-                Seneste registrering: {formatDate(barometer.latestEntry.entryDate)}
-              </Text>
-              <HStack>
-                <Badge colorScheme="blue" size="sm">
-                  {barometer.latestEntry.rating}/{barometer.scaleMax}
-                </Badge>
-                {barometer.recordedByName && (
-                  <Text fontSize="xs" color="gray.500">
-                    af {barometer.recordedByName}
-                  </Text>
-                )}
-              </HStack>
-              {barometer.latestEntry.comment && (
-                <Text fontSize="sm" color="gray.700" mt={2} fontStyle="italic">
-                  &ldquo;{barometer.latestEntry.comment}&rdquo;
-                </Text>
-              )}
-            </Box>
-          )}
+          {/* Registreringer Timeline */}
+          <CompactTimeline 
+            ref={timelineRef} 
+            barometer={barometer} 
+            maxEntries={10}
+            currentUserId={currentUserId}
+            isUserAdmin={isUserAdmin}
+            onEntryDeleted={onEntryRecorded}
+          />
         </VStack>
       </Box>
 
@@ -666,48 +704,23 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
           label: "Slet",
           onClick: confirmDeleteBarometer,
           isLoading: deletingBarometer,
-          isDisabled: deletingBarometer
+          isDisabled: deletingBarometer,
+          colorScheme: "coral"
         }}
         secondaryAction={{
           label: "Annuller",
-          onClick: () => setShowDeleteDialog(false)
+          onClick: () => setShowDeleteDialog(false),
+          colorScheme: "gray"
         }}
         isOpen={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
       >
         <VStack gap={4} align="stretch">
           <Text>
-            Er du sikker på, at du vil slette barometeret <strong>"{barometer.topic}"</strong>?
+            Er du sikker på, at du vil slette barometeret <strong>&ldquo;{barometer.topic}&rdquo;</strong>?
           </Text>
-          <Text fontSize="sm" color="red.600">
+          <Text fontSize="sm" color="coral.600">
             ⚠️ Denne handling kan ikke fortrydes. Alle data og registreringer for dette barometer vil blive permanent slettet.
-          </Text>
-        </VStack>
-      </DialogManager>
-
-      {/* Delete Entry Confirmation Dialog */}
-      <DialogManager
-        trigger={<Button style={{ display: 'none' }}>Hidden Trigger</Button>}
-        title="Slet Vurdering"
-        primaryAction={{
-          label: "Slet",
-          onClick: confirmDeleteEntry,
-          isLoading: deleting,
-          isDisabled: deleting
-        }}
-        secondaryAction={{
-          label: "Annuller",
-          onClick: () => setShowDeleteEntryDialog(false)
-        }}
-        isOpen={showDeleteEntryDialog}
-        onOpenChange={setShowDeleteEntryDialog}
-      >
-        <VStack gap={4} align="stretch">
-          <Text>
-            Er du sikker på, at du vil slette din vurdering for i dag?
-          </Text>
-          <Text fontSize="sm" color="orange.600">
-            ⚠️ Denne handling kan ikke fortrydes.
           </Text>
         </VStack>
       </DialogManager>

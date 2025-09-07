@@ -65,14 +65,23 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { topic, scaleMin = 1, scaleMax = 5, displayType = 'numbers', smileyType = 'emojis' } = body;
+    const { topic, description, scaleMin = 1, scaleMax = 5, displayType = 'numbers', smileyType = 'emojis' } = body;
 
     if (!topic || typeof topic !== 'string' || topic.trim().length === 0) {
       return NextResponse.json({ error: 'Topic is required' }, { status: 400 });
     }
 
-    if (scaleMin >= scaleMax || scaleMin < 1 || scaleMax > 100) {
-      return NextResponse.json({ error: 'Invalid scale range' }, { status: 400 });
+    // Validate scale range based on display type
+    if (displayType === 'percentage') {
+      // For percentage barometers, scale should be 0-100
+      if (scaleMin !== 0 || scaleMax !== 100) {
+        return NextResponse.json({ error: 'Percentage barometers must use 0-100 scale' }, { status: 400 });
+      }
+    } else {
+      // For numbers and smileys, scale should be 1-5 or 1-10
+      if (scaleMin >= scaleMax || scaleMin < 1 || scaleMax > 100) {
+        return NextResponse.json({ error: 'Invalid scale range' }, { status: 400 });
+      }
     }
 
     const validDisplayTypes = ['numbers', 'smileys', 'percentage'];
@@ -85,7 +94,7 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid smiley type' }, { status: 400 });
     }
 
-    const barometer = await createBarometer(childId, dbUser.id, topic.trim(), scaleMin, scaleMax, displayType, smileyType);
+    const barometer = await createBarometer(childId, dbUser.id, topic.trim(), scaleMin, scaleMax, displayType, smileyType, description?.trim());
     
     if (!barometer) {
       return NextResponse.json({ error: 'Failed to create barometer' }, { status: 500 });

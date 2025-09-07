@@ -4,9 +4,48 @@ import {
   recordBarometerEntry, 
   getBarometerById,
   getUserByStackAuthId,
-  isUserAdministratorForChild
+  isUserAdministratorForChild,
+  getBarometerEntries
 } from '@/lib/database-service';
 import { query } from '@/lib/db';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ barometerId: string }> }
+) {
+  try {
+    const { barometerId: barometerIdParam } = await params;
+    const user = await stackServerApp.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const dbUser = await getUserByStackAuthId(user.id);
+    if (!dbUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const barometerId = parseInt(barometerIdParam);
+    if (isNaN(barometerId)) {
+      return NextResponse.json({ error: 'Invalid barometer ID' }, { status: 400 });
+    }
+
+    // Check if barometer exists and user has access
+    const barometer = await getBarometerById(barometerId);
+    if (!barometer) {
+      return NextResponse.json({ error: 'Barometer not found' }, { status: 404 });
+    }
+
+    // Get entries for this barometer
+    const entries = await getBarometerEntries(barometerId, 50); // Get last 50 entries
+
+    return NextResponse.json({ entries });
+
+  } catch (error) {
+    console.error('Error fetching barometer entries:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
 
 export async function POST(
   request: NextRequest,
