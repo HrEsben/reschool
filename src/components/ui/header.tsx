@@ -212,8 +212,8 @@ export const Header = memo(function Header() {
         </HStack>
 
         {/* Right side items */}
-        <HStack gap={4} align="center">
-          {/* Notification Bell - visible on all screen sizes */}
+        <HStack gap={4} align="center" display={{ base: "none", md: "flex" }}>
+          {/* Notification Bell - visible on desktop only */}
           {user && (
             <NotificationBell 
               onClick={() => setIsNotificationCenterOpen(true)} 
@@ -222,28 +222,39 @@ export const Header = memo(function Header() {
           
           {/* User Avatar - visible on desktop */}
           {user && (
-            <Box position="relative" display={{ base: "none", md: "block" }}>
+            <Box position="relative">
               <UserAvatar />
             </Box>
           )}
         </HStack>
 
-        {/* Mobile menu button - positioned absolutely */}
+        {/* Mobile right side - notification bell + hamburger menu */}
         {user && (
-          <IconButton
-            aria-label="Åbn menu"
-            onClick={() => setIsMenuOpen(true)}
-            variant="ghost"
+          <HStack 
+            gap={2} 
+            align="center"
             display={{ base: "flex", md: "none" }}
-            className="text-delft-blue-500 hover:bg-cambridge-blue-900"
-            size="sm"
             position="absolute"
             right={0}
             top="50%"
             transform="translateY(-50%)"
           >
-            <HamburgerIcon />
-          </IconButton>
+            {/* Notification Bell - positioned left of hamburger on mobile */}
+            <NotificationBell 
+              onClick={() => setIsNotificationCenterOpen(true)} 
+            />
+            
+            {/* Mobile menu button */}
+            <IconButton
+              aria-label="Åbn menu"
+              onClick={() => setIsMenuOpen(true)}
+              variant="ghost"
+              className="text-delft-blue-500 hover:bg-cambridge-blue-900"
+              size="sm"
+            >
+              <HamburgerIcon />
+            </IconButton>
+          </HStack>
         )}
       </HStack>
 

@@ -17,11 +17,11 @@ export async function ensureUserInDatabase() {
     // Always sync user to database to ensure latest data is updated
     const dbUser = await syncUserToDatabase(user);
     
-    // If this is a new user (didn't exist before), activate any pending notifications
-    if (!existingDbUser && dbUser && user.primaryEmail) {
-      console.log('Activating pending notifications for email:', user.primaryEmail);
+    // Always check for and activate pending notifications for this email
+    if (dbUser && user.primaryEmail) {
+      console.log('Checking for pending notifications for email:', user.primaryEmail);
       await activatePendingNotifications(user.primaryEmail, dbUser.id);
-      console.log('Activation completed for user ID:', dbUser.id);
+      console.log('Notification activation check completed for user ID:', dbUser.id);
     }
 
     return dbUser;
