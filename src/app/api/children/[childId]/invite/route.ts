@@ -61,12 +61,12 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 });
     }
 
-    // Create notification for the invited email (will be pending if user doesn't exist)
-    const displayName = currentUser.displayName || currentUser.email.split('@')[0];
+        // Create notification for the invitation
+    const inviterName = currentUser.displayName || currentUser.email || 'En bruger';
     await createInvitationNotification(
       email,
       childData.child.name,
-      displayName,
+      inviterName,
       invitation.token
     );
 
@@ -85,7 +85,7 @@ export async function POST(
       await sendInvitationEmail({
         to: email,
         childName: childData.child.name,
-        inviterName: displayName,
+        inviterName: inviterName,
         inviterRelation: inviterRelation,
         recipientRelation: customRelationName || relation,
         inviteUrl

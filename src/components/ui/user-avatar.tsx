@@ -41,7 +41,7 @@ export function UserAvatar() {
   const displayName = user.displayName || user.primaryEmail || 'Bruger';
 
   return (
-    <MenuRoot positioning={{ placement: "bottom-end" }}>
+    <MenuRoot positioning={{ placement: "bottom-end", strategy: "absolute", offset: { mainAxis: 4, crossAxis: 0 } }}>
       <MenuTrigger asChild>
         <Button 
           variant="ghost" 
@@ -81,7 +81,7 @@ export function UserAvatar() {
         borderColor="gray.200"
         borderRadius="md"
         p={2}
-        zIndex={1000}
+        zIndex={1100}
         _focus={{ outline: "none" }}
         position="absolute"
       >

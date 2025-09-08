@@ -269,8 +269,9 @@ export async function createInvitationNotification(
   childName: string,
   inviterName: string,
   invitationToken: string
-): Promise<Notification | null> {
-  return createNotificationForEmail(
+): Promise<void> {
+  // Always create a pending notification for invitations since we only have email
+  await createPendingNotification(
     email,
     'invitation_received',
     'Ny invitation',
