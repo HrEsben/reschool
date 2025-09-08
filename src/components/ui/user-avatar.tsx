@@ -115,7 +115,23 @@ export function UserAvatar() {
         {/* Profile option */}
         <MenuItem 
           value="profile"
-          onClick={() => router.push(`/users/${user.primaryEmail?.split('@')[0] || 'profile'}`)}
+          onClick={() => {
+            // Generate slug similar to database-service logic
+            const generateUserSlug = (text: string) => {
+              return text.toLowerCase()
+                .replace(/[æå]/g, 'a')
+                .replace(/[ø]/g, 'o')
+                .replace(/[^a-z0-9]/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+            };
+            
+            const userSlug = user.displayName 
+              ? generateUserSlug(user.displayName)
+              : generateUserSlug(user.primaryEmail?.split('@')[0] || 'profile');
+              
+            router.push(`/users/${userSlug}`);
+          }}
           fontSize="sm"
           borderRadius="sm"
           p={2}

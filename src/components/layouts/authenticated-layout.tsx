@@ -2,9 +2,10 @@
 
 import { useUser } from "@stackframe/stack";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Box, Spinner, Text } from "@chakra-ui/react";
 import { AppLayout } from "@/components/ui/app-layout";
+import { CollectNameDialog } from "@/components/ui/collect-name-dialog";
 
 interface AuthenticatedLayoutProps {
   children: React.ReactNode;
@@ -13,15 +14,30 @@ interface AuthenticatedLayoutProps {
 export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const user = useUser();
   const router = useRouter();
+  const [showNameDialog, setShowNameDialog] = useState(false);
+  const [isCheckingName, setIsCheckingName] = useState(true);
 
   useEffect(() => {
     if (user === null) {
       router.push("/");
+    } else if (user && isCheckingName) {
+      // Check if user has a display name
+      if (!user.displayName) {
+        setShowNameDialog(true);
+      }
+      setIsCheckingName(false);
     }
-  }, [user, router]);
+  }, [user, router, isCheckingName]);
+
+  const handleNameComplete = async () => {
+    setShowNameDialog(false);
+    // The dialog already handles updating the user and syncing to database
+    // Force a page reload to ensure the updated user data is used
+    window.location.reload();
+  };
 
   // Show loading state while checking authentication
-  if (user === undefined) {
+  if (user === undefined || isCheckingName) {
     return (
       <Box 
         minH="100vh" 
@@ -46,8 +62,14 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   }
 
   return (
-    <AppLayout>
-      {children}
-    </AppLayout>
+    <>
+      <CollectNameDialog 
+        isOpen={showNameDialog} 
+        onComplete={handleNameComplete} 
+      />
+      <AppLayout>
+        {children}
+      </AppLayout>
+    </>
   );
 }
