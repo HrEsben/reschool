@@ -11,11 +11,28 @@ export default function Dashboard() {
   const user = useUser();
   const router = useRouter();
 
+  // Utility function to generate user slug
+  const generateUserSlug = (email: string, displayName?: string) => {
+    const generateSlug = (text: string) => {
+      return text.toLowerCase()
+        .replace(/[æå]/g, 'a')
+        .replace(/[ø]/g, 'o')
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    };
+
+    return displayName 
+      ? generateSlug(displayName)
+      : generateSlug(email.split('@')[0]);
+  };
+
   // Redirect based on user state
   useEffect(() => {
     if (user && (!user.displayName || user.displayName.trim() === '')) {
-      // User doesn't have a name set - redirect to settings
-      router.push("/settings?firstTime=true");
+      // User doesn't have a name set - redirect to user profile for setup
+      const userSlug = generateUserSlug(user.primaryEmail || '', user.displayName || undefined);
+      router.push(`/users/${userSlug}?firstTime=true`);
     }
   }, [user, router]);
 

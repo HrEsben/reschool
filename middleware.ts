@@ -21,7 +21,7 @@ export async function middleware(request: NextRequest) {
     const user = await stackServerApp.getUser();
 
     // If user is not authenticated and trying to access protected routes, redirect to home
-    if (!user && (pathname === '/dashboard' || pathname === '/settings')) {
+    if (!user && pathname === '/dashboard') {
       return NextResponse.redirect(new URL('/', request.url));
     }
 

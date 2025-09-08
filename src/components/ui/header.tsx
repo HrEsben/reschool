@@ -66,6 +66,22 @@ export const Header = memo(function Header() {
     }
   }, [pathname, user?.displayName]);
 
+  // Utility function to generate user slug
+  const generateUserSlug = useCallback((email: string, displayName?: string) => {
+    const generateSlug = (text: string) => {
+      return text.toLowerCase()
+        .replace(/[æå]/g, 'a')
+        .replace(/[ø]/g, 'o')
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    };
+
+    return displayName 
+      ? generateSlug(displayName)
+      : generateSlug(email.split('@')[0]);
+  }, []);
+
   const handleMenuItemClick = useCallback((href: string) => {
     router.push(href);
     setIsMenuOpen(false);
@@ -169,7 +185,7 @@ export const Header = memo(function Header() {
                   backgroundColor={
                     crumb.label === "Børn" ? "#81b29a" : 
                     crumb.label === "Indstillinger" ? "#e07a5f" : // Orange for settings
-                    (pathname?.startsWith('/users/') || (pathname === "/settings" && crumb.href.startsWith('/users/'))) ? "#3d405b" : // Dark blue for user name
+                    pathname?.startsWith('/users/') ? "#3d405b" : // Dark blue for user name
                     "#f2cc8f" // Default yellow for child names
                   }
                   borderRadius="9999px"
@@ -255,7 +271,7 @@ export const Header = memo(function Header() {
               {/* User info section at top - clickable to go to profile */}
               {user && (
                 <Button
-                  onClick={() => handleMenuItemClick(`/users/${user.primaryEmail?.split('@')[0] || 'profile'}`)}
+                  onClick={() => handleMenuItemClick(`/users/${generateUserSlug(user.primaryEmail || '', user.displayName || undefined)}`)}
                   variant="ghost"
                   p={6}
                   borderBottomWidth={1}
@@ -324,7 +340,7 @@ export const Header = memo(function Header() {
                 </Text>
                 <VStack gap={1} align="stretch">
                   <Button
-                    onClick={() => handleMenuItemClick("/settings")}
+                    onClick={() => user && handleMenuItemClick(`/users/${generateUserSlug(user.primaryEmail || '', user.displayName || undefined)}`)}
                     variant="ghost"
                     justifyContent="flex-start"
                     h="auto"

@@ -32,6 +32,22 @@ export default function SignupPage() {
     }
   }, [prefillEmail]);
 
+  // Utility function to generate user slug
+  const generateUserSlug = (email: string, displayName?: string) => {
+    const generateSlug = (text: string) => {
+      return text.toLowerCase()
+        .replace(/[æå]/g, 'a')
+        .replace(/[ø]/g, 'o')
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    };
+
+    return displayName 
+      ? generateSlug(displayName)
+      : generateSlug(email.split('@')[0]);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -56,11 +72,13 @@ export default function SignupPage() {
       });
 
       if (result.status === "ok") {
-        // If there's a redirect URL (like from invitation), go there instead of settings
+        // If there's a redirect URL (like from invitation), go there instead of user profile
         if (redirect) {
           router.push(redirect);
         } else {
-          router.push("/settings?firstTime=true");
+          // Generate user slug and redirect to user profile page for first-time setup
+          const userSlug = generateUserSlug(email);
+          router.push(`/users/${userSlug}?firstTime=true`);
         }
       } else {
         setError("Der opstod en fejl ved oprettelse af bruger");
