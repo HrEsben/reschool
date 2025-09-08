@@ -258,15 +258,32 @@ export default function ChildSlugPage() {
       
       if (!response.ok) {
         const errorData = await response.json();
-        alert(errorData.error || 'Der opstod en fejl ved fjernelse af brugeren');
+        showToast({
+          title: 'Fejl',
+          description: errorData.error || 'Der opstod en fejl ved fjernelse af brugeren',
+          type: 'error',
+          duration: 5000,
+        });
         return;
       }
+      
+      showToast({
+        title: 'Bruger fjernet',
+        description: 'Brugeren er blevet fjernet fra barnet',
+        type: 'success',
+        duration: 3000,
+      });
       
       // Refresh the child data to show updated user list
       await fetchChildData();
     } catch (error) {
       console.error('Error removing user:', error);
-      alert('Der opstod en netværksfejl ved fjernelse af brugeren');
+      showToast({
+        title: 'Netværksfejl',
+        description: 'Der opstod en netværksfejl ved fjernelse af brugeren',
+        type: 'error',
+        duration: 5000,
+      });
     } finally {
       setRemovingUser(false);
     }
@@ -507,6 +524,7 @@ export default function ChildSlugPage() {
                                     bg="rgba(224, 122, 95, 0.1)"
                                     color="#e07a5f"
                                     border="1px solid rgba(224, 122, 95, 0.3)"
+                                    onClick={(e) => e.stopPropagation()}
                                   >
                                     <Icon boxSize={4}>
                                       <svg fill="currentColor" viewBox="0 0 20 20">
@@ -592,7 +610,10 @@ export default function ChildSlugPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => copyInviteLink(invitation)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyInviteLink(invitation);
+                              }}
                               bg="#f4f1de"
                               borderColor="#81b29a"
                               color="#3d405b"
@@ -617,6 +638,7 @@ export default function ChildSlugPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  onClick={(e) => e.stopPropagation()}
                                   bg="#f4f1de"
                                   borderColor="#e07a5f"
                                   color="#e07a5f"
