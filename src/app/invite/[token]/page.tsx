@@ -60,6 +60,26 @@ export default function InviteAcceptPage() {
 
         const data = await response.json();
         setInvitation(data);
+
+        // Auto-accept invitation if user is logged in and email matches
+        if (user && user.primaryEmail === data.email && data.status === 'pending') {
+          try {
+            const acceptResponse = await fetch(`/api/invitations/${token}/auto-accept`, {
+              method: 'POST',
+            });
+
+            if (acceptResponse.ok) {
+              const acceptData = await acceptResponse.json();
+              // Redirect to child profile immediately
+              router.push(`/${acceptData.childSlug}`);
+              return;
+            }
+          } catch (autoAcceptError) {
+            console.log('Auto-acceptance failed, user can manually accept:', autoAcceptError);
+            // Continue to show manual acceptance UI
+          }
+        }
+        
       } catch (error) {
         console.error('Error fetching invitation:', error);
         setError('Der opstod en netværksfejl');
@@ -69,7 +89,7 @@ export default function InviteAcceptPage() {
     };
 
     fetchInvitation();
-  }, [token]);
+  }, [token, user, router]);
 
   const handleAcceptInvitation = async () => {
     if (!invitation || !user) return;

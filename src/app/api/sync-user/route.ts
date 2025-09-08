@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { stackServerApp } from '@/stack';
 import { ensureUserInDatabase } from '@/lib/user-sync';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     // Get current user from Stack Auth
     const user = await stackServerApp.getUser();
