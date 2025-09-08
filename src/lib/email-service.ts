@@ -84,7 +84,7 @@ ReSchool er en platform der hjælper med at følge børns udvikling og skabe bed
 
         // Send the email using Resend
     const { error } = await resend.emails.send({
-      from: 'ReSchool <onboarding@resend.dev>',
+      from: 'ReSchool <invitations@reschool.dk>',
       to: [to],
       subject: 'Invitation til at følge ' + childName + ' på ReSchool',
       html: htmlTemplate,
