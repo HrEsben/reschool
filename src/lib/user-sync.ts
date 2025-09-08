@@ -20,7 +20,9 @@ export async function ensureUserInDatabase() {
       
       // Activate any pending notifications for this email
       if (dbUser && user.primaryEmail) {
+        console.log('Activating pending notifications for email:', user.primaryEmail);
         await activatePendingNotifications(user.primaryEmail, dbUser.id);
+        console.log('Activation completed for user ID:', dbUser.id);
       }
     }
 

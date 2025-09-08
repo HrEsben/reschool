@@ -38,20 +38,23 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
 
   const fetchNotifications = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/notifications');
+      
       if (response.ok) {
         const data = await response.json();
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
+        console.log('Fetched notifications from API:', data);
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      } else {
+        console.error('Failed to fetch notifications:', response.status);
       }
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
+  };  useEffect(() => {
     if (isOpen) {
       fetchNotifications();
     }

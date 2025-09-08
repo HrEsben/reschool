@@ -28,6 +28,10 @@ export async function GET(request: NextRequest) {
     const notifications = await getUserNotifications(dbUser.id, limit, unreadOnly);
     const unreadCount = await getUnreadNotificationCount(dbUser.id);
 
+    console.log('Fetching notifications for user ID:', dbUser.id);
+    console.log('Found notifications count:', notifications.length);
+    console.log('Unread count:', unreadCount);
+
     return NextResponse.json({
       notifications,
       unreadCount

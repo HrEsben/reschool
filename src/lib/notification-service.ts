@@ -116,12 +116,25 @@ export async function createPendingNotification(
 // Activate pending notifications when user signs up
 export async function activatePendingNotifications(email: string, userId: number): Promise<void> {
   try {
-    await query(
-      `UPDATE notifications 
-       SET user_id = $1, pending_email = NULL, updated_at = NOW()
-       WHERE pending_email = $2`,
-      [userId, email]
+    console.log('Looking for pending notifications for email:', email);
+    
+    // Find all pending notifications for this email
+    const result = await query(
+      'SELECT * FROM notifications WHERE pending_email = $1',
+      [email]
     );
+    
+    console.log('Found pending notifications:', result.rows.length);
+    
+    if (result.rows.length > 0) {
+      // Activate them by setting user_id and clearing pending_email
+      await query(
+        'UPDATE notifications SET user_id = $1, pending_email = NULL WHERE pending_email = $2',
+        [userId, email]
+      );
+      
+      console.log('Activated', result.rows.length, 'notifications for user ID:', userId);
+    }
   } catch (error) {
     console.error('Error activating pending notifications:', error);
   }
@@ -181,7 +194,13 @@ export async function getUserNotifications(
     query_text += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`;
     params.push(limit);
 
+    console.log('getUserNotifications query:', query_text);
+    console.log('getUserNotifications params:', params);
+
     const result = await query(query_text, params);
+
+    console.log('getUserNotifications result rows:', result.rows.length);
+    console.log('getUserNotifications raw rows:', result.rows);
 
     return result.rows.map(row => ({
       id: row.id,
@@ -189,7 +208,7 @@ export async function getUserNotifications(
       type: row.type,
       title: row.title,
       message: row.message,
-      data: row.data ? JSON.parse(row.data) : null,
+      data: row.data && typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
       read: row.read || false,
       createdAt: new Date(row.created_at).toISOString()
     }));
@@ -234,13 +253,19 @@ export async function markAllNotificationsAsRead(userId: number): Promise<boolea
 // Get unread notification count
 export async function getUnreadNotificationCount(userId: number): Promise<number> {
   try {
+    console.log('getUnreadNotificationCount for user ID:', userId);
+    
     const result = await query(
       `SELECT COUNT(*) as count FROM notifications 
        WHERE user_id = $1 AND read = FALSE`,
       [userId]
     );
 
-    return parseInt(result.rows[0]?.count || '0');
+    console.log('getUnreadNotificationCount result:', result.rows[0]);
+    const count = parseInt(result.rows[0]?.count || '0');
+    console.log('getUnreadNotificationCount final count:', count);
+    
+    return count;
   } catch (error) {
     console.error('Error getting unread notification count:', error);
     return 0;
