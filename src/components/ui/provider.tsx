@@ -8,7 +8,12 @@ import { SimpleToaster } from "./simple-toast"
 export function Provider(props: { children: React.ReactNode }) {
   return (
     <ChakraProvider value={system}>
-      <ThemeProvider attribute="class" disableTransitionOnChange>
+      <ThemeProvider 
+        attribute="class" 
+        disableTransitionOnChange
+        forcedTheme="light"
+        defaultTheme="light"
+      >
         {props.children}
         <SimpleToaster />
       </ThemeProvider>
