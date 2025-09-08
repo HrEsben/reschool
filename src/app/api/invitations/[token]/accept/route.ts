@@ -5,8 +5,10 @@ import {
   getInvitationWithDetails,
   addUserToChild,
   getChildById,
-  updateInvitationStatus
+  updateInvitationStatus,
+  getChildWithUsers
 } from '@/lib/database-service';
+import { createChildAddedNotification, createUserJoinedChildNotification } from '@/lib/notification-service';
 
 export async function POST(
   request: NextRequest,
@@ -78,6 +80,33 @@ export async function POST(
     const child = await getChildById(invitation.childId);
     if (!child) {
       return NextResponse.json({ error: 'Child not found' }, { status: 404 });
+    }
+
+    // Create notifications
+    try {
+      // Notify the new user that they've been added to the child
+      await createChildAddedNotification(
+        currentUser.id,
+        child.name,
+        child.slug
+      );
+
+      // Notify other users of the child that a new user has joined
+      const childWithUsers = await getChildWithUsers(invitation.childId);
+      if (childWithUsers) {
+        const otherUsers = childWithUsers.users.filter(u => u.id !== currentUser.id);
+        for (const otherUser of otherUsers) {
+          await createUserJoinedChildNotification(
+            otherUser.id,
+            currentUser.displayName || currentUser.email,
+            child.name,
+            child.slug
+          );
+        }
+      }
+    } catch (notificationError) {
+      console.error('Error creating notifications:', notificationError);
+      // Don't fail the invitation acceptance if notifications fail
     }
 
     return NextResponse.json({

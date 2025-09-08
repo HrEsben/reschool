@@ -212,18 +212,18 @@ export const Header = memo(function Header() {
         </HStack>
 
         {/* Right side items */}
-        <HStack gap={3} display={{ base: "none", md: "flex" }}>
+        <HStack gap={4} align="center" display={{ base: "none", md: "flex" }}>
           {/* Notification Bell */}
           {user && (
-            <NotificationBell 
-              onClick={() => setIsNotificationCenterOpen(true)} 
-            />
+            <Box>
+              <NotificationBell 
+                onClick={() => setIsNotificationCenterOpen(true)} 
+              />
+            </Box>
           )}
           
           {/* User Avatar - hidden on mobile since it's in the hamburger menu */}
-          <Box position="relative">
-            {user && <UserAvatar />}
-          </Box>
+          {user && <UserAvatar />}
         </HStack>
 
         {/* Mobile menu button - positioned absolutely */}

@@ -9,7 +9,7 @@ export interface Notification {
   title: string;
   message: string;
   data?: Record<string, unknown>;
-  isRead: boolean;
+  read: boolean;
   createdAt: string;
 }
 
@@ -61,7 +61,7 @@ export async function createNotification(
       title: row.title,
       message: row.message,
       data: row.data ? JSON.parse(row.data) : null,
-      isRead: row.is_read || false,
+      read: row.read || false,
       createdAt: new Date(row.created_at).toISOString()
     };
   } catch (error) {
@@ -100,7 +100,7 @@ export async function getUserNotifications(
       title: row.title,
       message: row.message,
       data: row.data ? JSON.parse(row.data) : null,
-      isRead: row.is_read || false,
+      read: row.read || false,
       createdAt: new Date(row.created_at).toISOString()
     }));
   } catch (error) {

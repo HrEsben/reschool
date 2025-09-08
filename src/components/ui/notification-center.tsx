@@ -9,8 +9,7 @@ import {
   HStack, 
   Badge,
   IconButton,
-  Spinner,
-  Float
+  Spinner
 } from '@chakra-ui/react';
 import { useRouter } from 'next/navigation';
 import { BellIcon, CheckIcon } from 'lucide-react';
@@ -22,7 +21,7 @@ export interface Notification {
   title: string;
   message: string;
   data?: Record<string, unknown>;
-  isRead: boolean;
+  read: boolean;
   createdAt: string;
 }
 
@@ -103,7 +102,7 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
   };
 
   const handleNotificationClick = (notification: Notification) => {
-    if (!notification.isRead) {
+    if (!notification.read) {
       markAsRead(notification.id);
     }
     
@@ -206,8 +205,8 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
                   borderBottom="1px solid"
                   borderColor="gray.100"
                   cursor="pointer"
-                  bg={notification.isRead ? 'white' : 'blue.50'}
-                  _hover={{ bg: notification.isRead ? 'gray.50' : 'blue.100' }}
+                  bg={notification.read ? 'white' : 'blue.50'}
+                  _hover={{ bg: notification.read ? 'gray.50' : 'blue.100' }}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <HStack align="start" gap={3}>
@@ -224,7 +223,7 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
                     </Badge>
                     <VStack align="start" gap={1} flex={1}>
                       <Text
-                        fontWeight={notification.isRead ? 'normal' : 'semibold'}
+                        fontWeight={notification.read ? 'normal' : 'semibold'}
                         fontSize="sm"
                         className="text-delft-blue-600"
                       >
@@ -241,7 +240,7 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
                         {formatTime(notification.createdAt)}
                       </Text>
                     </VStack>
-                    {!notification.isRead && (
+                    {!notification.read && (
                       <Box
                         width="8px"
                         height="8px"
@@ -288,31 +287,33 @@ export function NotificationBell({ onClick }: NotificationBellProps) {
   }, []);
 
   return (
-    <Box>
-      <Float placement="top-end" offset={4}>
-        <IconButton
-          aria-label="Notifikationer"
-          variant="ghost"
-          onClick={onClick}
-          size="sm"
+    <Box position="relative">
+      <IconButton
+        aria-label="Notifikationer"
+        variant="ghost"
+        onClick={onClick}
+        size="sm"
+      >
+        <BellIcon size={20} className="text-delft-blue-500" />
+      </IconButton>
+      {unreadCount > 0 && (
+        <Badge
+          position="absolute"
+          top="-2px"
+          right="-2px"
+          colorScheme="red"
+          borderRadius="full"
+          fontSize="xs"
+          minWidth="18px"
+          height="18px"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          zIndex={1}
         >
-          <BellIcon size={20} className="text-delft-blue-500" />
-        </IconButton>
-        {unreadCount > 0 && (
-          <Badge
-            colorScheme="red"
-            borderRadius="full"
-            fontSize="xs"
-            minWidth="18px"
-            height="18px"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </Badge>
-        )}
-      </Float>
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </Badge>
+      )}
     </Box>
   );
 }
