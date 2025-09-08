@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stackServerApp } from '@/stack';
 import { getUserByStackAuthId, getChildWithUsers, createInvitation } from '@/lib/database-service';
 import { sendInvitationEmail } from '@/lib/email-service';
+import { createInvitationNotification } from '@/lib/notification-service';
 
 export async function POST(
   request: NextRequest,
@@ -60,6 +61,15 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 });
     }
 
+    // Create notification for the invited email (will be pending if user doesn't exist)
+    const displayName = currentUser.displayName || currentUser.email.split('@')[0];
+    await createInvitationNotification(
+      email,
+      childData.child.name,
+      displayName,
+      invitation.token
+    );
+
     // Create invitation URL
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invite/${invitation.token}`;
 
@@ -67,7 +77,6 @@ export async function POST(
     const inviterRelation = currentUserData.customRelationName || currentUserData.relation;
 
     // Send invitation email using email service
-    const displayName = currentUser.displayName || currentUser.email.split('@')[0];
     
     console.log('sendInvitationEmail function:', sendInvitationEmail);
     console.log('typeof sendInvitationEmail:', typeof sendInvitationEmail);

@@ -4,7 +4,8 @@ import { query } from './db';
 
 export interface Notification {
   id: number;
-  userId: number;
+  userId?: number; // Optional for pending notifications
+  pendingEmail?: string; // For notifications before user exists
   type: NotificationType;
   title: string;
   message: string;
@@ -30,6 +31,7 @@ export interface CreateNotificationData {
 }
 
 // Create a new notification
+// Create a notification for an existing user
 export async function createNotification(
   userId: number,
   type: string,
@@ -67,6 +69,94 @@ export async function createNotification(
   } catch (error) {
     console.error('Error creating notification:', error);
     return null;
+  }
+}
+
+// Create a pending notification for an email (user doesn't exist yet)
+export async function createPendingNotification(
+  email: string,
+  type: string,
+  title: string,
+  message: string,
+  data?: Record<string, unknown>
+): Promise<Notification | null> {
+  try {
+    const result = await query(
+      `INSERT INTO notifications (pending_email, type, title, message, data, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+       RETURNING *`,
+      [
+        email,
+        type,
+        title,
+        message,
+        data ? JSON.stringify(data) : null
+      ]
+    );
+
+    const row = result.rows[0];
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      pendingEmail: row.pending_email,
+      type: row.type,
+      title: row.title,
+      message: row.message,
+      data: row.data ? JSON.parse(row.data) : null,
+      read: row.read || false,
+      createdAt: new Date(row.created_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error creating pending notification:', error);
+    return null;
+  }
+}
+
+// Activate pending notifications when user signs up
+export async function activatePendingNotifications(email: string, userId: number): Promise<void> {
+  try {
+    await query(
+      `UPDATE notifications 
+       SET user_id = $1, pending_email = NULL, updated_at = NOW()
+       WHERE pending_email = $2`,
+      [userId, email]
+    );
+  } catch (error) {
+    console.error('Error activating pending notifications:', error);
+  }
+}
+
+// Check if user exists by email
+export async function getUserByEmail(email: string): Promise<any> {
+  try {
+    const result = await query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Error getting user by email:', error);
+    return null;
+  }
+}
+
+// Smart notification creation - creates for user if exists, pending if not
+export async function createNotificationForEmail(
+  email: string,
+  type: string,
+  title: string,
+  message: string,
+  data?: Record<string, unknown>
+): Promise<Notification | null> {
+  const existingUser = await getUserByEmail(email);
+  
+  if (existingUser) {
+    // User exists, create notification immediately
+    return createNotification(existingUser.id, type, title, message, data);
+  } else {
+    // User doesn't exist, create pending notification
+    return createPendingNotification(email, type, title, message, data);
   }
 }
 
@@ -175,13 +265,13 @@ export async function deleteNotification(notificationId: number): Promise<boolea
 // Helper functions for creating specific types of notifications
 
 export async function createInvitationNotification(
-  userId: number,
+  email: string,
   childName: string,
   inviterName: string,
   invitationToken: string
 ): Promise<Notification | null> {
-  return createNotification(
-    userId,
+  return createNotificationForEmail(
+    email,
     'invitation_received',
     'Ny invitation',
     `${inviterName} har inviteret dig til at følge ${childName}`,

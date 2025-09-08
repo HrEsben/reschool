@@ -2,6 +2,7 @@
 
 import { stackServerApp } from "@/stack";
 import { syncUserToDatabase, getUserByStackAuthId } from "./database-service";
+import { activatePendingNotifications } from "./notification-service";
 
 export async function ensureUserInDatabase() {
   try {
@@ -16,6 +17,11 @@ export async function ensureUserInDatabase() {
     // If user doesn't exist, sync them to database
     if (!dbUser) {
       dbUser = await syncUserToDatabase(user);
+      
+      // Activate any pending notifications for this email
+      if (dbUser && user.primaryEmail) {
+        await activatePendingNotifications(user.primaryEmail, dbUser.id);
+      }
     }
 
     return dbUser;
