@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   VStack,
@@ -48,7 +48,7 @@ export function BarometerTimeline({ barometer, trigger }: BarometerTimelineProps
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  const fetchEntries = async () => {
+  const fetchEntries = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/barometers/${barometer.id}/entries`);
@@ -68,13 +68,13 @@ export function BarometerTimeline({ barometer, trigger }: BarometerTimelineProps
     } finally {
       setLoading(false);
     }
-  };
+  }, [barometer.id]);
 
   useEffect(() => {
     if (isOpen) {
       fetchEntries();
     }
-  }, [isOpen]);
+  }, [isOpen, fetchEntries]);
 
   // Calculate color based on rating position in scale
   const getRatingColor = (rating: number) => {

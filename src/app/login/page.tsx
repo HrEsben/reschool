@@ -37,7 +37,7 @@ export default function LoginPage() {
       } else {
         setError("Ugyldige loginoplysninger");
       }
-    } catch (err) {
+    } catch {
       setError("Der opstod en fejl ved login");
     } finally {
       setIsLoading(false);

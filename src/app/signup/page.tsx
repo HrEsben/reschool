@@ -50,7 +50,7 @@ export default function SignupPage() {
       } else {
         setError("Der opstod en fejl ved oprettelse af bruger");
       }
-    } catch (err) {
+    } catch {
       setError("Der opstod en fejl ved oprettelse af bruger");
     } finally {
       setIsLoading(false);

@@ -34,7 +34,6 @@ export const Header = memo(function Header() {
         crumbs.push({ label: "Børn", href: "/dashboard" });
       } else if (pathname?.startsWith('/users/')) {
         // User profile page (e.g., /users/esben-stephansen)
-        const username = pathname.split('/')[2]; // Get username from path
         crumbs.push({ label: user?.displayName || "Bruger", href: pathname });
       } else if (pathname?.match(/^\/[^\/]+$/)) {
         // Child profile page (e.g., /mads, /hilda)
@@ -65,7 +64,7 @@ export const Header = memo(function Header() {
     if (pathname) {
       generateBreadcrumbs();
     }
-  }, [pathname]);
+  }, [pathname, user?.displayName]);
 
   const handleMenuItemClick = useCallback((href: string) => {
     router.push(href);

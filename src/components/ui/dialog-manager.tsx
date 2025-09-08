@@ -13,9 +13,7 @@ import {
   DialogBackdrop,
   Button,
   Text,
-  VStack,
-  HStack,
-  Box
+  HStack
 } from '@chakra-ui/react';
 
 export type DialogType = 'default' | 'warning' | 'error' | 'success' | 'info';

@@ -12,7 +12,6 @@ import {
 import { CreateBarometerDialog } from './create-barometer-dialog';
 import { EditBarometerDialog } from './edit-barometer-dialog';
 import { BarometerCard } from './barometer-card';
-import { showToast } from '@/components/ui/simple-toast';
 
 interface BarometerEntry {
   id: number;

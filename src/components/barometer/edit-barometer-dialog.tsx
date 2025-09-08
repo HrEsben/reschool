@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Input,
@@ -52,7 +52,7 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
   const [hasExistingEntries, setHasExistingEntries] = useState(false);
 
   // Check if barometer has existing entries
-  const checkExistingEntries = async () => {
+  const checkExistingEntries = useCallback(async () => {
     try {
       const response = await fetch(`/api/barometers/${barometer.id}/entries`);
       if (response.ok) {
@@ -64,7 +64,7 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
       // Default to true to be safe - prevent changing type if we can't check
       setHasExistingEntries(true);
     }
-  };
+  }, [barometer.id]);
 
   // Initialize form with existing barometer data
   useEffect(() => {
@@ -105,7 +105,7 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
       const midPoint = Math.floor((barometer.scaleMin + barometer.scaleMax) / 2);
       setPercentageValue([currentDisplayType === 'percentage' ? 50 : midPoint]);
     }
-  }, [barometer]);
+  }, [barometer, checkExistingEntries]);
 
   // Auto-set scale when display type changes
   const handleDisplayTypeChange = (details: { value: string | null }) => {

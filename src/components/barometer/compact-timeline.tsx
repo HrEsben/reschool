@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
 import {
   Box,
   VStack,
@@ -66,7 +66,7 @@ export const CompactTimeline = forwardRef<CompactTimelineRef, CompactTimelinePro
   const [entryToDelete, setEntryToDelete] = useState<BarometerEntry | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchEntries = async () => {
+  const fetchEntries = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/barometers/${barometer.id}/entries`);
@@ -81,7 +81,7 @@ export const CompactTimeline = forwardRef<CompactTimelineRef, CompactTimelinePro
     } finally {
       setLoading(false);
     }
-  };
+  }, [barometer.id, maxEntries]);
 
   // Expose refresh function to parent
   useImperativeHandle(ref, () => ({
@@ -140,14 +140,14 @@ export const CompactTimeline = forwardRef<CompactTimelineRef, CompactTimelinePro
 
   useEffect(() => {
     fetchEntries();
-  }, [barometer.id, maxEntries]);
+  }, [fetchEntries]);
 
   // Refresh when refreshTrigger changes
   useEffect(() => {
     if (refreshTrigger !== undefined && refreshTrigger > 0) {
       fetchEntries();
     }
-  }, [refreshTrigger]);
+  }, [refreshTrigger, fetchEntries]);
 
   // Calculate color based on rating position in scale
   const getRatingColor = (rating: number) => {
@@ -309,9 +309,6 @@ export const CompactTimeline = forwardRef<CompactTimelineRef, CompactTimelinePro
     return (
       <Box p={4} bg="cream.25" borderRadius="lg" border="1px solid" borderColor="cream.200">
         <VStack gap={2}>
-          <Icon fontSize="2xl" color="sage.400">
-            📊
-          </Icon>
           <Text fontSize="sm" color="navy.600" textAlign="center">
             Ingen registreringer endnu
           </Text>

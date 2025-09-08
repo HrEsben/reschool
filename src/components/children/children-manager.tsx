@@ -4,10 +4,7 @@ import { useState } from 'react';
 import {
   Box,
   Card,
-  Heading,
-  VStack,
-  HStack,
-  Text
+  HStack
 } from '@chakra-ui/react';
 import { AddChildForm } from './add-child-form';
 import { ChildrenList } from './children-list';

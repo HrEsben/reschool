@@ -12,7 +12,6 @@ import {
   Badge,
   Spinner,
   Button,
-  IconButton,
   Icon
 } from '@chakra-ui/react';
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
@@ -117,21 +116,6 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
     }
     
     return badges;
-  };
-
-  const getRelationColor = (relation: string) => {
-    switch (relation) {
-      case 'Mor':
-        return 'pink';
-      case 'Far':
-        return 'blue';
-      case 'Underviser':
-        return 'teal';
-      case 'Ressourceperson':
-        return 'purple';
-      default:
-        return 'gray';
-    }
   };
 
   if (isLoading) {

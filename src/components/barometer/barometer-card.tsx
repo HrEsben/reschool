@@ -10,7 +10,6 @@ import {
   Flex,
   Textarea,
   Heading,
-  Icon,
   Slider,
 } from '@chakra-ui/react';
 import { showToast } from '@/components/ui/simple-toast';

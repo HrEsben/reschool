@@ -17,7 +17,6 @@ import { useUser } from '@stackframe/stack';
 import { AddToolDialog } from './add-tool-dialog';
 import { BarometerCard } from '@/components/barometer/barometer-card';
 import { EditBarometerDialog } from '@/components/barometer/edit-barometer-dialog';
-import { showToast } from '@/components/ui/simple-toast';
 
 interface BarometerEntry {
   id: number;
@@ -51,7 +50,6 @@ interface ToolsManagerProps {
 }
 
 export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
-  const [tools, setTools] = useState<Barometer[]>([]);
   const [barometers, setBarometers] = useState<Barometer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

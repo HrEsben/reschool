@@ -83,7 +83,7 @@ Denne invitation udløber om 7 dage.
 ReSchool er en platform der hjælper med at følge børns udvikling og skabe bedre kommunikation mellem forældre, lærere og andre professionelle.`;
 
         // Send the email using Resend
-    const { data, error } = await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: 'ReSchool <onboarding@resend.dev>',
       to: [to],
       subject: 'Invitation til at følge ' + childName + ' på ReSchool',

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@stackframe/stack';
 import {
@@ -55,18 +55,7 @@ export default function ChildProfilePage() {
 
   const childId = params.childId as string;
 
-  useEffect(() => {
-    if (user === null) {
-      router.push("/");
-      return;
-    }
-
-    if (user && childId) {
-      fetchChildData();
-    }
-  }, [user, childId]);
-
-  const fetchChildData = async () => {
+  const fetchChildData = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/children/${childId}`);
@@ -90,7 +79,18 @@ export default function ChildProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [childId]);
+
+  useEffect(() => {
+    if (user === null) {
+      router.push("/");
+      return;
+    }
+
+    if (user && childId) {
+      fetchChildData();
+    }
+  }, [user, childId, fetchChildData, router]);
 
   const getRelationDisplayName = (user: UserWithRelation) => {
     if (user.relation === 'Ressourceperson' && user.customRelationName) {

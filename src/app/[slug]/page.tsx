@@ -15,7 +15,6 @@ import {
   Table,
   Icon
 } from '@chakra-ui/react';
-import { toaster } from '@/components/ui/toaster';
 import { showToast } from '@/components/ui/simple-toast';
 import { AuthenticatedLayout } from '@/components/layouts/authenticated-layout';
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
@@ -182,16 +181,6 @@ export default function ChildSlugPage() {
       return user.customRelationName;
     }
     return user.relation;
-  };
-
-  const getRelationBadgeColor = (relation: string) => {
-    switch (relation) {
-      case 'Mor': return 'coral';
-      case 'Far': return 'navy';
-      case 'Underviser': return 'sage';
-      case 'Ressourceperson': return 'golden';
-      default: return 'gray';
-    }
   };
 
   const generateUserSlug = (userData: UserWithRelation) => {
@@ -488,9 +477,6 @@ export default function ChildSlugPage() {
                       {isCurrentUserAdmin && (
                         <Table.Cell>
                           {(() => {
-                            // Current user data
-                            const currentUserData = childData.users.find(u => u.stackAuthId === user?.id);
-                            
                             // Count administrators
                             const adminCount = childData.users.filter(u => u.isAdministrator).length;
                             

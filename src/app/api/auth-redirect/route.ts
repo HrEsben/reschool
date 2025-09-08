@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       // Redirect to home if not authenticated
       return NextResponse.redirect(new URL('/', request.url));
     }
-  } catch (_error) {
+  } catch {
     // Fallback to home page
     return NextResponse.redirect(new URL('/', request.url));
   }

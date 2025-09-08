@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@stackframe/stack';
 import {
@@ -10,11 +10,9 @@ import {
   VStack,
   HStack,
   Spinner,
-  Badge,
   Button,
   Separator,
   Table,
-  Icon,
   Input,
   Field,
   Dialog,
@@ -68,28 +66,7 @@ export default function UserSlugPage() {
 
   const userSlug = params.userSlug as string;
 
-  useEffect(() => {
-    if (user === null) {
-      router.push("/");
-      return;
-    }
-
-    if (user && userSlug) {
-      fetchUserProfileData();
-    }
-  }, [user, userSlug]);
-
-  // Initialize settings form when user data is available
-  useEffect(() => {
-    if (user && userProfileData && userProfileData.user.stackAuthId === user.id) {
-      if (user) {
-        setDisplayName(user.displayName || "");
-        setEmail(user.primaryEmail || "");
-      }
-    }
-  }, [user, userProfileData]);
-
-  const fetchUserProfileData = async () => {
+  const fetchUserProfileData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -114,24 +91,33 @@ export default function UserSlugPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userSlug]);
 
-  const getRelationDisplayName = (child: ChildWithRelation) => {
+  useEffect(() => {
+    if (user === null) {
+      router.push("/");
+      return;
+    }
+    
+    if (user && userSlug) {
+      fetchUserProfileData();
+    }
+  }, [user, userSlug, fetchUserProfileData, router]);  const getRelationDisplayName = (child: ChildWithRelation) => {
     if (child.relation === 'Ressourceperson' && child.customRelationName) {
       return child.customRelationName;
     }
     return child.relation;
   };
 
-  const getRelationBadgeColor = (relation: string) => {
-    switch (relation) {
-      case 'Mor': return 'coral';
-      case 'Far': return 'navy';
-      case 'Underviser': return 'sage';
-      case 'Ressourceperson': return 'golden';
-      default: return 'gray';
+  // Initialize settings form when user data is available
+  useEffect(() => {
+    if (user && userProfileData && userProfileData.user.stackAuthId === user.id) {
+      if (user) {
+        setDisplayName(user.displayName || "");
+        setEmail(user.primaryEmail || "");
+      }
     }
-  };
+  }, [user, userProfileData]);
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) {
@@ -165,13 +151,6 @@ export default function UserSlugPage() {
   };
 
   // Settings functions (only used when viewing own profile)
-  const initializeSettingsForm = () => {
-    if (user) {
-      setDisplayName(user.displayName || "");
-      setEmail(user.primaryEmail || "");
-    }
-  };
-
   const showSettingsMessage = (type: 'success' | 'error', text: string) => {
     setSettingsMessage({ type, text });
     setTimeout(() => setSettingsMessage(null), 5000);
@@ -188,7 +167,7 @@ export default function UserSlugPage() {
       }
 
       showSettingsMessage('success', 'Profil opdateret succesfuldt');
-    } catch (_error) {
+    } catch {
       showSettingsMessage('error', 'Der opstod en fejl ved opdatering af profilen');
     } finally {
       setIsSettingsLoading(false);
@@ -203,7 +182,7 @@ export default function UserSlugPage() {
       await user.delete();
       showSettingsMessage('success', 'Konto slettet');
       router.push("/");
-    } catch (_error) {
+    } catch {
       showSettingsMessage('error', 'Der opstod en fejl ved sletning af kontoen');
     } finally {
       setIsSettingsLoading(false);
