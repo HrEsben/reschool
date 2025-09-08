@@ -12,18 +12,16 @@ export async function ensureUserInDatabase() {
     if (!user) return null;
 
     // Check if user already exists in database
-    let dbUser = await getUserByStackAuthId(user.id);
+    const existingDbUser = await getUserByStackAuthId(user.id);
     
-    // If user doesn't exist, sync them to database
-    if (!dbUser) {
-      dbUser = await syncUserToDatabase(user);
-      
-      // Activate any pending notifications for this email
-      if (dbUser && user.primaryEmail) {
-        console.log('Activating pending notifications for email:', user.primaryEmail);
-        await activatePendingNotifications(user.primaryEmail, dbUser.id);
-        console.log('Activation completed for user ID:', dbUser.id);
-      }
+    // Always sync user to database to ensure latest data is updated
+    const dbUser = await syncUserToDatabase(user);
+    
+    // If this is a new user (didn't exist before), activate any pending notifications
+    if (!existingDbUser && dbUser && user.primaryEmail) {
+      console.log('Activating pending notifications for email:', user.primaryEmail);
+      await activatePendingNotifications(user.primaryEmail, dbUser.id);
+      console.log('Activation completed for user ID:', dbUser.id);
     }
 
     return dbUser;

@@ -13,6 +13,7 @@ import {
 } from '@chakra-ui/react';
 import { useRouter } from 'next/navigation';
 import { BellIcon, CheckIcon } from 'lucide-react';
+import { AcceptInvitationDialog } from './accept-invitation-dialog';
 
 export interface Notification {
   id: number;
@@ -109,6 +110,13 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
       markAsRead(notification.id);
     }
     
+    // For invitation notifications, we handle them specially
+    if (notification.type === 'invitation_received') {
+      // Don't redirect - the dialog will be opened from the notification item itself
+      return;
+    }
+    
+    // For other notification types, use the actionUrl
     if (notification.data?.actionUrl && typeof notification.data.actionUrl === 'string') {
       router.push(notification.data.actionUrl);
       onClose();
@@ -201,59 +209,81 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
             </Box>
           ) : (
             <VStack gap={0} align="stretch">
-              {notifications.map((notification) => (
-                <Box
-                  key={notification.id}
-                  p={4}
-                  borderBottom="1px solid"
-                  borderColor="gray.100"
-                  cursor="pointer"
-                  bg={notification.read ? 'white' : 'blue.50'}
-                  _hover={{ bg: notification.read ? 'gray.50' : 'blue.100' }}
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <HStack align="start" gap={3}>
-                    <Badge
-                      colorScheme={getNotificationTypeColor(notification.type)}
-                      size="sm"
-                      borderRadius="full"
-                    >
-                      {notification.type === 'invitation_received' && '📬'}
-                      {notification.type === 'invitation_accepted' && '✅'}
-                      {notification.type === 'child_added' && '👶'}
-                      {notification.type === 'user_joined_child' && '👥'}
-                      {notification.type === 'barometer_entry' && '📊'}
-                    </Badge>
-                    <VStack align="start" gap={1} flex={1}>
-                      <Text
-                        fontWeight={notification.read ? 'normal' : 'semibold'}
-                        fontSize="sm"
-                        className="text-delft-blue-600"
-                      >
-                        {notification.title}
-                      </Text>
-                      <Text
-                        fontSize="xs"
-                        className="text-gray-600"
-                        lineHeight="1.4"
-                      >
-                        {notification.message}
-                      </Text>
-                      <Text fontSize="xs" className="text-gray-400">
-                        {formatTime(notification.createdAt)}
-                      </Text>
-                    </VStack>
-                    {!notification.read && (
-                      <Box
-                        width="8px"
-                        height="8px"
+              {notifications.map((notification) => {
+                const notificationContent = (
+                  <Box
+                    key={notification.id}
+                    p={4}
+                    borderBottom="1px solid"
+                    borderColor="gray.100"
+                    cursor="pointer"
+                    bg={notification.read ? 'white' : 'blue.50'}
+                    _hover={{ bg: notification.read ? 'gray.50' : 'blue.100' }}
+                    onClick={() => notification.type !== 'invitation_received' ? handleNotificationClick(notification) : undefined}
+                  >
+                    <HStack align="start" gap={3}>
+                      <Badge
+                        colorScheme={getNotificationTypeColor(notification.type)}
+                        size="sm"
                         borderRadius="full"
-                        bg="blue.500"
-                      />
-                    )}
-                  </HStack>
-                </Box>
-              ))}
+                      >
+                        {notification.type === 'invitation_received' && '📬'}
+                        {notification.type === 'invitation_accepted' && '✅'}
+                        {notification.type === 'child_added' && '👶'}
+                        {notification.type === 'user_joined_child' && '👥'}
+                        {notification.type === 'barometer_entry' && '📊'}
+                      </Badge>
+                      <VStack align="start" gap={1} flex={1}>
+                        <Text
+                          fontWeight={notification.read ? 'normal' : 'semibold'}
+                          fontSize="sm"
+                          className="text-delft-blue-600"
+                        >
+                          {notification.title}
+                        </Text>
+                        <Text
+                          fontSize="xs"
+                          className="text-gray-600"
+                          lineHeight="1.4"
+                        >
+                          {notification.message}
+                        </Text>
+                        <Text fontSize="xs" className="text-gray-400">
+                          {formatTime(notification.createdAt)}
+                        </Text>
+                      </VStack>
+                      {!notification.read && (
+                        <Box
+                          width="8px"
+                          height="8px"
+                          borderRadius="full"
+                          bg="blue.500"
+                        />
+                      )}
+                    </HStack>
+                  </Box>
+                );
+
+                // Wrap invitation notifications with the AcceptInvitationDialog
+                if (notification.type === 'invitation_received' && notification.data) {
+                  return (
+                    <AcceptInvitationDialog
+                      key={notification.id}
+                      trigger={notificationContent}
+                      invitationToken={notification.data.invitationToken as string}
+                      childName={notification.data.childName as string}
+                      inviterName={notification.data.inviterName as string}
+                      onAccept={() => {
+                        markAsRead(notification.id);
+                        onClose();
+                        fetchNotifications(); // Refresh notifications
+                      }}
+                    />
+                  );
+                }
+
+                return notificationContent;
+              })}
             </VStack>
           )}
         </Box>

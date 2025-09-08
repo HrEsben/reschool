@@ -1,21 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stackServerApp } from '@/stack';
 import { 
-  getUserBySlug, 
   getChildrenForUser,
   getUserByStackAuthId,
   type User,
   type ChildWithRelation
 } from '@/lib/database-service';
+import { query } from '@/lib/db';
 
 interface UserProfileResponse {
   user: User;
   children: ChildWithRelation[];
 }
 
+// Get user by database ID
+async function getUserById(userId: number): Promise<User | null> {
+  try {
+    const result = await query(
+      'SELECT * FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      stackAuthId: row.stack_auth_id,
+      email: row.email,
+      displayName: row.display_name,
+      profileImageUrl: row.profile_image_url,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  } catch (error) {
+    console.error('Error getting user by ID:', error);
+    return null;
+  }
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ userSlug: string }> }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const user = await stackServerApp.getUser();
@@ -25,10 +53,16 @@ export async function GET(
     }
 
     const resolvedParams = await params;
-    const userSlug = resolvedParams.userSlug;
+    const userIdParam = resolvedParams.userId;
     
-    // Get the target user by slug
-    const targetUser = await getUserBySlug(userSlug);
+    // Parse user ID
+    const userId = parseInt(userIdParam);
+    if (isNaN(userId)) {
+      return NextResponse.json({ error: 'Ugyldigt bruger ID' }, { status: 400 });
+    }
+    
+    // Get the target user by ID
+    const targetUser = await getUserById(userId);
 
     if (!targetUser) {
       return NextResponse.json({ error: 'Bruger ikke fundet' }, { status: 404 });

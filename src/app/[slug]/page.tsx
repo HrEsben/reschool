@@ -183,21 +183,6 @@ export default function ChildSlugPage() {
     return user.relation;
   };
 
-  const generateUserSlug = (userData: UserWithRelation) => {
-    const generateSlug = (text: string) => {
-      return text.toLowerCase()
-        .replace(/[æå]/g, 'a')
-        .replace(/[ø]/g, 'o')
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-    };
-
-    return userData.displayName 
-      ? generateSlug(userData.displayName)
-      : generateSlug(userData.email.split('@')[0]);
-  };
-
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -441,7 +426,7 @@ export default function ChildSlugPage() {
                     <Table.Row 
                       key={`user-${userData.id}`}
                       _hover={{ bg: "cream.100", cursor: "pointer" }}
-                      onClick={() => router.push(`/users/${generateUserSlug(userData)}`)}
+                      onClick={() => router.push(`/users/${userData.id}`)}
                       transition="background-color 0.2s ease"
                     >
                       <Table.Cell>

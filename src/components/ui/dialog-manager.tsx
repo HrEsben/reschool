@@ -139,16 +139,25 @@ export function DialogManager({
         {trigger}
       </DialogTrigger>
       
-      <DialogBackdrop />
+      <DialogBackdrop 
+        bg="blackAlpha.600"
+        backdropFilter="blur(4px)"
+        position="fixed"
+        top={0}
+        left={0}
+        width="100vw"
+        height="100vh"
+        zIndex={1100}
+      />
       
       <DialogContent 
         maxW={maxWidth}
         w="90vw"
         position="fixed"
-        top="50%"
-        left="50%"
+        top="50vh"
+        left="50vw"
         transform="translate(-50%, -50%)"
-        zIndex="modal"
+        zIndex={1200}
         bg="white"
         borderRadius="xl"
         border="2px solid"
@@ -156,9 +165,8 @@ export function DialogManager({
         p={0}
         maxH="90vh"
         overflow="hidden"
-        margin={0}
-        marginBlock={0}
-        marginInline={0}
+        margin="0 !important"
+        boxShadow="xl"
       >
         {/* Header */}
         <DialogHeader 

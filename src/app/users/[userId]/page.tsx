@@ -49,7 +49,7 @@ interface UserProfileData {
   children: ChildWithRelation[];
 }
 
-export default function UserSlugPage() {
+export default function UserProfilePage() {
   const params = useParams();
   const router = useRouter();
   const user = useUser();
@@ -64,13 +64,13 @@ export default function UserSlugPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
-  const userSlug = params.userSlug as string;
+  const userId = params.userId as string;
 
   const fetchUserProfileData = useCallback(async () => {
     try {
       setLoading(true);
       
-      const response = await fetch(`/api/users/${userSlug}`);
+      const response = await fetch(`/api/users/${userId}`);
       
       if (!response.ok) {
         if (response.status === 403) {
@@ -91,7 +91,7 @@ export default function UserSlugPage() {
     } finally {
       setLoading(false);
     }
-  }, [userSlug]);
+  }, [userId]);
 
   useEffect(() => {
     if (user === null) {
@@ -99,10 +99,10 @@ export default function UserSlugPage() {
       return;
     }
     
-    if (user && userSlug) {
+    if (user && userId) {
       fetchUserProfileData();
     }
-  }, [user, userSlug, fetchUserProfileData, router]);  const getRelationDisplayName = (child: ChildWithRelation) => {
+  }, [user, userId, fetchUserProfileData, router]);  const getRelationDisplayName = (child: ChildWithRelation) => {
     if (child.relation === 'Ressourceperson' && child.customRelationName) {
       return child.customRelationName;
     }

@@ -115,22 +115,19 @@ export function UserAvatar() {
         {/* Profile option */}
         <MenuItem 
           value="profile"
-          onClick={() => {
-            // Generate slug similar to database-service logic
-            const generateUserSlug = (text: string) => {
-              return text.toLowerCase()
-                .replace(/[æå]/g, 'a')
-                .replace(/[ø]/g, 'o')
-                .replace(/[^a-z0-9]/g, '-')
-                .replace(/-+/g, '-')
-                .replace(/^-|-$/g, '');
-            };
-            
-            const userSlug = user.displayName 
-              ? generateUserSlug(user.displayName)
-              : generateUserSlug(user.primaryEmail?.split('@')[0] || 'profile');
-              
-            router.push(`/users/${userSlug}`);
+          onClick={async () => {
+            try {
+              // Get user's database ID
+              const response = await fetch('/api/users/me');
+              if (response.ok) {
+                const userData = await response.json();
+                router.push(`/users/${userData.id}`);
+              } else {
+                console.error('Failed to get user data');
+              }
+            } catch (error) {
+              console.error('Error getting user data:', error);
+            }
           }}
           fontSize="sm"
           borderRadius="sm"
