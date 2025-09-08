@@ -64,10 +64,32 @@ export default function SignupPage() {
           router.push('/dashboard');
         }
       } else {
-        setError("Der opstod en fejl ved oprettelse af bruger");
+        // Handle specific Stack Auth errors
+        if (result.error) {
+          switch (result.error.type) {
+            case "USER_EMAIL_ALREADY_EXISTS":
+              setError("En bruger med denne email eksisterer allerede. Prøv at logge ind i stedet.");
+              break;
+            case "INVALID_EMAIL":
+              setError("Ugyldig email adresse");
+              break;
+            case "WEAK_PASSWORD":
+              setError("Adgangskoden er for svag");
+              break;
+            default:
+              setError(`Fejl ved oprettelse: ${result.error.message || 'Ukendt fejl'}`);
+          }
+        } else {
+          setError("Der opstod en fejl ved oprettelse af bruger");
+        }
       }
-    } catch {
-      setError("Der opstod en fejl ved oprettelse af bruger");
+    } catch (error) {
+      console.error('Signup error:', error);
+      if (error instanceof Error) {
+        setError(`Der opstod en fejl: ${error.message}`);
+      } else {
+        setError("Der opstod en uventet fejl ved oprettelse af bruger");
+      }
     } finally {
       setIsLoading(false);
     }
