@@ -31,8 +31,5 @@
         }
       ]
     }
-  ],
-  "checks": {
-    "enabled": false
-  }
+  ]
 }
