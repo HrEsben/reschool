@@ -31,7 +31,7 @@ const availableTools: ToolOption[] = [
     id: 'barometer',
     name: 'Barometer',
     description: 'Log daglige stemninger og følelser med en simpel skala',
-    icon: '',
+    icon: '📊',
     available: true,
   },
   // Future tools can be added here
@@ -136,7 +136,7 @@ export function AddToolDialog({ childId, onToolAdded, trigger }: AddToolDialogPr
                 onClick={() => tool.available && handleToolSelect(tool.id)}
               >
                 <HStack gap={3}>
-                  <Text fontSize="2xl">{tool.icon}</Text>
+                  <Text fontSize="2xl">{tool.icon || '🔧'}</Text>
                   <VStack align="start" gap={1} flex={1}>
                     <HStack>
                       <Text fontWeight="semibold" color={tool.available ? 'gray.800' : 'gray.500'}>

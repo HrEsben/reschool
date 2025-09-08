@@ -163,7 +163,7 @@ export function BarometerTimeline({ barometer, trigger }: BarometerTimelineProps
                         {formatDate(entry.entryDate)}
                       </Text>
                       <Text fontSize="xs" color="gray.500">
-                        {entry.recordedByName}
+                        {entry.recordedByName || 'Anonym'}
                       </Text>
                     </HStack>
                                           {entry.comment && (
