@@ -212,17 +212,17 @@ export const Header = memo(function Header() {
         </HStack>
 
         {/* Right side items */}
-        <HStack gap={4} align="center" display={{ base: "none", md: "flex" }}>
-          {/* Notification Bell */}
+        <HStack gap={4} align="center">
+          {/* Notification Bell - visible on all screen sizes */}
           {user && (
             <NotificationBell 
               onClick={() => setIsNotificationCenterOpen(true)} 
             />
           )}
           
-          {/* User Avatar - wrapped in Box to provide positioning context */}
+          {/* User Avatar - visible on desktop */}
           {user && (
-            <Box position="relative">
+            <Box position="relative" display={{ base: "none", md: "block" }}>
               <UserAvatar />
             </Box>
           )}
@@ -350,6 +350,26 @@ export const Header = memo(function Header() {
                   Konto
                 </Text>
                 <VStack gap={1} align="stretch">
+                  <Button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      setIsNotificationCenterOpen(true);
+                    }}
+                    variant="ghost"
+                    justifyContent="flex-start"
+                    h="auto"
+                    p={4}
+                    borderRadius="lg"
+                    fontWeight="500"
+                    fontSize="md"
+                    color="fg.default"
+                    _hover={{ 
+                      bg: "gray.50"
+                    }}
+                    _active={{ bg: "gray.100" }}
+                  >
+                    Notifikationer
+                  </Button>
                   <Button
                     onClick={() => user && handleMenuItemClick(`/users/${generateUserSlug(user.primaryEmail || '', user.displayName || undefined)}`)}
                     variant="ghost"

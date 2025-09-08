@@ -156,12 +156,12 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
       position="fixed"
       top="0"
       right="0"
-      width="400px"
+      width={{ base: "100vw", md: "400px" }}
       height="100vh"
       bg="white"
       boxShadow="xl"
       zIndex={1000}
-      borderLeft="1px solid"
+      borderLeft={{ base: "none", md: "1px solid" }}
       borderColor="gray.200"
     >
       <VStack gap={0} height="100%">
