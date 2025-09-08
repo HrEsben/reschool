@@ -288,7 +288,7 @@ export default function InviteAcceptPage() {
                 _hover={{
                   bg: "#6a9b82"
                 }}
-                onClick={() => router.push('/sign-up')}
+                onClick={() => router.push(`/signup?redirect=/invite/${token}&email=${encodeURIComponent(invitation.email)}`)}
               >
                 Opret konto og acceptér invitation
               </Button>
@@ -301,7 +301,7 @@ export default function InviteAcceptPage() {
                   fontWeight="600"
                   p={0}
                   h="auto"
-                  onClick={() => router.push('/sign-in')}
+                  onClick={() => router.push(`/login?redirect=/invite/${token}&email=${encodeURIComponent(invitation.email)}`)}
                 >
                   Log ind her
                 </Button>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { stackApp } from "@/stack-client";
 import {
   Box,
@@ -20,6 +20,16 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect');
+  const prefillEmail = searchParams.get('email');
+
+  // Prefill email if provided in URL
+  useEffect(() => {
+    if (prefillEmail) {
+      setEmail(decodeURIComponent(prefillEmail));
+    }
+  }, [prefillEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +43,12 @@ export default function LoginPage() {
       });
 
       if (result.status === "ok") {
-        router.push("/dashboard");
+        // If there's a redirect URL (like from invitation), go there instead of dashboard
+        if (redirect) {
+          router.push(redirect);
+        } else {
+          router.push("/dashboard");
+        }
       } else {
         setError("Ugyldige loginoplysninger");
       }
@@ -108,6 +123,11 @@ export default function LoginPage() {
                     }}
                     required
                   />
+                  {prefillEmail && (
+                    <Text fontSize="sm" color="#81b29a" mt={1}>
+                      ✉️ Email fra invitation
+                    </Text>
+                  )}
                 </Box>
 
                 <Box>
