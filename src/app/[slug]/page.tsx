@@ -452,7 +452,7 @@ export default function ChildSlugPage() {
                             fontWeight="bold"
                             fontSize="sm"
                           >
-                            {(userData.displayName || userData.email).charAt(0).toUpperCase()}
+                            {(userData.displayName || userData.email || 'U').charAt(0).toUpperCase()}
                           </Box>
                           <Text fontWeight="500" color="fg.default">
                             {userData.displayName || 'Navn ikke angivet'}
@@ -529,7 +529,7 @@ export default function ChildSlugPage() {
                                     </Icon>
                                   </Button>
                                 }
-                                userName={userData.displayName || ''}
+                                userName={userData.displayName || 'Ukendt bruger'}
                                 userEmail={userData.email}
                                 onConfirm={() => handleRemoveUser(userData.id)}
                                 isLoading={removingUser}

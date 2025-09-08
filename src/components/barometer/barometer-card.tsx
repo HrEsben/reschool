@@ -558,7 +558,7 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
     >
       <Box p={4} borderBottom="1px solid" borderColor="gray.100">
         <HStack justify="space-between">
-                    <Heading size="md">{barometer.topic}</Heading>
+                    <Heading size="md">{barometer.topic || 'Untitled Barometer'}</Heading>
           <HStack gap={2}>
             <Button
               variant="ghost"

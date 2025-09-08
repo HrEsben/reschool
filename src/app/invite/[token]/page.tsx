@@ -266,9 +266,9 @@ export default function InviteAcceptPage() {
           <VStack p={8} gap={6} align="stretch">
             <VStack gap={4} textAlign="center">
               <Text color="#3d405b" fontSize="lg" lineHeight="1.6">
-                <Text as="span" fontWeight="600">{invitation.inviterName}</Text>
+                <Text as="span" fontWeight="600">{invitation.inviterName || 'Ukendt'}</Text>
                 {' '}({invitation.inviterRelation}) har inviteret dig til at følge{' '}
-                <Text as="span" fontWeight="600">{invitation.childName}</Text>
+                <Text as="span" fontWeight="600">{invitation.childName || 'ukendt barn'}</Text>
                 {' '}som <Text as="span" fontWeight="600" color="#81b29a">
                   {invitation.customRelationName || invitation.relation}
                 </Text>.
@@ -420,9 +420,9 @@ export default function InviteAcceptPage() {
         <VStack p={8} gap={6} align="stretch">
           <VStack gap={4} textAlign="center">
             <Text color="#3d405b" fontSize="lg" lineHeight="1.6">
-              <Text as="span" fontWeight="600">{invitation.inviterName}</Text>
+              <Text as="span" fontWeight="600">{invitation.inviterName || 'Ukendt'}</Text>
               {' '}({invitation.inviterRelation}) har inviteret dig til at følge{' '}
-              <Text as="span" fontWeight="600">{invitation.childName}</Text>
+              <Text as="span" fontWeight="600">{invitation.childName || 'ukendt barn'}</Text>
               {' '}som <Text as="span" fontWeight="600" color="#81b29a">
                 {invitation.customRelationName || invitation.relation}
               </Text>.
