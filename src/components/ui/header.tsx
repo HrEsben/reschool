@@ -16,6 +16,7 @@ import {
 import { useRouter, usePathname } from "next/navigation";
 import { useState, memo, useCallback, useEffect } from "react";
 import { UserAvatar } from "./user-avatar";
+import { NotificationBell, NotificationCenter } from "./notification-center";
 
 export const Header = memo(function Header() {
   const user = useUser();
@@ -24,6 +25,7 @@ export const Header = memo(function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<Array<{ label: string; href: string }>>([]);
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
 
   // Generate breadcrumbs based on current path
   useEffect(() => {
@@ -211,6 +213,13 @@ export const Header = memo(function Header() {
 
         {/* Right side items */}
         <HStack gap={3} display={{ base: "none", md: "flex" }}>
+          {/* Notification Bell */}
+          {user && (
+            <NotificationBell 
+              onClick={() => setIsNotificationCenterOpen(true)} 
+            />
+          )}
+          
           {/* User Avatar - hidden on mobile since it's in the hamburger menu */}
           <Box position="relative">
             {user && <UserAvatar />}
@@ -387,6 +396,12 @@ export const Header = memo(function Header() {
           </Drawer.Content>
         </Drawer.Positioner>
       </Drawer.Root>
+
+      {/* Notification Center */}
+      <NotificationCenter 
+        isOpen={isNotificationCenterOpen}
+        onClose={() => setIsNotificationCenterOpen(false)}
+      />
     </Box>
   );
 });
