@@ -14,7 +14,7 @@ import {
 } from '@chakra-ui/react';
 import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
-import { CompactTimeline, CompactTimelineRef } from './compact-timeline';
+import { BarometerTimeline, BarometerTimelineRef } from './barometer-timeline-wrapper';
 import { SettingsIcon, TrashIcon } from '@/components/ui/icons';
 
 interface BarometerEntry {
@@ -59,7 +59,7 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
   const [loading, setLoading] = useState(false);
   const [deletingBarometer, setDeletingBarometer] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const timelineRef = useRef<CompactTimelineRef>(null);
+  const timelineRef = useRef<BarometerTimelineRef>(null);
 
   // Calculate color based on rating position in scale using site's color palette
   const getRatingColor = (rating: number) => {
@@ -677,7 +677,7 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
           </HStack>
 
           {/* Registreringer Timeline */}
-          <CompactTimeline 
+          <BarometerTimeline 
             ref={timelineRef} 
             barometer={barometer} 
             maxEntries={10}

@@ -1001,14 +1001,18 @@ export async function recordBarometerEntry(
 export async function getBarometerEntries(
   barometerId: number,
   limit: number = 30
-): Promise<(BarometerEntry & { recordedByName?: string })[]> {
+): Promise<(BarometerEntry & { recordedByName?: string; userRelation?: string; customRelationName?: string })[]> {
   try {
     const result = await query(
       `SELECT 
          be.*,
-         u.display_name as recorded_by_name
+         u.display_name as recorded_by_name,
+         ucr.relation as user_relation,
+         ucr.custom_relation_name
        FROM barometer_entries be
        LEFT JOIN users u ON be.recorded_by = u.id
+       LEFT JOIN barometers b ON be.barometer_id = b.id
+       LEFT JOIN user_child_relations ucr ON u.id = ucr.user_id AND b.child_id = ucr.child_id
        WHERE be.barometer_id = $1
        ORDER BY be.entry_date DESC
        LIMIT $2`,
@@ -1024,7 +1028,9 @@ export async function getBarometerEntries(
       comment: row.comment,
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString(),
-      recordedByName: row.recorded_by_name
+      recordedByName: row.recorded_by_name,
+      userRelation: row.user_relation,
+      customRelationName: row.custom_relation_name
     }));
   } catch (error) {
     console.error('Error getting barometer entries:', error);
