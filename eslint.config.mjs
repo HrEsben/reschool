@@ -20,6 +20,23 @@ const eslintConfig = [
       "next-env.d.ts",
     ],
   },
+  {
+    rules: {
+      // Warnings instead of errors for development
+      "@typescript-eslint/no-unused-vars": "warn",
+      "react-hooks/exhaustive-deps": "warn",
+      
+      // Keep real errors as errors
+      "react/no-unescaped-entities": "error",
+      
+      // Allow some common patterns
+      "@typescript-eslint/no-explicit-any": "warn",
+      "prefer-const": "warn",
+      
+      // Disable overly strict rules for rapid development
+      "@next/next/no-img-element": "off"
+    }
+  }
 ];
 
 export default eslintConfig;

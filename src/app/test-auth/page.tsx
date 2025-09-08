@@ -67,7 +67,7 @@ export default function TestAuthPage() {
 
         <Box>
           <Text fontSize="sm" color="gray.500">
-            This page is completely public and doesn't force any redirects. Use it to test the authentication flow.
+            This page is completely public and doesn&apos;t force any redirects. Use it to test the authentication flow.
           </Text>
         </Box>
       </VStack>
