@@ -76,9 +76,26 @@ export default function SignupPage() {
         if (redirect) {
           router.push(redirect);
         } else {
-          // Generate user slug and redirect to user profile page for first-time setup
-          const userSlug = generateUserSlug(email);
-          router.push(`/users/${userSlug}?firstTime=true`);
+          // Sync user to database and get their slug
+          try {
+            const syncResponse = await fetch('/api/sync-user', {
+              method: 'POST',
+            });
+            
+            if (syncResponse.ok) {
+              const syncData = await syncResponse.json();
+              router.push(`/users/${syncData.userSlug}?firstTime=true`);
+            } else {
+              // Fallback: use email-based slug if sync fails
+              const userSlug = generateUserSlug(email);
+              router.push(`/users/${userSlug}?firstTime=true`);
+            }
+          } catch (syncError) {
+            console.error('Error syncing user:', syncError);
+            // Fallback: use email-based slug if sync fails
+            const userSlug = generateUserSlug(email);
+            router.push(`/users/${userSlug}?firstTime=true`);
+          }
         }
       } else {
         setError("Der opstod en fejl ved oprettelse af bruger");

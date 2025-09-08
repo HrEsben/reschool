@@ -31,9 +31,30 @@ export default function Home() {
     if (user) {
       // Check if user has a display name set
       if (!user.displayName || user.displayName.trim() === '') {
-        // First time user - redirect to user profile to set name
-        const userSlug = generateUserSlug(user.primaryEmail || '', user.displayName || undefined);
-        router.push(`/users/${userSlug}?firstTime=true`);
+        // First time user - sync and redirect to user profile to set name
+        const syncAndRedirect = async () => {
+          try {
+            const syncResponse = await fetch('/api/sync-user', {
+              method: 'POST',
+            });
+            
+            if (syncResponse.ok) {
+              const syncData = await syncResponse.json();
+              router.push(`/users/${syncData.userSlug}?firstTime=true`);
+            } else {
+              // Fallback: use email-based slug if sync fails
+              const userSlug = generateUserSlug(user.primaryEmail || '', user.displayName || undefined);
+              router.push(`/users/${userSlug}?firstTime=true`);
+            }
+          } catch (error) {
+            console.error('Error syncing user:', error);
+            // Fallback: use email-based slug if sync fails
+            const userSlug = generateUserSlug(user.primaryEmail || '', user.displayName || undefined);
+            router.push(`/users/${userSlug}?firstTime=true`);
+          }
+        };
+        
+        syncAndRedirect();
       } else {
         // User has name set - go to dashboard
         router.push("/dashboard");

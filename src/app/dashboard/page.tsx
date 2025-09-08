@@ -30,9 +30,30 @@ export default function Dashboard() {
   // Redirect based on user state
   useEffect(() => {
     if (user && (!user.displayName || user.displayName.trim() === '')) {
-      // User doesn't have a name set - redirect to user profile for setup
-      const userSlug = generateUserSlug(user.primaryEmail || '', user.displayName || undefined);
-      router.push(`/users/${userSlug}?firstTime=true`);
+      // User doesn't have a name set - sync and redirect to user profile for setup
+      const syncAndRedirect = async () => {
+        try {
+          const syncResponse = await fetch('/api/sync-user', {
+            method: 'POST',
+          });
+          
+          if (syncResponse.ok) {
+            const syncData = await syncResponse.json();
+            router.push(`/users/${syncData.userSlug}?firstTime=true`);
+          } else {
+            // Fallback: use email-based slug if sync fails
+            const userSlug = generateUserSlug(user.primaryEmail || '', user.displayName || undefined);
+            router.push(`/users/${userSlug}?firstTime=true`);
+          }
+        } catch (error) {
+          console.error('Error syncing user:', error);
+          // Fallback: use email-based slug if sync fails
+          const userSlug = generateUserSlug(user.primaryEmail || '', user.displayName || undefined);
+          router.push(`/users/${userSlug}?firstTime=true`);
+        }
+      };
+      
+      syncAndRedirect();
     }
   }, [user, router]);
 
