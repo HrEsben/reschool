@@ -26,6 +26,26 @@ export const Header = memo(function Header() {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<Array<{ label: string; href: string }>>([]);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+  const [dbUserId, setDbUserId] = useState<number | null>(null);
+
+  // Fetch database user ID when user is available
+  useEffect(() => {
+    const fetchDbUserId = async () => {
+      if (!user) return;
+      
+      try {
+        const response = await fetch('/api/users/me');
+        if (response.ok) {
+          const data = await response.json();
+          setDbUserId(data.user.id);
+        }
+      } catch (error) {
+        console.error('Error fetching database user ID:', error);
+      }
+    };
+
+    fetchDbUserId();
+  }, [user]);
 
   // Generate breadcrumbs based on current path
   useEffect(() => {
@@ -67,22 +87,6 @@ export const Header = memo(function Header() {
       generateBreadcrumbs();
     }
   }, [pathname, user?.displayName]);
-
-  // Utility function to generate user slug
-  const generateUserSlug = useCallback((email: string, displayName?: string) => {
-    const generateSlug = (text: string) => {
-      return text.toLowerCase()
-        .replace(/[æå]/g, 'a')
-        .replace(/[ø]/g, 'o')
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-    };
-
-    return displayName 
-      ? generateSlug(displayName)
-      : generateSlug(email.split('@')[0]);
-  }, []);
 
   const handleMenuItemClick = useCallback((href: string) => {
     router.push(href);
@@ -293,7 +297,7 @@ export const Header = memo(function Header() {
               {/* User info section at top - clickable to go to profile */}
               {user && (
                 <Button
-                  onClick={() => handleMenuItemClick(`/users/${generateUserSlug(user.primaryEmail || '', user.displayName || undefined)}`)}
+                  onClick={() => dbUserId && handleMenuItemClick(`/users/${dbUserId}`)}
                   variant="ghost"
                   p={6}
                   borderBottomWidth={1}
@@ -382,7 +386,7 @@ export const Header = memo(function Header() {
                     Notifikationer
                   </Button>
                   <Button
-                    onClick={() => user && handleMenuItemClick(`/users/${generateUserSlug(user.primaryEmail || '', user.displayName || undefined)}`)}
+                    onClick={() => dbUserId && handleMenuItemClick(`/users/${dbUserId}`)}
                     variant="ghost"
                     justifyContent="flex-start"
                     h="auto"

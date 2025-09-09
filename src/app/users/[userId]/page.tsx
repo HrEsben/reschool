@@ -218,7 +218,7 @@ export default function UserProfilePage() {
   if (error) {
     return (
       <AppLayout>
-        <Box p={8}>
+        <Box p={{ base: 4, md: 8 }}>
           <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
             <Button
               variant="ghost"
@@ -254,7 +254,7 @@ export default function UserProfilePage() {
 
   return (
     <AppLayout>
-      <Box p={8}>
+      <Box p={{ base: 4, md: 8 }}>
         <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
           {/* User Header - simplified */}
           <VStack align="start" gap={2}>
@@ -296,7 +296,7 @@ export default function UserProfilePage() {
             borderRadius="xl" 
             border="1px solid" 
             borderColor="border.muted" 
-            p={6}
+            p={{ base: 4, md: 6 }}
           >
             <VStack align="stretch" gap={4}>
               <Heading size="lg" color="fg.default" fontWeight="600">
@@ -387,7 +387,7 @@ export default function UserProfilePage() {
               borderRadius="xl" 
               border="1px solid" 
               borderColor="border.muted" 
-              p={6}
+              p={{ base: 4, md: 6 }}
             >
               <VStack align="stretch" gap={4}>
                 {/* Settings Message */}

@@ -8,7 +8,7 @@ import { AuthenticatedLayout } from "@/components/layouts/authenticated-layout";
 export default function Dashboard() {
   return (
     <AuthenticatedLayout>
-      <Box p={8}>
+      <Box p={{ base: 4, md: 8 }}>
         {/* Welcome Section */}
         <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
           <Box>
