@@ -6,12 +6,11 @@ import {
   Box,
   Input,
   Select,
-  createListCollection,
-  createToaster,
-  Toaster
+  createListCollection
 } from '@chakra-ui/react';
 import { useState } from 'react';
 import { DialogManager } from './dialog-manager';
+import { showToast } from './simple-toast';
 
 interface InviteUserDialogProps {
   trigger: React.ReactElement;
@@ -27,10 +26,6 @@ const relationOptions = createListCollection({
     { label: 'Underviser', value: 'Underviser' },
     { label: 'Ressourceperson', value: 'Ressourceperson' },
   ],
-});
-
-const toaster = createToaster({
-  placement: 'top',
 });
 
 export function InviteUserDialog({
@@ -78,7 +73,7 @@ export function InviteUserDialog({
       // Success - show appropriate toast based on email restriction
       if (data.emailRestriction) {
         // Email couldn't be sent due to restrictions, but invitation was created
-        toaster.create({
+        showToast({
           title: 'Invitation oprettet!',
           description: data.message,
           type: 'warning',
@@ -89,7 +84,7 @@ export function InviteUserDialog({
         if (data.inviteUrl && navigator.clipboard) {
           try {
             await navigator.clipboard.writeText(data.inviteUrl);
-            toaster.create({
+            showToast({
               title: 'Link kopieret!',
               description: 'Invitations-linket er kopieret til udklipsholderen',
               type: 'info',
@@ -101,7 +96,7 @@ export function InviteUserDialog({
         }
       } else {
         // Email was sent successfully
-        toaster.create({
+        showToast({
           title: 'Invitation sendt!',
           description: `Invitation er sendt til ${email}`,
           type: 'success',
@@ -228,20 +223,6 @@ export function InviteUserDialog({
           </VStack>
         </VStack>
       </DialogManager>
-      <Toaster toaster={toaster}>
-        {(toast) => (
-          <Box
-            bg={toast.type === 'success' ? 'green.500' : 'red.500'}
-            color="white"
-            p={3}
-            borderRadius="md"
-            maxW="sm"
-          >
-            <Text fontWeight="semibold">{toast.title}</Text>
-            {toast.description && <Text fontSize="sm">{toast.description}</Text>}
-          </Box>
-        )}
-      </Toaster>
     </>
   );
 }
