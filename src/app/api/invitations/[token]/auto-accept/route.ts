@@ -57,7 +57,7 @@ export async function POST(
     }
 
     // Get current user from database - ensure we have the latest data
-    let currentUser = await getUserByStackAuthId(user.id);
+    const currentUser = await getUserByStackAuthId(user.id);
     if (!currentUser) {
       return NextResponse.json({ error: 'User not found in database' }, { status: 404 });
     }

@@ -1,10 +1,10 @@
 "use client";
 
 import { useUser } from "@stackframe/stack";
-import { Box, Button, Heading, Text, VStack, HStack, Spinner, Alert } from "@chakra-ui/react";
+import { Box, Button, Heading, Text, VStack, HStack, Spinner } from "@chakra-ui/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, Suspense } from "react";
 
 function AuthenticatedHome() {
   const user = useUser(); // This is now inside a Suspense boundary

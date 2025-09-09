@@ -24,7 +24,7 @@ export default function AuthDebug() {
 
       // Test Stack Auth
       try {
-        import('@stackframe/stack').then(({ useUser }) => {
+        import('@stackframe/stack').then(() => {
           setStackAuthStatus('Stack Auth module loaded successfully');
         });
       } catch (error) {

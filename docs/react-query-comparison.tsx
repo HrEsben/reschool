@@ -4,9 +4,9 @@
 import { useState, useEffect } from 'react';
 
 export function OldChildrenList() {
-  const [children, setChildren] = useState([]);
+  const [children, setChildren] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Manual fetch function
@@ -23,7 +23,7 @@ export function OldChildrenList() {
       const data = await response.json();
       setChildren(data.children || []);
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Unknown error occurred');
     } finally {
       setLoading(false);
     }
@@ -35,7 +35,7 @@ export function OldChildrenList() {
   }, [refreshTrigger]);
 
   // Manual delete with refetch
-  const handleDelete = async (childId) => {
+  const handleDelete = async (childId: string) => {
     try {
       const response = await fetch(`/api/children/${childId}`, {
         method: 'DELETE',
@@ -45,7 +45,7 @@ export function OldChildrenList() {
       // Manual refetch after deletion
       fetchChildren();
     } catch (error) {
-      setError(error.message);
+      setError(error instanceof Error ? error.message : 'Delete failed');
     }
   };
 
@@ -75,7 +75,7 @@ export function NewChildrenList() {
   const deleteChildMutation = useDeleteChild();
 
   // Optimistic mutation with automatic cache updates
-  const handleDelete = async (childId) => {
+  const handleDelete = async (childId: string) => {
     try {
       await deleteChildMutation.mutateAsync(childId);
       // Cache automatically updated by mutation's onSuccess

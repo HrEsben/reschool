@@ -29,10 +29,11 @@ interface Child {
 }
 
 interface ChildrenListProps {
-  refreshTrigger?: number; // Made optional since we won't need it anymore
+  // No props needed - React Query handles all data management
+  className?: string;
 }
 
-export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
+export function ChildrenList({}: ChildrenListProps) {
   const [deletingChildId, setDeletingChildId] = useState<string | null>(null);
   const router = useRouter();
 

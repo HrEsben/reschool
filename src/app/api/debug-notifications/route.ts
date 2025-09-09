@@ -1,10 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { stackServerApp } from '@/stack';
-import { getUserByStackAuthId } from '@/lib/database-service';
 import { query } from '@/lib/db';
 import { activatePendingNotifications } from '@/lib/notification-service';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Get current user
     const user = await stackServerApp.getUser();

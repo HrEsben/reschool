@@ -9,8 +9,6 @@ import {
   Text,
   Badge,
   Spinner,
-  Button,
-  Icon,
   Alert
 } from '@chakra-ui/react';
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
@@ -22,7 +20,7 @@ export function ChildrenListImproved() {
   const router = useRouter();
   const [deletingChildId, setDeletingChildId] = useState<string | null>(null);
   
-  const { data: children = [], isLoading, error, refetch } = useChildren();
+  const { data: children = [], isLoading, error } = useChildren();
   const deleteChildMutation = useDeleteChild();
 
   const handleDeleteChild = async (child: any) => {
@@ -115,9 +113,10 @@ export function ChildrenListImproved() {
 
               <Box position="absolute" top={4} right={4}>
                 <DeleteChildDialog
-                  child={child}
-                  onDelete={handleDeleteChild}
-                  isDeleting={deletingChildId === child.id}
+                  trigger={<button>Delete</button>}
+                  childName={child.name}
+                  onConfirm={() => handleDeleteChild(child)}
+                  isLoading={deletingChildId === child.id}
                 />
               </Box>
             </HStack>
