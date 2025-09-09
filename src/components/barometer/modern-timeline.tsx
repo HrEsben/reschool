@@ -177,11 +177,11 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
             <Box key={dateKey}>
               {/* Date Header */}
               <Text 
-                fontSize="sm" 
+                fontSize={{ base: "xs", md: "sm" }}
                 fontWeight="semibold" 
                 color="gray.600" 
                 mb={3}
-                pl={2}
+                pl={{ base: 1, md: 2 }}
               >
                 {formatDateHeader(dateKey)}
               </Text>
@@ -192,12 +192,12 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
                   <Box
                     key={entry.id}
                     position="relative"
-                    pl={8} // Space for timeline line
+                    pl={{ base: 6, md: 8 }} // Responsive left padding for timeline space
                   >
                     {/* Timeline connector */}
                     <Box
                       position="absolute"
-                      left="12px"
+                      left={{ base: "8px", md: "12px" }}
                       top={0}
                       bottom={index === dateEntries.length - 1 ? "50%" : "-8px"}
                       width="2px"
@@ -208,10 +208,10 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
                     {/* Timeline dot */}
                     <Box
                       position="absolute"
-                      left="8px"
-                      top="16px"
-                      width="10px"
-                      height="10px"
+                      left={{ base: "6px", md: "8px" }}
+                      top={{ base: "12px", md: "16px" }}
+                      width={{ base: "8px", md: "10px" }}
+                      height={{ base: "8px", md: "10px" }}
                       borderRadius="full"
                       bg={getRatingColor(entry.rating)}
                       border="2px solid"
@@ -225,7 +225,7 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
                       borderRadius="lg"
                       border="1px solid"
                       borderColor="gray.200"
-                      p={4}
+                      p={{ base: 3, md: 4 }}
                       shadow="sm"
                       _hover={{
                         shadow: "md",
@@ -233,11 +233,22 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
                       }}
                       transition="all 0.2s"
                     >
-                      <Flex justify="space-between" align="flex-start" mb={2}>
-                        <Flex align="center" gap={3} flex={1}>
+                      <Flex 
+                        justify="space-between" 
+                        align="flex-start" 
+                        mb={2}
+                        direction={{ base: "column", sm: "row" }}
+                        gap={{ base: 2, sm: 0 }}
+                      >
+                        <Flex 
+                          align="center" 
+                          gap={{ base: 2, md: 3 }} 
+                          flex={1}
+                          wrap={{ base: "wrap", sm: "nowrap" }}
+                        >
                           {/* Rating with emoji */}
-                          <Flex align="center" gap={2}>
-                            <Text fontSize="lg">
+                          <Flex align="center" gap={{ base: 1, md: 2 }}>
+                            <Text fontSize={{ base: "md", md: "lg" }}>
                               {getRatingEmoji(entry.rating)}
                             </Text>
                             <Badge
@@ -245,27 +256,37 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
                                 entry.rating >= 4 ? 'success' : 
                                 entry.rating >= 3 ? 'warning' : 'coral'
                               }
-                              size="sm"
+                              size={{ base: "xs", md: "sm" }}
                               borderRadius="full"
-                              px={2}
+                              px={{ base: 1, md: 2 }}
                             >
                               {entry.rating.toFixed(1)}
                             </Badge>
                           </Flex>
                           
                           {/* User and time info */}
-                          <VStack gap={0} align="flex-start" flex={1}>
-                            <HStack gap={2} align="center">
-                              <Text fontSize="sm" fontWeight="medium" color="gray.800">
+                          <VStack gap={0} align="flex-start" flex={1} minW={0}>
+                            <HStack 
+                              gap={{ base: 1, md: 2 }} 
+                              align="center"
+                              flexWrap={{ base: "wrap", sm: "nowrap" }}
+                            >
+                              <Text 
+                                fontSize={{ base: "xs", md: "sm" }} 
+                                fontWeight="medium" 
+                                color="gray.800"
+                                lineClamp={1}
+                              >
                                 {entry.recordedByName || 'Ukendt bruger'}
                               </Text>
                               {getRelationDisplayName(entry.userRelation, entry.customRelationName) && (
                                 <Badge
-                                  size="sm"
+                                  size={{ base: "xs", md: "sm" }}
                                   colorPalette="navy"
                                   variant="subtle"
                                   borderRadius="full"
-                                  px={2}
+                                  px={{ base: 1, md: 2 }}
+                                  flexShrink={0}
                                 >
                                   {getRelationDisplayName(entry.userRelation, entry.customRelationName)}
                                 </Badge>
@@ -281,13 +302,13 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
                         {canDelete && onDeleteEntry && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size={{ base: "xs", md: "sm" }}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteEntry(entry.id);
                             }}
                             title="Slet registrering"
-                            p={1}
+                            p={{ base: 0.5, md: 1 }}
                             minW="auto"
                             color="coral.600"
                             _hover={{ bg: "coral.50", color: "coral.700" }}
@@ -302,6 +323,7 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
                               outline: "none"
                             }}
                             borderRadius="md"
+                            flexShrink={0}
                           >
                             <TrashIcon size="sm" />
                           </Button>
@@ -311,14 +333,18 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
                       {/* Comment */}
                       {entry.comment && (
                         <Box
-                          mt={3}
-                          p={3}
+                          mt={{ base: 2, md: 3 }}
+                          p={{ base: 2, md: 3 }}
                           bg="gray.50"
                           borderRadius="md"
                           border="1px solid"
                           borderColor="gray.100"
                         >
-                          <Text fontSize="sm" color="gray.700" lineHeight="1.5">
+                          <Text 
+                            fontSize={{ base: "xs", md: "sm" }} 
+                            color="gray.700" 
+                            lineHeight="1.5"
+                          >
                             &ldquo;{entry.comment}&rdquo;
                           </Text>
                         </Box>
