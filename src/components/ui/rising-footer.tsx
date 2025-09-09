@@ -7,13 +7,13 @@ export default function RisingFooter() {
     <Box
       position="sticky"
       bottom={0}
-      mt="-50vh"
-      height="100vh"
+      mt="-30vh"
+      height={{ base: "30vh", md: "50vh" }}
       bg="white"
       overflow="hidden"
     >
       <Text
-        fontSize={{ base: "20vw", md: "15vw" }}
+        fontSize={{ base: "15vw", md: "12vw" }}
         fontWeight="700"
         background="linear-gradient(135deg, #e07a5f 0%, #3d405b 25%, #81b29a 75%, #f2cc8f 100%)"
         backgroundClip="text"
