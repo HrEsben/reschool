@@ -3,8 +3,22 @@
 import { useState, useEffect } from 'react';
 import { Box, Button, Text, VStack, Card, Code, Heading } from '@chakra-ui/react';
 
+interface BrowserData {
+  localStorage: string[];
+  sessionStorage: string[];
+  cookies: string[];
+  url: string;
+  userAgent: string;
+}
+
 export default function AuthDebug() {
-  const [browserData, setBrowserData] = useState<any>({});
+  const [browserData, setBrowserData] = useState<BrowserData>({
+    localStorage: [],
+    sessionStorage: [],
+    cookies: [],
+    url: '',
+    userAgent: ''
+  });
   const [stackAuthStatus, setStackAuthStatus] = useState<string>('checking...');
 
   useEffect(() => {
@@ -85,22 +99,22 @@ export default function AuthDebug() {
             <VStack gap={4} align="stretch">
               <Box>
                 <Text fontWeight="bold">Local Storage (Stack-related):</Text>
-                <Code>{JSON.stringify(browserData.localStorage, null, 2)}</Code>
+                <Code>{JSON.stringify(browserData.localStorage || [], null, 2)}</Code>
               </Box>
               
               <Box>
                 <Text fontWeight="bold">Session Storage (Stack-related):</Text>
-                <Code>{JSON.stringify(browserData.sessionStorage, null, 2)}</Code>
+                <Code>{JSON.stringify(browserData.sessionStorage || [], null, 2)}</Code>
               </Box>
               
               <Box>
                 <Text fontWeight="bold">Cookies (Stack-related):</Text>
-                <Code>{JSON.stringify(browserData.cookies, null, 2)}</Code>
+                <Code>{JSON.stringify(browserData.cookies || [], null, 2)}</Code>
               </Box>
               
               <Box>
                 <Text fontWeight="bold">Current URL:</Text>
-                <Code>{browserData.url}</Code>
+                <Code>{browserData.url || ''}</Code>
               </Box>
             </VStack>
           </Card.Body>

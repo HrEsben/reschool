@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@stackframe/stack';
 import {
@@ -24,42 +24,6 @@ import { DeleteInvitationDialog } from '@/components/ui/delete-invitation-dialog
 import { ToolsManager } from '@/components/tools/tools-manager';
 import { useChildBySlug, useRemoveUserFromChild, useDeleteInvitation, useDeleteChild } from '@/lib/queries';
 
-interface UserWithRelation {
-  id: number;
-  stackAuthId: string;
-  email: string;
-  displayName?: string;
-  profileImageUrl?: string;
-  relation: string;
-  customRelationName?: string;
-  isAdministrator: boolean;
-  createdAt: string;
-}
-
-interface Child {
-  id: number;
-  name: string;
-  createdBy: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Invitation {
-  id: number;
-  email: string;
-  relation: string;
-  customRelationName?: string;
-  status: 'pending' | 'accepted' | 'expired';
-  createdAt: string;
-  token: string;
-}
-
-interface ChildData {
-  child: Child;
-  users: UserWithRelation[];
-  invitations: Invitation[];
-}
-
 export default function ChildSlugPage() {
   const params = useParams();
   const router = useRouter();
@@ -77,7 +41,7 @@ export default function ChildSlugPage() {
   // Convert query error to string for display
   const error = queryError ? (queryError instanceof Error ? queryError.message : 'Der opstod en fejl') : null;
 
-  const copyInviteLink = async (invitation: any) => {
+  const copyInviteLink = async (invitation: { token: string; email: string }) => {
     const currentUrl = new URL(window.location.href);
     const inviteUrl = `${currentUrl.protocol}//${currentUrl.host}/invite/${invitation.token}`;
     
@@ -126,7 +90,7 @@ export default function ChildSlugPage() {
     }
   };
 
-  const getRelationDisplayName = (user: any) => {
+  const getRelationDisplayName = (user: { relation: string; customRelationName?: string }) => {
     if (user.relation === 'Ressourceperson' && user.customRelationName) {
       return user.customRelationName;
     }
@@ -258,7 +222,7 @@ export default function ChildSlugPage() {
     return null;
   }
 
-  const currentUserRelation = childData.users.find((u: any) => u.stackAuthId === user?.id);
+  const currentUserRelation = childData.users.find((u: { stackAuthId: string; isAdministrator: boolean }) => u.stackAuthId === user?.id);
   const isCurrentUserAdmin = currentUserRelation?.isAdministrator || false;
 
   return (
@@ -350,7 +314,16 @@ export default function ChildSlugPage() {
                 </Table.Header>
                 <Table.Body>
                   {/* Existing Users */}
-                  {childData.users.map((userData: any) => (
+                  {childData.users.map((userData: { 
+                    id: number; 
+                    stackAuthId: string;
+                    displayName?: string; 
+                    email: string; 
+                    relation: string; 
+                    customRelationName?: string; 
+                    isAdministrator: boolean; 
+                    createdAt: string 
+                  }) => (
                     <Table.Row 
                       key={`user-${userData.id}`}
                       _hover={{ bg: "cream.100", cursor: "pointer" }}
@@ -408,7 +381,7 @@ export default function ChildSlugPage() {
                         <Table.Cell>
                           {(() => {
                             // Count administrators
-                            const adminCount = childData.users.filter((u: any) => u.isAdministrator).length;
+                            const adminCount = childData.users.filter((u: { isAdministrator: boolean }) => u.isAdministrator).length;
                             
                             // Don't show remove button if:
                             // 1. This is the current user and they are the last admin
@@ -459,7 +432,15 @@ export default function ChildSlugPage() {
                   ))}
                   
                   {/* Pending Invitations */}
-                  {childData.invitations.map((invitation: any) => (
+                  {childData.invitations.map((invitation: { 
+                    id: number; 
+                    email: string; 
+                    relation: string; 
+                    customRelationName?: string; 
+                    status: string; 
+                    createdAt: string;
+                    token: string;
+                  }) => (
                     <Table.Row 
                       key={`invitation-${invitation.id}`}
                       bg="rgba(129, 178, 154, 0.05)"

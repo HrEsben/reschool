@@ -23,7 +23,7 @@ export function ChildrenListImproved() {
   const { data: children = [], isLoading, error } = useChildren();
   const deleteChildMutation = useDeleteChild();
 
-  const handleDeleteChild = async (child: any) => {
+  const handleDeleteChild = async (child: { id: string; name: string }) => {
     setDeletingChildId(child.id);
     
     try {
@@ -37,7 +37,7 @@ export function ChildrenListImproved() {
     }
   };
 
-  const getRelationDisplay = (child: any) => {
+  const getRelationDisplay = (child: { relation: string; customRelationName?: string }) => {
     if (child.relation === 'Ressourceperson' && child.customRelationName) {
       return child.customRelationName;
     }

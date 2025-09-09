@@ -27,7 +27,7 @@ export interface CreateNotificationData {
   type: NotificationType;
   title: string;
   message: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 // Create a new notification
@@ -141,7 +141,7 @@ export async function activatePendingNotifications(email: string, userId: number
 }
 
 // Check if user exists by email
-export async function getUserByEmail(email: string): Promise<any> {
+export async function getUserByEmail(email: string): Promise<{ id: number; email: string; displayName?: string } | null> {
   try {
     const result = await query(
       'SELECT * FROM users WHERE email = $1',
@@ -185,7 +185,7 @@ export async function getUserNotifications(
       WHERE user_id = $1
     `;
     
-    const params: any[] = [userId];
+    const params: (number | boolean)[] = [userId];
     
     if (unreadOnly) {
       query_text += ` AND read = FALSE`;

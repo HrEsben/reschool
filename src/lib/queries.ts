@@ -222,7 +222,7 @@ export function useCreateBarometer() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ childId, data }: { childId: string; data: any }) => {
+    mutationFn: async ({ childId, data }: { childId: string; data: Record<string, unknown> }) => {
       const response = await fetch(`/api/children/${childId}/barometers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
