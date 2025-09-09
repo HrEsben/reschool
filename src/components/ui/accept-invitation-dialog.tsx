@@ -48,7 +48,7 @@ export function AcceptInvitationDialog({
         
         // Redirect to the child's page
         if (data.childSlug) {
-          router.push(`/children/${data.childSlug}`);
+          router.push(`/${data.childSlug}`);
         } else {
           router.push('/dashboard');
         }

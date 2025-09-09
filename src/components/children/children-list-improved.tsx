@@ -80,7 +80,7 @@ export function ChildrenListImproved() {
           className="bg-white border border-eggshell-300 hover:border-cambridge-blue-300 transition-colors duration-200"
           borderRadius="lg"
           cursor="pointer"
-          onClick={() => router.push(`/children/${child.id}`)}
+          onClick={() => router.push(`/${child.slug}`)}
           position="relative"
         >
           <Card.Body p={6}>

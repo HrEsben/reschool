@@ -186,8 +186,15 @@ export function useRemoveUserFromChild() {
     mutationFn: ({ childId, userId }: { childId: string; userId: string }) => 
       api.removeUserFromChild(childId, userId),
     onSuccess: (_, { childId }) => {
-      // Invalidate the child data to refresh user list
+      // Invalidate the specific child query and the children list
       queryClient.invalidateQueries({ queryKey: queryKeys.child(childId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.children });
+      // Also invalidate any queries that start with ['children'] to catch slug-based queries
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          return query.queryKey[0] === 'children';
+        }
+      });
     },
   });
 }
