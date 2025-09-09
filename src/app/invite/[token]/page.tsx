@@ -76,8 +76,10 @@ export default function InviteAcceptPage() {
             } else if (acceptResponse.status === 400) {
               const errorData = await acceptResponse.json();
               if (errorData.requiresManualAccept) {
-                console.log('User needs to complete profile setup first, showing manual accept UI');
-                // Continue to show manual acceptance UI - user needs to complete their profile
+                console.log('User needs to complete profile setup first');
+                // Redirect to dashboard with invite token so we can retry after name collection
+                router.push(`/dashboard?inviteToken=${token}`);
+                return;
               }
             }
           } catch (autoAcceptError) {

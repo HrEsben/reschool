@@ -37,7 +37,7 @@ export function CollectNameDialog({ isOpen, onComplete }: CollectNameDialogProps
         displayName: name.trim()
       });
 
-      // Sync the updated user to the database
+      // Sync the updated user to the database and wait for completion
       const syncResponse = await fetch('/api/sync-user', {
         method: 'POST',
       });
@@ -45,6 +45,9 @@ export function CollectNameDialog({ isOpen, onComplete }: CollectNameDialogProps
       if (!syncResponse.ok) {
         throw new Error('Failed to sync user');
       }
+
+      // Wait for the sync to be processed
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       onComplete();
     } catch (error) {

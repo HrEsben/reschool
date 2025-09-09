@@ -57,18 +57,36 @@ export async function POST(
     }
 
     // Get current user from database - ensure we have the latest data
-    const currentUser = await getUserByStackAuthId(user.id);
+    let currentUser = await getUserByStackAuthId(user.id);
     if (!currentUser) {
       return NextResponse.json({ error: 'User not found in database' }, { status: 404 });
     }
 
-    // If user doesn't have a display name, we can't auto-accept yet
-    // Let them go through the normal flow to provide their name first
+    // If user doesn't have a display name, check if it was just updated
     if (!user.displayName || !currentUser.displayName) {
-      return NextResponse.json({ 
-        error: 'User must complete profile setup first',
-        requiresManualAccept: true 
-      }, { status: 400 });
+      // Force a fresh sync from Stack Auth to database
+      const syncResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/sync-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (syncResponse.ok) {
+        // Wait a moment for sync to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Try to get user again
+        currentUser = await getUserByStackAuthId(user.id);
+      }
+
+      // If still no display name, require manual accept
+      if (!user.displayName || !currentUser?.displayName) {
+        return NextResponse.json({ 
+          error: 'User must complete profile setup first',
+          requiresManualAccept: true 
+        }, { status: 400 });
+      }
     }
 
     // Add user to child with the specified relation

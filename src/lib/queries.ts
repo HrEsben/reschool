@@ -48,6 +48,18 @@ export const queryKeys = {
   user: (id: string) => ['users', id] as const,
 };
 
+// Utility function to refresh all user-related data
+export function useRefreshUserData() {
+  const queryClient = useQueryClient();
+  
+  return () => {
+    // Invalidate all user-related queries
+    queryClient.invalidateQueries({ queryKey: queryKeys.children });
+    queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+    queryClient.invalidateQueries({ queryKey: queryKeys.users });
+  };
+}
+
 // Additional API functions for child by slug
 const api = {
   async fetchChildren(): Promise<Child[]> {
@@ -198,8 +210,9 @@ export function useCreateChild() {
   return useMutation({
     mutationFn: api.createChild,
     onSuccess: () => {
-      // Invalidate and refetch children list
+      // Invalidate children list and notifications
       queryClient.invalidateQueries({ queryKey: queryKeys.children });
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
     },
   });
 }

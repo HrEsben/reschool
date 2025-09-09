@@ -3,6 +3,7 @@
 import { useUser } from "@stackframe/stack";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useRefreshUserData } from "@/lib/queries";
 import { Box, Spinner, Text } from "@chakra-ui/react";
 import { AppLayout } from "@/components/ui/app-layout";
 import { CollectNameDialog } from "@/components/ui/collect-name-dialog";
@@ -14,6 +15,7 @@ interface AuthenticatedLayoutProps {
 export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const user = useUser();
   const router = useRouter();
+  const refreshUserData = useRefreshUserData();
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [isCheckingName, setIsCheckingName] = useState(true);
 
@@ -31,9 +33,24 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
 
   const handleNameComplete = async () => {
     setShowNameDialog(false);
-    // The dialog already handles updating the user and syncing to database
-    // Force a page reload to ensure the updated user data is used
-    window.location.reload();
+    
+    // Invalidate all queries to ensure fresh data
+    refreshUserData();
+    
+    // Small delay to ensure database sync is complete
+    setTimeout(() => {
+      // Check if user was redirected from an invite
+      const urlParams = new URLSearchParams(window.location.search);
+      const inviteToken = urlParams.get('inviteToken');
+      
+      if (inviteToken) {
+        // Retry auto-accept now that user has a display name
+        window.location.href = `/invite/${inviteToken}`;
+      } else {
+        // Force a refresh of the current page data
+        window.location.reload();
+      }
+    }, 1000); // Wait 1 second for database sync
   };
 
   // Show loading state while checking authentication
