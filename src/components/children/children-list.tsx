@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -12,9 +12,11 @@ import {
   Badge,
   Spinner,
   Button,
-  Icon
+  Icon,
+  Alert
 } from '@chakra-ui/react';
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
+import { useChildren, useDeleteChild, usePrefetchBarometers } from '@/lib/queries';
 
 interface Child {
   id: string;
@@ -27,64 +29,36 @@ interface Child {
 }
 
 interface ChildrenListProps {
-  refreshTrigger: number;
+  refreshTrigger?: number; // Made optional since we won't need it anymore
 }
 
 export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
-  const [children, setChildren] = useState<Child[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [deletingChildId, setDeletingChildId] = useState<string | null>(null);
   const router = useRouter();
+
+  // Use React Query hooks
+  const { data: children = [], isLoading, error } = useChildren();
+  const deleteChildMutation = useDeleteChild();
+  const prefetchBarometers = usePrefetchBarometers();
 
   const handleDeleteChild = async (child: Child) => {
     setDeletingChildId(child.id);
     
     try {
-      const response = await fetch(`/api/children/${child.id}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.error || 'Der opstod en fejl ved sletning af barnet');
-        return;
-      }
-      
-      // Refresh the children list
-      fetchChildren();
+      await deleteChildMutation.mutateAsync(child.id);
+      // The cache is automatically updated via the mutation's onSuccess
     } catch (error) {
       console.error('Error deleting child:', error);
-      setError('Der opstod en netværksfejl ved sletning af barnet');
+      // You can add toast notification here if needed
     } finally {
       setDeletingChildId(null);
     }
   };
 
-  const fetchChildren = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const response = await fetch('/api/children');
-      
-      if (!response.ok) {
-        throw new Error('Fejl ved hentning af børn');
-      }
-      
-      const data = await response.json();
-      setChildren(data.children || []);
-    } catch (err) {
-      console.error('Error fetching children:', err);
-      setError(err instanceof Error ? err.message : 'Der opstod en fejl');
-    } finally {
-      setIsLoading(false);
-    }
+  // Prefetch barometers when hovering over a child card for better UX
+  const handleChildHover = (childId: string) => {
+    prefetchBarometers(childId);
   };
-
-  useEffect(() => {
-    fetchChildren();
-  }, [refreshTrigger]);
 
   const getRelationDisplay = (child: Child) => {
     if (child.relation === 'Ressourceperson' && child.customRelationName) {
@@ -128,13 +102,11 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
 
   if (error) {
     return (
-      <Box
-        p={4}
-        className="bg-burnt-sienna-900 border-l-4 border-burnt-sienna-400"
-        borderRadius="lg"
-      >
-        <Text className="text-burnt-sienna-600" fontWeight="500">{error}</Text>
-      </Box>
+      <Alert.Root status="error">
+        <Alert.Description>
+          {error instanceof Error ? error.message : 'Der opstod en fejl ved indlæsning af børn'}
+        </Alert.Description>
+      </Alert.Root>
     );
   }
 
@@ -170,6 +142,7 @@ export function ChildrenList({ refreshTrigger }: ChildrenListProps) {
             }}
             transition="all 0.3s ease"
             overflow="hidden"
+            onMouseEnter={() => handleChildHover(child.id)}
           >
             <Card.Body p={0}>
               {/* Header section with soft gradient */}

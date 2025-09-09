@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from 'react';
 import {
   Box,
   Card,
@@ -10,10 +9,9 @@ import { AddChildForm } from './add-child-form';
 import { ChildrenList } from './children-list';
 
 export function ChildrenManager() {
-  const [childrenRefreshTrigger, setChildrenRefreshTrigger] = useState(0);
-
   const handleChildAdded = () => {
-    setChildrenRefreshTrigger(prev => prev + 1);
+    // With React Query, we don't need manual refresh triggers
+    // The cache will be invalidated automatically by the mutation
   };
 
   return (
@@ -28,7 +26,7 @@ export function ChildrenManager() {
       </Card.Header>
       
       <Card.Body pt={0}>
-        <ChildrenList refreshTrigger={childrenRefreshTrigger} />
+        <ChildrenList />
       </Card.Body>
     </Card.Root>
   );

@@ -1,20 +1,18 @@
 "use client";
 
 import { useUser } from "@stackframe/stack";
-import { Box, Button, Heading, Text, VStack, HStack, Spinner } from "@chakra-ui/react";
+import { Box, Button, Heading, Text, VStack, HStack, Spinner, Alert } from "@chakra-ui/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState, Suspense } from "react";
 
-export default function Home() {
-  const user = useUser();
+function AuthenticatedHome() {
+  const user = useUser(); // This is now inside a Suspense boundary
   const router = useRouter();
 
-  // Redirect based on user state
+  // Redirect if authenticated
   useEffect(() => {
     if (user) {
-      // All authenticated users go to dashboard
-      // The AuthenticatedLayout will handle name collection if needed
       router.push("/dashboard");
     }
   }, [user, router]);
@@ -56,13 +54,7 @@ export default function Home() {
           >©</Text>
         </Heading>
         
-        {user === undefined ? (
-          // Loading state
-          <VStack gap={4}>
-            <Spinner size="lg" className="text-delft-blue-500" />
-            <Text className="text-delft-blue-600">Indlæser...</Text>
-          </VStack>
-        ) : user === null ? (
+        {user === null ? (
           // Not authenticated - show login/signup
           <VStack gap={6}>
             <Text fontSize="lg" className="text-delft-blue-600" maxW="md" textAlign="center" lineHeight="1.6">
@@ -100,8 +92,41 @@ export default function Home() {
               </Link>
             </HStack>
           </VStack>
-        ) : null}
+        ) : (
+          // User is authenticated, redirecting...
+          <VStack gap={4}>
+            <Spinner size="lg" className="text-delft-blue-500" />
+            <Text className="text-delft-blue-600">Omdirigerer til dashboard...</Text>
+          </VStack>
+        )}
       </VStack>
     </Box>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <Box 
+      minH="100vh" 
+      display="flex" 
+      alignItems="center" 
+      justifyContent="center"
+      flexDirection="column"
+      gap={4}
+      className="bg-eggshell-900"
+    >
+      <Spinner size="xl" className="text-delft-blue-500" />
+      <Text className="text-delft-blue-600" fontSize="lg" fontWeight="500">
+        Checking authentication...
+      </Text>
+    </Box>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <AuthenticatedHome />
+    </Suspense>
   );
 }

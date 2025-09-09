@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@stackframe/stack';
 import {
@@ -22,6 +22,7 @@ import { RemoveUserDialog } from '@/components/ui/remove-user-dialog';
 import { InviteUserDialog } from '@/components/ui/invite-user-dialog';
 import { DeleteInvitationDialog } from '@/components/ui/delete-invitation-dialog';
 import { ToolsManager } from '@/components/tools/tools-manager';
+import { useChildBySlug, useRemoveUserFromChild, useDeleteInvitation, useDeleteChild } from '@/lib/queries';
 
 interface UserWithRelation {
   id: number;
@@ -63,16 +64,20 @@ export default function ChildSlugPage() {
   const params = useParams();
   const router = useRouter();
   const user = useUser();
-  const [childData, setChildData] = useState<ChildData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState(false);
   const [deletingInvitation, setDeletingInvitation] = useState(false);
-  const [removingUser, setRemovingUser] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+  
   const slug = params.slug as string;
 
-  const copyInviteLink = async (invitation: Invitation) => {
+  // Use React Query hooks
+  const { data: childData, isLoading: loading, error: queryError, refetch } = useChildBySlug(slug);
+  const removeUserMutation = useRemoveUserFromChild();
+  const deleteInvitationMutation = useDeleteInvitation();
+  const deleteChildMutation = useDeleteChild();
+
+  // Convert query error to string for display
+  const error = queryError ? (queryError instanceof Error ? queryError.message : 'Der opstod en fejl') : null;
+
+  const copyInviteLink = async (invitation: any) => {
     const currentUrl = new URL(window.location.href);
     const inviteUrl = `${currentUrl.protocol}//${currentUrl.host}/invite/${invitation.token}`;
     
@@ -98,20 +103,7 @@ export default function ChildSlugPage() {
   const deleteInvitation = async (invitationId: number, invitationEmail: string) => {
     setDeletingInvitation(true);
     try {
-      const response = await fetch(`/api/invitations/delete/${invitationId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        showToast({
-          title: 'Fejl',
-          description: data.error || 'Kunne ikke slette invitationen',
-          type: 'error',
-          duration: 3000,
-        });
-        return;
-      }
+      await deleteInvitationMutation.mutateAsync(invitationId.toString());
 
       showToast({
         title: 'Invitation slettet',
@@ -120,13 +112,12 @@ export default function ChildSlugPage() {
         duration: 3000,
       });
 
-      // Refresh data to show updated invitation list
-      fetchChildData();
+      // React Query will automatically update the cache
     } catch (error) {
       console.error('Error deleting invitation:', error);
       showToast({
         title: 'Fejl',
-        description: 'Der opstod en netværksfejl',
+        description: error instanceof Error ? error.message : 'Der opstod en netværksfejl',
         type: 'error',
         duration: 3000,
       });
@@ -135,48 +126,7 @@ export default function ChildSlugPage() {
     }
   };
 
-  const fetchChildData = useCallback(async () => {
-    try {
-      setLoading(true);
-      
-      // Direct slug-based lookup using the new API endpoint
-      const response = await fetch(`/api/children/slug/${slug}`);
-      
-      if (!response.ok) {
-        if (response.status === 403) {
-          setError('Du har ikke adgang til dette barns profil');
-        } else if (response.status === 404) {
-          setError('Barnet blev ikke fundet');
-        } else {
-          setError('Der opstod en fejl ved indlæsning af barnets profil');
-        }
-        return;
-      }
-
-      const data = await response.json();
-      setChildData(data);
-    } catch (error) {
-      console.error('Error fetching child data:', error);
-      setError('Der opstod en netværksfejl');
-    } finally {
-      setLoading(false);
-    }
-  }, [slug]);
-
-  useEffect(() => {
-    // Skip certain reserved routes
-    const reservedRoutes = ['dashboard', 'settings', 'api', 'children', 'users', '_next', 'favicon.ico'];
-    if (reservedRoutes.includes(slug.toLowerCase())) {
-      setError('Ugyldig side');
-      return;
-    }
-
-    if (slug && user) {
-      fetchChildData();
-    }
-  }, [user, slug, fetchChildData]); // Include fetchChildData in dependencies
-
-  const getRelationDisplayName = (user: UserWithRelation) => {
+  const getRelationDisplayName = (user: any) => {
     if (user.relation === 'Ressourceperson' && user.customRelationName) {
       return user.customRelationName;
     }
@@ -208,49 +158,30 @@ export default function ChildSlugPage() {
   const handleDeleteChild = async () => {
     if (!childData) return;
     
-    setDeleting(true);
-    
     try {
-      const response = await fetch(`/api/children/${childData.child.id}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        alert(errorData.error || 'Der opstod en fejl ved sletning af barnet');
-        return;
-      }
+      await deleteChildMutation.mutateAsync(childData.child.id.toString());
       
       // Redirect to dashboard after successful deletion
       router.push('/dashboard');
     } catch (error) {
       console.error('Error deleting child:', error);
-      alert('Der opstod en netværksfejl ved sletning af barnet');
-    } finally {
-      setDeleting(false);
+      showToast({
+        title: 'Fejl',
+        description: error instanceof Error ? error.message : 'Der opstod en fejl ved sletning af barnet',
+        type: 'error',
+        duration: 3000,
+      });
     }
   };
 
   const handleRemoveUser = async (userId: number) => {
     if (!childData) return;
     
-    setRemovingUser(true);
-    
     try {
-      const response = await fetch(`/api/children/${childData.child.id}/users/${userId}`, {
-        method: 'DELETE',
+      await removeUserMutation.mutateAsync({
+        childId: childData.child.id.toString(),
+        userId: userId.toString()
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        showToast({
-          title: 'Fejl',
-          description: errorData.error || 'Der opstod en fejl ved fjernelse af brugeren',
-          type: 'error',
-          duration: 5000,
-        });
-        return;
-      }
       
       showToast({
         title: 'Bruger fjernet',
@@ -259,18 +190,15 @@ export default function ChildSlugPage() {
         duration: 3000,
       });
       
-      // Refresh the child data to show updated user list
-      await fetchChildData();
+      // React Query will automatically update the cache
     } catch (error) {
       console.error('Error removing user:', error);
       showToast({
         title: 'Netværksfejl',
-        description: 'Der opstod en netværksfejl ved fjernelse af brugeren',
+        description: error instanceof Error ? error.message : 'Der opstod en netværksfejl ved fjernelse af brugeren',
         type: 'error',
         duration: 5000,
       });
-    } finally {
-      setRemovingUser(false);
     }
   };
 
@@ -330,7 +258,7 @@ export default function ChildSlugPage() {
     return null;
   }
 
-  const currentUserRelation = childData.users.find(u => u.stackAuthId === user?.id);
+  const currentUserRelation = childData.users.find((u: any) => u.stackAuthId === user?.id);
   const isCurrentUserAdmin = currentUserRelation?.isAdministrator || false;
 
   return (
@@ -398,8 +326,8 @@ export default function ChildSlugPage() {
                     childId={childData.child.id}
                     childName={childData.child.name}
                     onInviteSuccess={() => {
-                      // Refresh the child data to show new invitations
-                      fetchChildData();
+                      // React Query will automatically refetch when cache is invalidated
+                      refetch();
                     }}
                   />
                 )}
@@ -422,7 +350,7 @@ export default function ChildSlugPage() {
                 </Table.Header>
                 <Table.Body>
                   {/* Existing Users */}
-                  {childData.users.map((userData) => (
+                  {childData.users.map((userData: any) => (
                     <Table.Row 
                       key={`user-${userData.id}`}
                       _hover={{ bg: "cream.100", cursor: "pointer" }}
@@ -480,7 +408,7 @@ export default function ChildSlugPage() {
                         <Table.Cell>
                           {(() => {
                             // Count administrators
-                            const adminCount = childData.users.filter(u => u.isAdministrator).length;
+                            const adminCount = childData.users.filter((u: any) => u.isAdministrator).length;
                             
                             // Don't show remove button if:
                             // 1. This is the current user and they are the last admin
@@ -521,7 +449,7 @@ export default function ChildSlugPage() {
                                 userName={userData.displayName || 'Ukendt bruger'}
                                 userEmail={userData.email}
                                 onConfirm={() => handleRemoveUser(userData.id)}
-                                isLoading={removingUser}
+                                isLoading={removeUserMutation.isPending}
                               />
                             );
                           })()}
@@ -531,7 +459,7 @@ export default function ChildSlugPage() {
                   ))}
                   
                   {/* Pending Invitations */}
-                  {childData.invitations.map((invitation) => (
+                  {childData.invitations.map((invitation: any) => (
                     <Table.Row 
                       key={`invitation-${invitation.id}`}
                       bg="rgba(129, 178, 154, 0.05)"
@@ -692,7 +620,7 @@ export default function ChildSlugPage() {
                   }
                   childName={childData.child.name}
                   onConfirm={handleDeleteChild}
-                  isLoading={deleting}
+                  isLoading={deleteChildMutation.isPending}
                 />
               </HStack>
             </Box>

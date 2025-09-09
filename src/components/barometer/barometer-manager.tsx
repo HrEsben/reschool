@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Button,
@@ -8,10 +8,12 @@ import {
   VStack,
   Spinner,
   Center,
+  Alert
 } from '@chakra-ui/react';
 import { CreateBarometerDialog } from './create-barometer-dialog';
 import { EditBarometerDialog } from './edit-barometer-dialog';
 import { BarometerCard } from './barometer-card';
+import { useBarometers } from '@/lib/queries';
 
 interface BarometerEntry {
   id: number;
@@ -45,45 +47,23 @@ interface BarometerManagerProps {
 }
 
 export function BarometerManager({ childId, isUserAdmin }: BarometerManagerProps) {
-  const [barometers, setBarometers] = useState<Barometer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [editingBarometer, setEditingBarometer] = useState<Barometer | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const fetchBarometers = async () => {
-    try {
-      setError(null);
-      const response = await fetch(`/api/children/${childId}/barometers`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch barometers');
-      }
-
-      const data = await response.json();
-      setBarometers(data.barometers || []);
-    } catch (error) {
-      console.error('Error fetching barometers:', error);
-      setError('Kunne ikke indlæse barometre');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchBarometers();
-  }, [childId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Use React Query hook
+  const { data: barometers = [], isLoading, error, refetch } = useBarometers(childId.toString());
 
   const handleBarometerCreated = () => {
-    fetchBarometers();
+    // React Query will automatically refetch when the cache is invalidated
+    refetch();
   };
 
   const handleEntryRecorded = () => {
-    fetchBarometers();
+    refetch();
   };
 
   const handleBarometerDeleted = () => {
-    fetchBarometers();
+    refetch();
   };
 
   const handleBarometerEdit = (barometer: Barometer) => {
@@ -92,12 +72,12 @@ export function BarometerManager({ childId, isUserAdmin }: BarometerManagerProps
   };
 
   const handleBarometerUpdated = () => {
-    fetchBarometers();
+    refetch();
     setEditingBarometer(null);
     setIsEditDialogOpen(false);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Center py={8}>
         <Spinner size="lg" />
@@ -107,14 +87,14 @@ export function BarometerManager({ childId, isUserAdmin }: BarometerManagerProps
 
   if (error) {
     return (
-      <Box py={8} textAlign="center">
-        <Text color="red.500" mb={4}>
-          {error}
-        </Text>
-        <Button onClick={fetchBarometers} size="sm">
+      <Alert.Root status="error">
+        <Alert.Description>
+          {error instanceof Error ? error.message : 'Kunne ikke indlæse barometre'}
+        </Alert.Description>
+        <Button onClick={() => refetch()} size="sm" mt={2}>
           Prøv igen
         </Button>
-      </Box>
+      </Alert.Root>
     );
   }
 

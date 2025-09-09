@@ -13,6 +13,7 @@ import {
   Card
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
+import { useCreateChild } from '@/lib/queries';
 
 interface AddChildFormProps {
   onChildAdded: () => void;
@@ -21,7 +22,6 @@ interface AddChildFormProps {
 type RelationType = 'Mor' | 'Far' | 'Underviser' | 'Ressourceperson';
 
 export function AddChildForm({ onChildAdded }: AddChildFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const [childName, setChildName] = useState('');
   const [relation, setRelation] = useState<RelationType>('Mor');
   const [customRelationName, setCustomRelationName] = useState('');
@@ -34,6 +34,9 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
     type: 'success' | 'error';
   } | null>(null);
   const [open, setOpen] = useState(false);
+
+  // Use React Query mutation
+  const createChildMutation = useCreateChild();
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -62,25 +65,12 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
       return;
     }
 
-    setIsLoading(true);
-    
     try {
-      const response = await fetch('/api/children', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: childName.trim(),
-          relation,
-          customRelationName: relation === 'Ressourceperson' ? customRelationName.trim() : undefined,
-        }),
+      await createChildMutation.mutateAsync({
+        name: childName.trim(),
+        relation,
+        customRelationName: relation === 'Ressourceperson' ? customRelationName.trim() : undefined,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Fejl ved oprettelse af barn');
-      }
 
       // Reset form
       setChildName('');
@@ -97,8 +87,6 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
         error instanceof Error ? error.message : 'Der opstod en fejl ved tilføjelse af barnet',
         'error'
       );
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -144,15 +132,15 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
         isOpen={open}
         onOpenChange={setOpen}
         primaryAction={{
-          label: isLoading ? 'Tilføjer...' : 'Tilføj barn',
+          label: createChildMutation.isPending ? 'Tilføjer...' : 'Tilføj barn',
           onClick: () => {
             const form = document.getElementById('add-child-form') as HTMLFormElement;
             if (form) {
               form.requestSubmit();
             }
           },
-          isLoading: isLoading,
-          isDisabled: isLoading
+          isLoading: createChildMutation.isPending,
+          isDisabled: createChildMutation.isPending
         }}
         secondaryAction={{
           label: 'Annuller',
