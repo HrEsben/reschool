@@ -46,6 +46,8 @@ export const queryKeys = {
   notifications: ['notifications'] as const,
   users: ['users'] as const,
   user: (id: string) => ['users', id] as const,
+  invitations: ['invitations'] as const,
+  pendingInvitations: ['invitations', 'pending'] as const,
 };
 
 // Utility function to refresh all user-related data
@@ -271,4 +273,69 @@ export function usePrefetchBarometers() {
       staleTime: 2 * 60 * 1000, // 2 minutes
     });
   };
+}
+
+// Invitation types
+interface PendingInvitation {
+  id: number;
+  email: string;
+  childId: number;
+  childName: string;
+  childSlug: string;
+  invitedBy: number;
+  relation: string;
+  customRelationName?: string;
+  token: string;
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+  inviterName: string;
+  inviterRelation: string;
+}
+
+// Invitation API functions
+const invitationApi = {
+  fetchPendingInvitations: async (): Promise<PendingInvitation[]> => {
+    const response = await fetch('/api/invitations/pending', {
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch pending invitations');
+    }
+    const data = await response.json();
+    return data.invitations;
+  },
+
+  declineInvitation: async (invitationId: number): Promise<void> => {
+    const response = await fetch('/api/invitations/decline', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invitationId }),
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to decline invitation');
+    }
+  },
+};
+
+// Invitation hooks
+export function usePendingInvitations() {
+  return useQuery({
+    queryKey: queryKeys.pendingInvitations,
+    queryFn: invitationApi.fetchPendingInvitations,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useDeclineInvitation() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: invitationApi.declineInvitation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pendingInvitations });
+    },
+  });
 }

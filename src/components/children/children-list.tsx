@@ -14,7 +14,8 @@ import {
   Button,
   Icon,
   Alert,
-  Flex
+  Flex,
+  Skeleton
 } from '@chakra-ui/react';
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 import { useChildren, useDeleteChild, usePrefetchBarometers } from '@/lib/queries';
@@ -155,9 +156,19 @@ export function ChildrenList({}: ChildrenListProps) {
 
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" py={8}>
-        <Spinner size="lg" colorPalette="primary" />
-      </Box>
+      <VStack gap={4}>
+        {[1, 2, 3].map((i) => (
+          <Box key={i} width="100%" p={4} border="1px solid" borderColor="gray.200" borderRadius="lg">
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Box flex={1}>
+                <Skeleton height="24px" width="50%" mb={2} />
+                <Skeleton height="16px" width="30%" />
+              </Box>
+              <Skeleton height="40px" width="100px" />
+            </Box>
+          </Box>
+        ))}
+      </VStack>
     );
   }
 

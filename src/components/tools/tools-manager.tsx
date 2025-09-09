@@ -6,7 +6,7 @@ import {
   Button,
   Text,
   VStack,
-  Spinner,
+  Skeleton,
   Center,
   Heading,
   HStack,
@@ -17,6 +17,7 @@ import { useUser } from '@stackframe/stack';
 import { AddToolDialog } from './add-tool-dialog';
 import { BarometerCard } from '@/components/barometer/barometer-card';
 import { EditBarometerDialog } from '@/components/barometer/edit-barometer-dialog';
+import { useBarometers } from '@/lib/queries';
 
 interface BarometerEntry {
   id: number;
@@ -50,13 +51,14 @@ interface ToolsManagerProps {
 }
 
 export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
-  const [barometers, setBarometers] = useState<Barometer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: barometers = [], isLoading: loading, error: queryError } = useBarometers(childId.toString());
   const [editingBarometer, setEditingBarometer] = useState<Barometer | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const user = useUser();
+
+  // Convert query error to string for display
+  const error = queryError ? (queryError instanceof Error ? queryError.message : 'Kunne ikke indlæse værktøjer') : null;
 
   // Get current user's database ID
   useEffect(() => {
@@ -77,40 +79,16 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
     getCurrentUserId();
   }, [user]);
 
-  const fetchTools = async () => {
-    try {
-      setError(null);
-      // Fetch barometers
-      const barometerResponse = await fetch(`/api/children/${childId}/barometers`);
-      
-      if (!barometerResponse.ok) {
-        throw new Error('Failed to fetch tools');
-      }
-
-      const barometerData = await barometerResponse.json();
-      setBarometers(barometerData.barometers || []);
-    } catch (error) {
-      console.error('Error fetching tools:', error);
-      setError('Kunne ikke indlæse værktøjer');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTools();
-  }, [childId]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const handleToolAdded = () => {
-    fetchTools();
+    // TanStack Query will automatically refresh due to cache invalidation
   };
 
   const handleEntryRecorded = () => {
-    fetchTools();
+    // TanStack Query will automatically refresh due to cache invalidation
   };
 
   const handleBarometerDeleted = () => {
-    fetchTools();
+    // TanStack Query will automatically refresh due to cache invalidation
   };
 
   const handleBarometerEdit = (barometer: Barometer) => {
@@ -119,16 +97,47 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
   };
 
   const handleBarometerUpdated = () => {
-    fetchTools();
+    // TanStack Query will automatically refresh due to cache invalidation
     setEditingBarometer(null);
     setIsEditDialogOpen(false);
   };
 
   if (loading) {
     return (
-      <Center py={8}>
-        <Spinner size="lg" />
-      </Center>
+      <VStack gap={4} align="stretch">
+        {/* Tools Header Skeleton */}
+        <HStack justify="space-between" align="center">
+          <VStack align="start" gap={2}>
+            <Skeleton height="28px" width="200px" />
+            <Skeleton height="4px" width="64px" borderRadius="full" />
+          </VStack>
+          <Skeleton height="40px" width="120px" />
+        </HStack>
+        
+        <Separator />
+        
+        {/* Tools Grid Skeleton */}
+        <Box>
+          <VStack gap={4}>
+            {[1, 2, 3].map((i) => (
+              <Box key={i} p={4} border="1px solid" borderColor="gray.200" borderRadius="lg" width="100%">
+                <VStack align="stretch" gap={3}>
+                  <HStack justify="space-between" align="center">
+                    <Skeleton height="20px" width="40%" />
+                    <Skeleton height="32px" width="80px" />
+                  </HStack>
+                  <Skeleton height="60px" width="100%" />
+                  <HStack gap={2}>
+                    {[1, 2, 3, 4, 5].map((j) => (
+                      <Skeleton key={j} height="40px" width="40px" borderRadius="full" />
+                    ))}
+                  </HStack>
+                </VStack>
+              </Box>
+            ))}
+          </VStack>
+        </Box>
+      </VStack>
     );
   }
 
@@ -138,9 +147,9 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
         <Text color="red.500" mb={4}>
           {error}
         </Text>
-        <Button onClick={fetchTools} size="sm">
-          Prøv igen
-        </Button>
+        <Text fontSize="sm" color="gray.600">
+          Prøv at genindlæse siden
+        </Text>
       </Box>
     );
   }
