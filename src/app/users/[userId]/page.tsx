@@ -307,15 +307,16 @@ export default function UserProfilePage() {
               <Separator />
 
               {userProfileData.children.length > 0 ? (
-                <Table.Root size="md" variant="line" striped>
-                  <Table.Header>
-                    <Table.Row>
-                      <Table.ColumnHeader color="fg.muted" fontWeight="600">Navn</Table.ColumnHeader>
-                      <Table.ColumnHeader color="fg.muted" fontWeight="600">Relation</Table.ColumnHeader>
-                      <Table.ColumnHeader color="fg.muted" fontWeight="600">Rolle</Table.ColumnHeader>
-                      <Table.ColumnHeader color="fg.muted" fontWeight="600">Tilføjet</Table.ColumnHeader>
-                    </Table.Row>
-                  </Table.Header>
+                <Table.ScrollArea borderWidth="1px" rounded="md">
+                  <Table.Root size={{ base: "sm", md: "md" }} variant="line" striped>
+                    <Table.Header>
+                      <Table.Row>
+                        <Table.ColumnHeader color="fg.muted" fontWeight="600" minW="150px">Navn</Table.ColumnHeader>
+                        <Table.ColumnHeader color="fg.muted" fontWeight="600" minW="120px">Relation</Table.ColumnHeader>
+                        <Table.ColumnHeader color="fg.muted" fontWeight="600" minW="100px">Rolle</Table.ColumnHeader>
+                        <Table.ColumnHeader color="fg.muted" fontWeight="600" minW="100px">Tilføjet</Table.ColumnHeader>
+                      </Table.Row>
+                    </Table.Header>
                   <Table.Body>
                     {userProfileData.children.map((child) => (
                       <Table.Row 
@@ -370,6 +371,7 @@ export default function UserProfilePage() {
                     ))}
                   </Table.Body>
                 </Table.Root>
+                </Table.ScrollArea>
               ) : (
                 <Text color="fg.muted" textAlign="center" py={8} fontWeight="500">
                   {isOwnProfile ? 'Du har ikke tilføjet nogen børn endnu' : 'Denne bruger har ingen børn tilknyttet'}

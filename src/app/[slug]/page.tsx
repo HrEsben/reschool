@@ -299,19 +299,20 @@ export default function ChildSlugPage() {
               
               <Separator />
 
-              <Table.Root size="md" variant="line" striped>
-                <Table.Header>
-                  <Table.Row>
-                    <Table.ColumnHeader color="fg.muted" fontWeight="600">Navn</Table.ColumnHeader>
-                    <Table.ColumnHeader color="fg.muted" fontWeight="600">Email</Table.ColumnHeader>
-                    <Table.ColumnHeader color="fg.muted" fontWeight="600">Relation</Table.ColumnHeader>
-                    <Table.ColumnHeader color="fg.muted" fontWeight="600">Rolle</Table.ColumnHeader>
-                    <Table.ColumnHeader color="fg.muted" fontWeight="600">Tilføjet</Table.ColumnHeader>
-                    {isCurrentUserAdmin && (
-                      <Table.ColumnHeader color="fg.muted" fontWeight="600">Handlinger</Table.ColumnHeader>
-                    )}
-                  </Table.Row>
-                </Table.Header>
+              <Table.ScrollArea borderWidth="1px" rounded="md">
+                <Table.Root size={{ base: "sm", md: "md" }} variant="line" striped>
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeader color="fg.muted" fontWeight="600" minW="150px">Navn</Table.ColumnHeader>
+                      <Table.ColumnHeader color="fg.muted" fontWeight="600" minW="200px">Email</Table.ColumnHeader>
+                      <Table.ColumnHeader color="fg.muted" fontWeight="600" minW="120px">Relation</Table.ColumnHeader>
+                      <Table.ColumnHeader color="fg.muted" fontWeight="600" minW="100px">Rolle</Table.ColumnHeader>
+                      <Table.ColumnHeader color="fg.muted" fontWeight="600" minW="100px">Tilføjet</Table.ColumnHeader>
+                      {isCurrentUserAdmin && (
+                        <Table.ColumnHeader color="fg.muted" fontWeight="600" minW="120px">Handlinger</Table.ColumnHeader>
+                      )}
+                    </Table.Row>
+                  </Table.Header>
                 <Table.Body>
                   {/* Existing Users */}
                   {childData.users.map((userData: { 
@@ -563,6 +564,7 @@ export default function ChildSlugPage() {
                   ))}
                 </Table.Body>
               </Table.Root>
+              </Table.ScrollArea>
 
               {childData.users.length === 0 && childData.invitations.length === 0 && (
                 <Text color="fg.muted" textAlign="center" py={8} fontWeight="500">
