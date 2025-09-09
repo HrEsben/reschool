@@ -14,8 +14,7 @@ import {
   Button,
   Icon,
   Alert,
-  Flex,
-  Separator
+  Flex
 } from '@chakra-ui/react';
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 import { useChildren, useDeleteChild, usePrefetchBarometers } from '@/lib/queries';

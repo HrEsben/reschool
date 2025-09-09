@@ -4,6 +4,7 @@ import { stackServerApp } from "../stack";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Provider } from "@/components/ui/provider";
+import RisingFooter from "@/components/ui/rising-footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,7 +44,10 @@ export default function RootLayout({
         <Provider>
           <StackProvider app={stackServerApp}>
             <StackTheme>
-              {children}
+              <div style={{ position: 'relative', zIndex: 10, backgroundColor: 'white', paddingBottom: '20vh' }}>
+                {children}
+              </div>
+              <RisingFooter />
             </StackTheme>
           </StackProvider>
         </Provider>
