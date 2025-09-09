@@ -73,6 +73,12 @@ export default function InviteAcceptPage() {
               // Redirect to child profile immediately
               router.push(`/${acceptData.childSlug}`);
               return;
+            } else if (acceptResponse.status === 400) {
+              const errorData = await acceptResponse.json();
+              if (errorData.requiresManualAccept) {
+                console.log('User needs to complete profile setup first, showing manual accept UI');
+                // Continue to show manual acceptance UI - user needs to complete their profile
+              }
             }
           } catch (autoAcceptError) {
             console.log('Auto-acceptance failed, user can manually accept:', autoAcceptError);

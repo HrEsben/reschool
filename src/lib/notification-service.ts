@@ -120,7 +120,7 @@ export async function activatePendingNotifications(email: string, userId: number
     
     // Find all pending notifications for this email
     const result = await query(
-      'SELECT * FROM notifications WHERE pending_email = $1',
+      'SELECT * FROM notifications WHERE pending_email = $1 AND user_id IS NULL',
       [email]
     );
     
@@ -128,12 +128,12 @@ export async function activatePendingNotifications(email: string, userId: number
     
     if (result.rows.length > 0) {
       // Activate them by setting user_id and clearing pending_email
-      await query(
-        'UPDATE notifications SET user_id = $1, pending_email = NULL WHERE pending_email = $2',
+      const updateResult = await query(
+        'UPDATE notifications SET user_id = $1, pending_email = NULL, updated_at = NOW() WHERE pending_email = $2 AND user_id IS NULL',
         [userId, email]
       );
       
-      console.log('Activated', result.rows.length, 'notifications for user ID:', userId);
+      console.log('Activated', updateResult.rowCount, 'notifications for user ID:', userId);
     }
   } catch (error) {
     console.error('Error activating pending notifications:', error);
@@ -366,4 +366,31 @@ export async function createBarometerEntryNotification(
       actionUrl: `/${childSlug}`
     }
   );
+}
+
+// Update notifications that reference a user by email to use their display name instead
+export async function updateNotificationsWithUserName(email: string, displayName: string): Promise<void> {
+  try {
+    // Update "user_joined_child" notifications that mention this email in the message
+    await query(
+      `UPDATE notifications 
+       SET message = REPLACE(message, $1, $2), updated_at = NOW()
+       WHERE type = 'user_joined_child' 
+       AND message LIKE '%' || $1 || '%'`,
+      [email, displayName]
+    );
+
+    // Update the userName in the data JSON for user_joined_child notifications
+    await query(
+      `UPDATE notifications 
+       SET data = jsonb_set(data, '{userName}', $2, false), updated_at = NOW()
+       WHERE type = 'user_joined_child' 
+       AND data->>'userName' = $1`,
+      [email, JSON.stringify(displayName)]
+    );
+
+    console.log('Updated notifications to use display name:', displayName, 'instead of email:', email);
+  } catch (error) {
+    console.error('Error updating notifications with user name:', error);
+  }
 }

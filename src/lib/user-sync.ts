@@ -2,7 +2,7 @@
 
 import { stackServerApp } from "@/stack";
 import { syncUserToDatabase, getUserByStackAuthId } from "./database-service";
-import { activatePendingNotifications } from "./notification-service";
+import { activatePendingNotifications, updateNotificationsWithUserName } from "./notification-service";
 
 export async function ensureUserInDatabase() {
   try {
@@ -22,6 +22,16 @@ export async function ensureUserInDatabase() {
       console.log('Checking for pending notifications for email:', user.primaryEmail);
       await activatePendingNotifications(user.primaryEmail, dbUser.id);
       console.log('Notification activation check completed for user ID:', dbUser.id);
+
+      // If user now has a display name (and didn't before, or it changed), 
+      // update any notifications that reference them by email
+      if (user.displayName && user.primaryEmail) {
+        const previousDisplayName = existingDbUser?.displayName;
+        if (!previousDisplayName || previousDisplayName !== user.displayName) {
+          console.log('Updating notifications with new display name:', user.displayName);
+          await updateNotificationsWithUserName(user.primaryEmail, user.displayName);
+        }
+      }
     }
 
     return dbUser;

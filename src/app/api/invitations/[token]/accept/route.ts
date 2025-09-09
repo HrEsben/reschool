@@ -6,7 +6,8 @@ import {
   addUserToChild,
   getChildById,
   updateInvitationStatus,
-  getChildWithUsers
+  getChildWithUsers,
+  syncUserToDatabase
 } from '@/lib/database-service';
 import { createChildAddedNotification, createUserJoinedChildNotification } from '@/lib/notification-service';
 
@@ -52,10 +53,20 @@ export async function POST(
       }, { status: 400 });
     }
 
-    // Get current user from database
-    const currentUser = await getUserByStackAuthId(user.id);
+    // Get current user from database - ensure we have the latest data
+    let currentUser = await getUserByStackAuthId(user.id);
     if (!currentUser) {
       return NextResponse.json({ error: 'User not found in database' }, { status: 404 });
+    }
+
+    // Refresh user data from Stack Auth to ensure we have the latest display name
+    const latestStackUser = await stackServerApp.getUser();
+    if (latestStackUser && latestStackUser.displayName !== currentUser.displayName) {
+      // Sync the latest user data to database
+      const updatedUser = await syncUserToDatabase(latestStackUser);
+      if (updatedUser) {
+        currentUser = updatedUser;
+      }
     }
 
     // Add user to child with the specified relation
@@ -65,6 +76,10 @@ export async function POST(
       invitation.relation,
       invitation.customRelationName
     );
+
+    if (!userChildRelation) {
+      return NextResponse.json({ error: 'Failed to add user to child' }, { status: 500 });
+    }
 
     if (!userChildRelation) {
       return NextResponse.json({ error: 'Failed to add user to child' }, { status: 500 });

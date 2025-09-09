@@ -56,10 +56,19 @@ export async function POST(
       }, { status: 400 });
     }
 
-    // Get current user from database
-    const currentUser = await getUserByStackAuthId(user.id);
+    // Get current user from database - ensure we have the latest data
+    let currentUser = await getUserByStackAuthId(user.id);
     if (!currentUser) {
       return NextResponse.json({ error: 'User not found in database' }, { status: 404 });
+    }
+
+    // If user doesn't have a display name, we can't auto-accept yet
+    // Let them go through the normal flow to provide their name first
+    if (!user.displayName || !currentUser.displayName) {
+      return NextResponse.json({ 
+        error: 'User must complete profile setup first',
+        requiresManualAccept: true 
+      }, { status: 400 });
     }
 
     // Add user to child with the specified relation
