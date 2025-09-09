@@ -408,22 +408,27 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
 
   const generateNumberRating = () => {
     const buttons = [];
+    const scaleLength = barometer.scaleMax - barometer.scaleMin + 1;
+    
     for (let i = barometer.scaleMin; i <= barometer.scaleMax; i++) {
       const color = getRatingColor(i);
       buttons.push(
         <Button
           key={i}
           variant={selectedRating === i ? "solid" : "outline"}
-          bg={selectedRating === i ? color : "white"}
-          color={selectedRating === i ? "white" : "navy.700"}
-          borderColor={selectedRating === i ? color : "cream.300"}
-          size="lg"
+          bg={selectedRating === i ? color : { base: `${color}30`, md: "white" }}
+          color={selectedRating === i ? "white" : { base: "white", md: "navy.700" }}
+          borderColor={selectedRating === i ? color : color}
+          borderWidth="2px"
+          size={{ base: scaleLength > 7 ? "sm" : "md", md: "lg" }}
           onClick={() => handleRatingClick(i)}
-          minW="50px"
-          h="50px"
-          fontSize="lg"
+          minW={{ base: scaleLength > 7 ? "35px" : "45px", md: "50px" }}
+          h={{ base: scaleLength > 7 ? "35px" : "45px", md: "50px" }}
+          fontSize={{ base: scaleLength > 7 ? "sm" : "md", md: "lg" }}
           fontWeight="semibold"
           borderRadius="lg"
+          flex="1"
+          maxW={{ base: scaleLength > 7 ? "40px" : "50px", md: "none" }}
           _hover={{
             bg: selectedRating === i ? color : "sage.50",
             borderColor: color,
@@ -447,7 +452,15 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
       );
     }
     return (
-      <Flex flexWrap="wrap" gap={2} justifyContent="space-evenly" alignItems="center" width="100%">
+      <Flex 
+        gap={{ base: 1, md: 2 }} 
+        justifyContent="space-between" 
+        alignItems="center" 
+        width="100%"
+        flexWrap="nowrap"
+        overflowX="auto"
+        px={{ base: 2, md: 0 }}
+      >
         {buttons}
       </Flex>
     );
@@ -455,23 +468,31 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
 
   const generateSmileyRating = () => {
     const buttons = [];
+    const scaleLength = barometer.scaleMax - barometer.scaleMin + 1;
+    const smileyType = barometer.smileyType || 'emojis';
+    
     for (let i = barometer.scaleMin; i <= barometer.scaleMax; i++) {
       const color = getRatingColor(i);
+      // For emoji smileys, we need different color handling since emojis don't respond to CSS color
+      const isEmojiType = smileyType === 'emojis';
+      
       buttons.push(
         <Button
           key={i}
           variant="ghost"
-          bg={selectedRating === i ? color : "cream.50"}
-          color={selectedRating === i ? "white" : "gray.800"}
-          borderColor={selectedRating === i ? color : "cream.300"}
+          bg={selectedRating === i ? color : { base: isEmojiType ? `${color}20` : `${color}15`, md: "cream.50" }}
+          color={selectedRating === i ? "white" : { base: isEmojiType ? "initial" : "navy.700", md: "gray.800" }}
+          borderColor={selectedRating === i ? color : color}
           borderWidth="2px"
           borderStyle="solid"
-          size="lg"
+          size={{ base: scaleLength > 7 ? "sm" : "md", md: "lg" }}
           onClick={() => handleRatingClick(i)}
-          minW="60px"
-          h="60px"
-          fontSize="2xl"
+          minW={{ base: scaleLength > 7 ? "40px" : "50px", md: "60px" }}
+          h={{ base: scaleLength > 7 ? "40px" : "50px", md: "60px" }}
+          fontSize={{ base: scaleLength > 7 ? "lg" : "xl", md: "2xl" }}
           borderRadius="full"
+          flex="1"
+          maxW={{ base: scaleLength > 7 ? "45px" : "55px", md: "none" }}
           _hover={{
             bg: color,
             borderColor: color,
@@ -496,7 +517,15 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
     }
     return (
       <VStack gap={4} align="stretch" width="100%">
-        <Flex flexWrap="wrap" gap={2} justifyContent="space-evenly" alignItems="center" width="100%">
+        <Flex 
+          gap={{ base: 1, md: 2 }} 
+          justifyContent="space-between" 
+          alignItems="center" 
+          width="100%"
+          flexWrap="nowrap"
+          overflowX="auto"
+          px={{ base: 2, md: 0 }}
+        >
           {buttons}
         </Flex>
       </VStack>
