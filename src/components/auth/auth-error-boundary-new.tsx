@@ -1,7 +1,5 @@
 "use client";
 
-import { Box, Button, Heading, Text, VStack } from '@chakra-ui/react';
-
 interface AuthErrorBoundaryProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
