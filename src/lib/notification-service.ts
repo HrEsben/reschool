@@ -119,7 +119,6 @@ export async function createPendingNotification(
 // Activate pending notifications when user signs up
 export async function activatePendingNotifications(email: string, userId: number): Promise<void> {
   try {
-    console.log('Looking for pending notifications for email:', email);
     
     // Find all pending notifications for this email
     const result = await query(
@@ -127,7 +126,6 @@ export async function activatePendingNotifications(email: string, userId: number
       [email]
     );
     
-    console.log('Found pending notifications:', result.rows.length);
     
     if (result.rows.length > 0) {
       // Activate them by setting user_id and clearing pending_email
@@ -136,7 +134,6 @@ export async function activatePendingNotifications(email: string, userId: number
         [userId, email]
       );
       
-      console.log('Activated', updateResult.rowCount, 'notifications for user ID:', userId);
     }
   } catch (error) {
     console.error('Error activating pending notifications:', error);
@@ -197,13 +194,7 @@ export async function getUserNotifications(
     query_text += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`;
     params.push(limit);
 
-    console.log('getUserNotifications query:', query_text);
-    console.log('getUserNotifications params:', params);
-
     const result = await query(query_text, params);
-
-    console.log('getUserNotifications result rows:', result.rows.length);
-    console.log('getUserNotifications raw rows:', result.rows);
 
     return result.rows.map(row => ({
       id: row.id,
@@ -256,7 +247,6 @@ export async function markAllNotificationsAsRead(userId: number): Promise<boolea
 // Get unread notification count
 export async function getUnreadNotificationCount(userId: number): Promise<number> {
   try {
-    console.log('getUnreadNotificationCount for user ID:', userId);
     
     const result = await query(
       `SELECT COUNT(*) as count FROM notifications 
@@ -264,10 +254,7 @@ export async function getUnreadNotificationCount(userId: number): Promise<number
       [userId]
     );
 
-    console.log('getUnreadNotificationCount result:', result.rows[0]);
     const count = parseInt(result.rows[0]?.count || '0');
-    console.log('getUnreadNotificationCount final count:', count);
-    
     return count;
   } catch (error) {
     console.error('Error getting unread notification count:', error);
@@ -392,7 +379,6 @@ export async function updateNotificationsWithUserName(email: string, displayName
       [email, JSON.stringify(displayName)]
     );
 
-    console.log('Updated notifications to use display name:', displayName, 'instead of email:', email);
   } catch (error) {
     console.error('Error updating notifications with user name:', error);
   }

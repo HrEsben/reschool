@@ -21,8 +21,11 @@ import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 import { RemoveUserDialog } from '@/components/ui/remove-user-dialog';
 import { InviteUserDialog } from '@/components/ui/invite-user-dialog';
 import { DeleteInvitationDialog } from '@/components/ui/delete-invitation-dialog';
+import { PromoteUserDialog } from '@/components/ui/promote-user-dialog';
+import { DemoteUserDialog } from '@/components/ui/demote-user-dialog';
 import { ToolsManager } from '@/components/tools/tools-manager';
-import { useChildBySlug, useRemoveUserFromChild, useDeleteInvitation, useDeleteChild } from '@/lib/queries';
+import { AdminStarIcon, DemoteStarIcon } from '@/components/ui/icons';
+import { useChildBySlug, useRemoveUserFromChild, useDeleteInvitation, useDeleteChild, usePromoteUserToAdmin, useDemoteUserFromAdmin } from '@/lib/queries';
 
 export default function ChildSlugPage() {
   const params = useParams();
@@ -37,6 +40,8 @@ export default function ChildSlugPage() {
   const removeUserMutation = useRemoveUserFromChild();
   const deleteInvitationMutation = useDeleteInvitation();
   const deleteChildMutation = useDeleteChild();
+  const promoteUserMutation = usePromoteUserToAdmin();
+  const demoteUserMutation = useDemoteUserFromAdmin();
 
   // Convert query error to string for display
   const error = queryError ? (queryError instanceof Error ? queryError.message : 'Der opstod en fejl') : null;
@@ -160,6 +165,62 @@ export default function ChildSlugPage() {
       showToast({
         title: 'Netværksfejl',
         description: error instanceof Error ? error.message : 'Der opstod en netværksfejl ved fjernelse af brugeren',
+        type: 'error',
+        duration: 5000,
+      });
+    }
+  };
+
+  const handlePromoteUser = async (userId: number, userName: string) => {
+    if (!childData) return;
+    
+    try {
+      await promoteUserMutation.mutateAsync({
+        childId: childData.child.id.toString(),
+        userId: userId.toString()
+      });
+      
+      showToast({
+        title: 'Bruger forfremmet',
+        description: `${userName} er nu administrator for ${childData.child.name}`,
+        type: 'success',
+        duration: 3000,
+      });
+      
+      // React Query will automatically update the cache
+    } catch (error) {
+      console.error('Error promoting user:', error);
+      showToast({
+        title: 'Netværksfejl',
+        description: error instanceof Error ? error.message : 'Der opstod en fejl ved forfremmelse af brugeren',
+        type: 'error',
+        duration: 5000,
+      });
+    }
+  };
+
+  const handleDemoteUser = async (userId: number, userName: string) => {
+    if (!childData) return;
+    
+    try {
+      await demoteUserMutation.mutateAsync({
+        childId: childData.child.id.toString(),
+        userId: userId.toString()
+      });
+      
+      showToast({
+        title: 'Administratorrettigheder fjernet',
+        description: `${userName} er ikke længere administrator for ${childData.child.name}`,
+        type: 'success',
+        duration: 3000,
+      });
+      
+      // React Query will automatically update the cache
+    } catch (error) {
+      console.error('Error demoting user:', error);
+      showToast({
+        title: 'Netværksfejl',
+        description: error instanceof Error ? error.message : 'Der opstod en fejl ved fjernelse af administratorrettigheder',
         type: 'error',
         duration: 5000,
       });
@@ -509,33 +570,90 @@ export default function ChildSlugPage() {
                             }
                             
                             return (
-                              <RemoveUserDialog
-                                trigger={
-                                  <Button
-                                    variant="subtle"
-                                    size="sm"
-                                    colorPalette="red"
-                                    _hover={{
-                                      bg: "#e07a5f",
-                                      color: "white"
-                                    }}
-                                    bg="rgba(224, 122, 95, 0.1)"
-                                    color="#e07a5f"
-                                    border="1px solid rgba(224, 122, 95, 0.3)"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <Icon boxSize={4}>
-                                      <svg fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53L15.986 5.952l.149.022a.75.75 0 00.23-1.482A48.16 48.16 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
-                                      </svg>
-                                    </Icon>
-                                  </Button>
-                                }
-                                userName={userData.displayName || 'Ukendt bruger'}
-                                userEmail={userData.email}
-                                onConfirm={() => handleRemoveUser(userData.id)}
-                                isLoading={removeUserMutation.isPending}
-                              />
+                              <HStack gap={2}>
+                                {/* Promote button - only show for non-admin users */}
+                                {!userData.isAdministrator && (
+                                  <PromoteUserDialog
+                                    trigger={
+                                      <Button
+                                        variant="subtle"
+                                        size="sm"
+                                        colorPalette="green"
+                                        _hover={{
+                                          bg: "#81b29a",
+                                          color: "white"
+                                        }}
+                                        bg="rgba(129, 178, 154, 0.1)"
+                                        color="#81b29a"
+                                        border="1px solid rgba(129, 178, 154, 0.3)"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <AdminStarIcon size={16} />
+                                      </Button>
+                                    }
+                                    userName={userData.displayName || 'Ukendt bruger'}
+                                    userEmail={userData.email}
+                                    onConfirm={() => handlePromoteUser(userData.id, userData.displayName || userData.email)}
+                                    isLoading={promoteUserMutation.isPending}
+                                  />
+                                )}
+
+                                {/* Demote button - only show for admin users (except last admin) */}
+                                {userData.isAdministrator && !(isCurrentUser && isLastAdmin) && (
+                                  <DemoteUserDialog
+                                    trigger={
+                                      <Button
+                                        variant="subtle"
+                                        size="sm"
+                                        colorPalette="orange"
+                                        _hover={{
+                                          bg: "#f2cc8f",
+                                          color: "white"
+                                        }}
+                                        bg="rgba(242, 204, 143, 0.1)"
+                                        color="#e9c46a"
+                                        border="1px solid rgba(242, 204, 143, 0.3)"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <DemoteStarIcon size={16} />
+                                      </Button>
+                                    }
+                                    userName={userData.displayName || 'Ukendt bruger'}
+                                    userEmail={userData.email}
+                                    onConfirm={() => handleDemoteUser(userData.id, userData.displayName || userData.email)}
+                                    isLoading={demoteUserMutation.isPending}
+                                  />
+                                )}
+                                
+                                {/* Remove button */}
+                                <RemoveUserDialog
+                                  trigger={
+                                    <Button
+                                      variant="subtle"
+                                      size="sm"
+                                      colorPalette="red"
+                                      _hover={{
+                                        bg: "#e07a5f",
+                                        color: "white"
+                                      }}
+                                      bg="rgba(224, 122, 95, 0.1)"
+                                      color="#e07a5f"
+                                      border="1px solid rgba(224, 122, 95, 0.3)"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <Icon boxSize={4}>
+                                        <svg fill="currentColor" viewBox="0 0 20 20">
+                                          <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53L15.986 5.952l.149.022a.75.75 0 00.23-1.482A48.16 48.16 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                                        </svg>
+                                      </Icon>
+                                    </Button>
+                                  }
+                                  userName={userData.displayName || 'Ukendt bruger'}
+                                  userEmail={userData.email}
+                                  onConfirm={() => handleRemoveUser(userData.id)}
+                                  isLoading={removeUserMutation.isPending}
+                                />
+                              </HStack>
                             );
                           })()}
                         </Table.Cell>

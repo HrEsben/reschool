@@ -94,7 +94,8 @@ export async function POST(
       currentUser.id,
       invitation.childId,
       invitation.relation,
-      invitation.customRelationName
+      invitation.customRelationName,
+      invitation.isAdministrator
     );
 
     if (!userChildRelation) {

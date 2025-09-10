@@ -231,6 +231,62 @@ export function useDeleteInvitation() {
   });
 }
 
+export function usePromoteUserToAdmin() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ childId, userId }: { childId: string; userId: string }) => {
+      const response = await fetch(`/api/children/${childId}/users/${userId}/promote`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to promote user to admin');
+      }
+    },
+    onSuccess: (_, { childId }) => {
+      // Invalidate the specific child query and the children list
+      queryClient.invalidateQueries({ queryKey: queryKeys.child(childId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.children });
+      // Also invalidate any queries that start with ['children'] to catch slug-based queries
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          return query.queryKey[0] === 'children';
+        }
+      });
+    },
+  });
+}
+
+export function useDemoteUserFromAdmin() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ childId, userId }: { childId: string; userId: string }) => {
+      const response = await fetch(`/api/children/${childId}/users/${userId}/demote`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to demote user from admin');
+      }
+    },
+    onSuccess: (_, { childId }) => {
+      // Invalidate the specific child query and the children list
+      queryClient.invalidateQueries({ queryKey: queryKeys.child(childId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.children });
+      // Also invalidate any queries that start with ['children'] to catch slug-based queries
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          return query.queryKey[0] === 'children';
+        }
+      });
+    },
+  });
+}
+
 export function useCreateChild() {
   const queryClient = useQueryClient();
   

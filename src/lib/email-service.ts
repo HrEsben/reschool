@@ -24,7 +24,6 @@ export async function sendInvitationEmail({
   inviteUrl
 }: SendInvitationEmailParams) {
   try {
-    console.log(`Sending invitation email to ${to} for child ${childName}`);
     
     const htmlTemplate = `<!DOCTYPE html>
 <html lang="da">

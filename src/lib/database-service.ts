@@ -44,6 +44,7 @@ export interface Invitation {
   expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
+  isAdministrator: boolean;
 }
 
 export interface ChildWithRelation extends Child {
@@ -286,14 +287,15 @@ export async function addUserToChild(
   userId: number,
   childId: number,
   relation: UserChildRelation['relation'],
-  customRelationName?: string
+  customRelationName?: string,
+  isAdministrator: boolean = false
 ): Promise<UserChildRelation | null> {
   try {
     const result = await query(
       `INSERT INTO user_child_relations 
        (user_id, child_id, relation, custom_relation_name, is_administrator)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [userId, childId, relation, customRelationName, false]
+      [userId, childId, relation, customRelationName, isAdministrator]
     );
 
     return result.rows[0] as UserChildRelation;
@@ -320,13 +322,50 @@ export async function removeUserFromChild(
   }
 }
 
+// Promote user to administrator for a child
+export async function promoteUserToAdmin(
+  childId: number,
+  userId: number
+): Promise<boolean> {
+  try {
+    const result = await query(
+      'UPDATE user_child_relations SET is_administrator = TRUE WHERE child_id = $1 AND user_id = $2',
+      [childId, userId]
+    );
+
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Error promoting user to admin:', error);
+    return false;
+  }
+}
+
+// Demote user from administrator for a child
+export async function demoteUserFromAdmin(
+  childId: string,
+  userId: string
+): Promise<boolean> {
+  try {
+    const result = await query(
+      'UPDATE user_child_relations SET is_administrator = FALSE WHERE child_id = $1 AND user_id = $2',
+      [parseInt(childId), parseInt(userId)]
+    );
+
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Error demoting user from admin:', error);
+    return false;
+  }
+}
+
 // Invitation functions
 export async function createInvitation(
   email: string,
   childId: number,
   invitedBy: number,
   relation: Invitation['relation'],
-  customRelationName?: string
+  customRelationName?: string,
+  isAdministrator: boolean = false
 ): Promise<Invitation | null> {
   try {
     // Normalize email to lowercase for consistent storage
@@ -341,18 +380,19 @@ export async function createInvitation(
 
     const result = await query(
       `INSERT INTO invitations 
-       (email, child_id, invited_by, relation, custom_relation_name, token, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+       (email, child_id, invited_by, relation, custom_relation_name, token, expires_at, is_administrator)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
        ON CONFLICT (email, child_id) 
        DO UPDATE SET 
          relation = EXCLUDED.relation,
          custom_relation_name = EXCLUDED.custom_relation_name,
          token = EXCLUDED.token,
          expires_at = EXCLUDED.expires_at,
+         is_administrator = EXCLUDED.is_administrator,
          status = 'pending',
          updated_at = NOW()
        RETURNING *`,
-      [normalizedEmail, childId, invitedBy, relation, customRelationName, token, expiresAt]
+      [normalizedEmail, childId, invitedBy, relation, customRelationName, token, expiresAt, isAdministrator]
     );
 
     const row = result.rows[0];
@@ -367,7 +407,8 @@ export async function createInvitation(
       status: row.status,
       expiresAt: new Date(row.expires_at),
       createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at)
+      updatedAt: new Date(row.updated_at),
+      isAdministrator: row.is_administrator
     };
   } catch (error) {
     console.error('Error creating invitation:', error);
@@ -396,7 +437,8 @@ export async function getInvitationByToken(token: string): Promise<Invitation | 
       status: row.status,
       expiresAt: new Date(row.expires_at),
       createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at)
+      updatedAt: new Date(row.updated_at),
+      isAdministrator: row.is_administrator || false
     };
   } catch (error) {
     console.error('Error getting invitation by token:', error);
@@ -442,7 +484,8 @@ export async function getInvitationWithDetails(token: string): Promise<{
       status: row.status,
       expiresAt: new Date(row.expires_at),
       createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at)
+      updatedAt: new Date(row.updated_at),
+      isAdministrator: row.is_administrator || false
     };
 
     return {
@@ -492,7 +535,8 @@ export async function getInvitationsForChild(childId: number): Promise<Invitatio
       status: row.status,
       expiresAt: new Date(row.expires_at),
       createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at)
+      updatedAt: new Date(row.updated_at),
+      isAdministrator: row.is_administrator || false
     }));
   } catch (error) {
     console.error('Error getting invitations for child:', error);
@@ -752,7 +796,8 @@ export async function getInvitationById(invitationId: number): Promise<Invitatio
       status: row.status,
       expiresAt: new Date(row.expires_at),
       createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at)
+      updatedAt: new Date(row.updated_at),
+      isAdministrator: row.is_administrator || false
     };
   } catch (error) {
     console.error('Error getting invitation by ID:', error);

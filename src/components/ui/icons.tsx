@@ -11,7 +11,9 @@ import {
   MdCheck,
   MdWarning,
   MdError,
-  MdInfo
+  MdInfo,
+  MdStar,
+  MdStarBorder
 } from 'react-icons/md';
 import { GoNumber } from 'react-icons/go';
 
@@ -152,6 +154,56 @@ export const InfoIcon: React.FC<CustomIconProps> = ({
   </Icon>
 );
 
+// Star icons for admin promotion/demotion
+export const StarIcon: React.FC<CustomIconProps> = ({ 
+  size = 'md', 
+  ...props 
+}) => (
+  <Icon {...props}>
+    <MdStar size={getIconSize(size)} />
+  </Icon>
+);
+
+export const StarOutlineIcon: React.FC<CustomIconProps> = ({ 
+  size = 'md', 
+  ...props 
+}) => (
+  <Icon {...props}>
+    <MdStarBorder size={getIconSize(size)} />
+  </Icon>
+);
+
+// Custom star icons using the exact same path as used in the dashboard
+export const AdminStarIcon: React.FC<CustomIconProps> = ({ 
+  size = 'md', 
+  ...props 
+}) => {
+  const iconSize = typeof size === 'number' ? `${size}px` : size;
+  return (
+    <Icon size={iconSize as "sm" | "md" | "lg" | "xl" | "xs" | "inherit"} {...props}>
+      <svg fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M10 2L13 7l5.5 1-4 4 1 5.5L10 15l-5.5 2.5 1-5.5-4-4L7 7l3-5z" clipRule="evenodd" />
+      </svg>
+    </Icon>
+  );
+};
+
+// Crossed star for demoting admin
+export const DemoteStarIcon: React.FC<CustomIconProps> = ({ 
+  size = 'md', 
+  ...props 
+}) => {
+  const iconSize = typeof size === 'number' ? `${size}px` : size;
+  return (
+    <Icon size={iconSize as "sm" | "md" | "lg" | "xl" | "xs" | "inherit"} {...props}>
+      <svg fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M10 2L13 7l5.5 1-4 4 1 5.5L10 15l-5.5 2.5 1-5.5-4-4L7 7l3-5z" clipRule="evenodd" opacity="0.5" />
+        <path stroke="currentColor" strokeWidth="2" d="M5 5L15 15M15 5L5 15" fill="none" strokeLinecap="round"/>
+      </svg>
+    </Icon>
+  );
+};
+
 // Custom SVG icons that are used across the site
 export const MenuIcon: React.FC<IconProps> = (props) => (
   <Icon viewBox="0 0 24 24" {...props}>
@@ -184,6 +236,10 @@ export const Icons = {
   Warning: WarningIcon,
   Error: ErrorIcon,
   Info: InfoIcon,
+  Star: StarIcon,
+  StarOutline: StarOutlineIcon,
+  AdminStar: AdminStarIcon,
+  DemoteStar: DemoteStarIcon,
   Menu: MenuIcon,
   User: UserIcon,
 } as const;

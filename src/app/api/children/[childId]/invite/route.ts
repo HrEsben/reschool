@@ -17,7 +17,7 @@ export async function POST(
     const resolvedParams = await params;
     const childId = parseInt(resolvedParams.childId);
     
-    const { email, relation, customRelationName } = await request.json();
+    const { email, relation, customRelationName, isAdministrator } = await request.json();
 
     if (!email || !relation) {
       return NextResponse.json({ error: 'Email and relation are required' }, { status: 400 });
@@ -57,7 +57,8 @@ export async function POST(
       childId,
       currentUser.id,
       relation,
-      customRelationName
+      customRelationName,
+      isAdministrator || false
     );
 
     if (!invitation) {

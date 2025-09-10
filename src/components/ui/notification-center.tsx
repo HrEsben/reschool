@@ -44,7 +44,6 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Fetched notifications from API:', data);
         setNotifications(data.notifications || []);
         setUnreadCount(data.unreadCount || 0);
       } else {
