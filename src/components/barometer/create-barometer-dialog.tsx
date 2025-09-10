@@ -13,8 +13,7 @@ import {
   Heading,
   SegmentGroup,
   Slider,
-  Grid,
-  Icon,
+  Tabs,
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { showToast } from '@/components/ui/simple-toast';
@@ -39,8 +38,8 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
   const [percentageValue, setPercentageValue] = useState([50]); // For slider preview
   const [loading, setLoading] = useState(false);
   
-  // Access control state
-  const [isPublic, setIsPublic] = useState(true);
+  // Visibility control state
+  const [visibilityOption, setVisibilityOption] = useState<'alle' | 'kun_mig' | 'custom'>('alle');
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   
   // Fetch child users for access control selection
@@ -270,7 +269,22 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
     );
   };
 
-  // Access control handlers
+  // Visibility control handlers
+  const handleVisibilityChange = (option: 'alle' | 'kun_mig' | 'custom') => {
+    setVisibilityOption(option);
+    
+    if (option === 'alle') {
+      // All adults - set to public
+      setSelectedUserIds([]);
+    } else if (option === 'kun_mig') {
+      // Only me - set to private with no other users
+      setSelectedUserIds([]);
+    } else if (option === 'custom') {
+      // Custom selection - user will manually select
+      // Keep current selection if any
+    }
+  };
+
   const handleUserSelection = (userId: number, isSelected: boolean) => {
     if (isSelected) {
       setSelectedUserIds(prev => [...prev, userId]);
@@ -395,11 +409,11 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
       return;
     }
 
-    // Validate access control
-    if (!isPublic && selectedUserIds.length === 0) {
+    // Validate visibility settings
+    if (visibilityOption === 'custom' && selectedUserIds.length === 0) {
       showToast({
         title: 'Fejl',
-        description: 'Hvis barometeret ikke er offentligt, skal du vælge mindst én voksen der har adgang',
+        description: 'Hvis du vælger tilpasset synlighed, skal du vælge mindst én voksen der har adgang',
         type: 'error',
         duration: 5000,
       });
@@ -429,8 +443,8 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
           scaleMax: finalScaleMax,
           displayType: displayType[0] || 'numbers',
           smileyType: displayType[0] === 'smileys' ? (smileyType[0] || 'emojis') : null,
-          isPublic: isPublic,
-          accessibleUserIds: !isPublic ? selectedUserIds : []
+          isPublic: visibilityOption === 'alle',
+          accessibleUserIds: visibilityOption === 'custom' ? selectedUserIds : []
         }),
       });
 
@@ -453,7 +467,7 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
       setScaleMax(5);
       setDisplayType(['numbers']);
       setSmileyType(['emojis']);
-      setIsPublic(true);
+      setVisibilityOption('alle');
       setSelectedUserIds([]);
       
       if (onOpenChange) {
@@ -500,7 +514,7 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
     setScaleMax(5);
     setDisplayType(['numbers']);
     setSmileyType(['emojis']);
-    setIsPublic(true);
+    setVisibilityOption('alle');
     setSelectedUserIds([]);
     
     if (onOpenChange) {
@@ -528,9 +542,16 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
       isOpen={isOpen}
       onOpenChange={onOpenChange}
     >
-      <HStack gap={0} align="start">
-        {/* Form Section */}
-        <VStack gap={4} align="stretch" flex={1} pr={6}>
+      <Tabs.Root defaultValue="indstillinger" variant="enclosed">
+        <Tabs.List>
+          <Tabs.Trigger value="indstillinger">Indstillinger</Tabs.Trigger>
+          <Tabs.Trigger value="synlighed">Synlighed</Tabs.Trigger>
+        </Tabs.List>
+
+        <Tabs.Content value="indstillinger">
+          <HStack gap={0} align="start">
+            {/* Form Section */}
+            <VStack gap={4} align="stretch" flex={1} pr={6}>
           <Box>
             <Text mb={2} fontWeight="medium">Emne</Text>
             <Input
@@ -736,104 +757,6 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
           )}
         </VStack>
 
-        {/* Access Control Section */}
-        <VStack gap={4} align="stretch" p={4} bg="gray.50" borderRadius="md">
-          <Text fontSize="lg" fontWeight="semibold" color="gray.700">
-            Adgang til målestok
-          </Text>
-          
-          <Box>
-            <label>
-              <input
-                type="checkbox"
-                checked={isPublic}
-                onChange={(e: any) => setIsPublic(e.target.checked)}
-                style={{ marginRight: '8px' }}
-              />
-              <Text as="span">Synlig for alle voksne tilknyttet barnet</Text>
-            </label>
-          </Box>
-
-          {!isPublic && (
-            <VStack gap={3} align="stretch">
-              <Box>
-                <Text fontSize="sm" fontWeight="medium" color="gray.600" mb={2}>
-                  Vælg hvilke voksne der skal have adgang:
-                </Text>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleSelectAllUsers(selectedUserIds.length !== childUsers.length)}
-                  colorScheme="blue"
-                >
-                  {selectedUserIds.length === childUsers.length ? 'Fravælg alle' : 'Vælg alle'}
-                </Button>
-              </Box>
-              
-              {childUsers && childUsers.length > 0 ? (
-                <VStack gap={2} align="stretch">
-                  {childUsers.map((user: any) => (
-                    <Box
-                      key={user.id}
-                      p={3}
-                      bg="white"
-                      borderRadius="md"
-                      border="1px solid"
-                      borderColor="gray.200"
-                    >
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={selectedUserIds.includes(user.id)}
-                          onChange={(e: any) => handleUserSelection(user.id, e.target.checked)}
-                          style={{ marginRight: '8px' }}
-                        />
-                        <HStack gap={2} display="inline-flex" alignItems="center">
-                          <Box
-                            w={6}
-                            h={6}
-                            borderRadius="full"
-                            bg="blue.500"
-                            color="white"
-                            display="flex"
-                            alignItems="center"
-                            justifyContent="center"
-                            fontSize="xs"
-                            fontWeight="bold"
-                          >
-                            {user.displayName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || '?'}
-                          </Box>
-                          <VStack gap={0} align="start">
-                            <Text fontSize="sm" fontWeight="medium">
-                              {user.displayName || user.email}
-                            </Text>
-                            <Text fontSize="xs" color="gray.500">
-                              {user.relation}
-                              {user.customRelationName && ` (${user.customRelationName})`}
-                            </Text>
-                          </VStack>
-                        </HStack>
-                      </label>
-                    </Box>
-                  ))}
-                </VStack>
-              ) : (
-                <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>
-                  {usersLoading ? 'Indlæser voksne...' : 'Ingen voksne tilgængelige'}
-                </Text>
-              )}
-
-              {!isPublic && selectedUserIds.length === 0 && (
-                <Box p={3} bg="orange.50" borderRadius="md" border="1px solid" borderColor="orange.200">
-                  <Text fontSize="sm" color="orange.700">
-                    ⚠️ Du skal vælge mindst én voksen, hvis målestokken ikke skal være synligt for alle.
-                  </Text>
-                </Box>
-              )}
-            </VStack>
-          )}
-        </VStack>
-
         {/* Vertical Divider */}
         <Box w="1px" bg="gray.200" alignSelf="stretch" minH="400px" />
 
@@ -915,7 +838,228 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
             )}
           </VStack>
         </VStack>
-      </HStack>
+          </HStack>
+        </Tabs.Content>
+
+        <Tabs.Content value="synlighed">
+          <VStack gap={4} align="stretch" p={4}>
+            <Text fontSize="lg" fontWeight="semibold" color="gray.700">
+              Hvem kan se dette barometer?
+            </Text>
+            
+            <VStack gap={3} align="stretch">
+              {/* Alle option */}
+              <Box
+                p={3}
+                border="2px solid"
+                borderColor={visibilityOption === 'alle' ? 'sage.400' : 'gray.200'}
+                borderRadius="md"
+                bg={visibilityOption === 'alle' ? 'sage.50' : 'white'}
+                cursor="pointer"
+                onClick={() => handleVisibilityChange('alle')}
+                _hover={{ borderColor: 'sage.300' }}
+              >
+                <HStack gap={3}>
+                  <Box
+                    w={4}
+                    h={4}
+                    borderRadius="full"
+                    border="2px solid"
+                    borderColor={visibilityOption === 'alle' ? 'sage.500' : 'gray.300'}
+                    bg={visibilityOption === 'alle' ? 'sage.500' : 'white'}
+                    position="relative"
+                  >
+                    {visibilityOption === 'alle' && (
+                      <Box
+                        position="absolute"
+                        top="50%"
+                        left="50%"
+                        transform="translate(-50%, -50%)"
+                        w={2}
+                        h={2}
+                        borderRadius="full"
+                        bg="white"
+                      />
+                    )}
+                  </Box>
+                  <VStack gap={1} align="start">
+                    <Text fontWeight="semibold">Alle voksne</Text>
+                    <Text fontSize="sm" color="gray.600">
+                      Alle voksne tilknyttet barnet kan se og tilføje målinger
+                    </Text>
+                  </VStack>
+                </HStack>
+              </Box>
+
+              {/* Kun mig option */}
+              <Box
+                p={3}
+                border="2px solid"
+                borderColor={visibilityOption === 'kun_mig' ? 'sage.400' : 'gray.200'}
+                borderRadius="md"
+                bg={visibilityOption === 'kun_mig' ? 'sage.50' : 'white'}
+                cursor="pointer"
+                onClick={() => handleVisibilityChange('kun_mig')}
+                _hover={{ borderColor: 'sage.300' }}
+              >
+                <HStack gap={3}>
+                  <Box
+                    w={4}
+                    h={4}
+                    borderRadius="full"
+                    border="2px solid"
+                    borderColor={visibilityOption === 'kun_mig' ? 'sage.500' : 'gray.300'}
+                    bg={visibilityOption === 'kun_mig' ? 'sage.500' : 'white'}
+                    position="relative"
+                  >
+                    {visibilityOption === 'kun_mig' && (
+                      <Box
+                        position="absolute"
+                        top="50%"
+                        left="50%"
+                        transform="translate(-50%, -50%)"
+                        w={2}
+                        h={2}
+                        borderRadius="full"
+                        bg="white"
+                      />
+                    )}
+                  </Box>
+                  <VStack gap={1} align="start">
+                    <Text fontWeight="semibold">Kun mig</Text>
+                    <Text fontSize="sm" color="gray.600">
+                      Kun du kan se og tilføje målinger til dette barometer
+                    </Text>
+                  </VStack>
+                </HStack>
+              </Box>
+
+              {/* Custom option */}
+              <Box
+                p={3}
+                border="2px solid"
+                borderColor={visibilityOption === 'custom' ? 'sage.400' : 'gray.200'}
+                borderRadius="md"
+                bg={visibilityOption === 'custom' ? 'sage.50' : 'white'}
+                cursor="pointer"
+                onClick={() => handleVisibilityChange('custom')}
+                _hover={{ borderColor: 'sage.300' }}
+              >
+                <HStack gap={3}>
+                  <Box
+                    w={4}
+                    h={4}
+                    borderRadius="full"
+                    border="2px solid"
+                    borderColor={visibilityOption === 'custom' ? 'sage.500' : 'gray.300'}
+                    bg={visibilityOption === 'custom' ? 'sage.500' : 'white'}
+                    position="relative"
+                  >
+                    {visibilityOption === 'custom' && (
+                      <Box
+                        position="absolute"
+                        top="50%"
+                        left="50%"
+                        transform="translate(-50%, -50%)"
+                        w={2}
+                        h={2}
+                        borderRadius="full"
+                        bg="white"
+                      />
+                    )}
+                  </Box>
+                  <VStack gap={1} align="start">
+                    <Text fontWeight="semibold">Udvalgte voksne</Text>
+                    <Text fontSize="sm" color="gray.600">
+                      Vælg specifikt hvilke voksne der skal have adgang
+                    </Text>
+                  </VStack>
+                </HStack>
+              </Box>
+            </VStack>
+
+            {/* Custom user selection */}
+            {visibilityOption === 'custom' && (
+              <VStack gap={3} align="stretch" mt={4}>
+                <Box>
+                  <Text fontSize="sm" fontWeight="medium" color="gray.600" mb={2}>
+                    Vælg hvilke voksne der skal have adgang:
+                  </Text>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleSelectAllUsers(selectedUserIds.length !== childUsers.length)}
+                    colorScheme="sage"
+                  >
+                    {selectedUserIds.length === childUsers.length ? 'Fravælg alle' : 'Vælg alle'}
+                  </Button>
+                </Box>
+                
+                {childUsers && childUsers.length > 0 ? (
+                  <VStack gap={2} align="stretch">
+                    {childUsers.map((user: any) => (
+                      <Box
+                        key={user.id}
+                        p={3}
+                        bg="white"
+                        borderRadius="md"
+                        border="1px solid"
+                        borderColor="gray.200"
+                      >
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={selectedUserIds.includes(user.id)}
+                            onChange={(e: any) => handleUserSelection(user.id, e.target.checked)}
+                            style={{ marginRight: '8px' }}
+                          />
+                          <HStack gap={2} display="inline-flex" alignItems="center">
+                            <Box
+                              w={6}
+                              h={6}
+                              borderRadius="full"
+                              bg="sage.500"
+                              color="white"
+                              display="flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              fontSize="xs"
+                              fontWeight="bold"
+                            >
+                              {user.displayName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || '?'}
+                            </Box>
+                            <VStack gap={0} align="start">
+                              <Text fontSize="sm" fontWeight="medium">
+                                {user.displayName || user.email}
+                              </Text>
+                              <Text fontSize="xs" color="gray.500">
+                                {user.relation}
+                                {user.customRelationName && ` (${user.customRelationName})`}
+                              </Text>
+                            </VStack>
+                          </HStack>
+                        </label>
+                      </Box>
+                    ))}
+                  </VStack>
+                ) : (
+                  <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>
+                    {usersLoading ? 'Indlæser voksne...' : 'Ingen voksne tilgængelige'}
+                  </Text>
+                )}
+
+                {visibilityOption === 'custom' && selectedUserIds.length === 0 && (
+                  <Box p={3} bg="orange.50" borderRadius="md" border="1px solid" borderColor="orange.200">
+                    <Text fontSize="sm" color="orange.700">
+                      ⚠️ Du skal vælge mindst én voksen når du bruger tilpasset synlighed.
+                    </Text>
+                  </Box>
+                )}
+              </VStack>
+            )}
+          </VStack>
+        </Tabs.Content>
+      </Tabs.Root>
     </DialogManager>
   );
 }
