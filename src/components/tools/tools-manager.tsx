@@ -38,6 +38,7 @@ interface Barometer {
   scaleMax: number;
   displayType: string;
   smileyType?: string;
+  isPublic?: boolean;
   createdAt: string;
   updatedAt: string;
   latestEntry?: BarometerEntry;

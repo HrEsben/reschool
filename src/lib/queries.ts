@@ -31,6 +31,7 @@ interface Barometer {
   scaleMax: number;
   displayType: string;
   smileyType?: string;
+  isPublic?: boolean;
   createdAt: string;
   updatedAt: string;
   latestEntry?: BarometerEntry;
@@ -147,6 +148,15 @@ const api = {
     }
     return response.json();
   },
+
+  async fetchChildUsers(childId: string) {
+    const response = await fetch(`/api/children/${childId}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch child users');
+    }
+    const data = await response.json();
+    return data.users || [];
+  },
 };
 
 // Hooks
@@ -178,6 +188,14 @@ export function useChildBySlug(slug: string) {
     queryKey: queryKeys.child(slug),
     queryFn: () => api.fetchChildBySlug(slug),
     enabled: !!slug && !['dashboard', 'settings', 'api', 'children', 'users', '_next', 'favicon.ico'].includes(slug.toLowerCase()),
+  });
+}
+
+export function useChildUsers(childId: string) {
+  return useQuery({
+    queryKey: [...queryKeys.child(childId), 'users'],
+    queryFn: () => api.fetchChildUsers(childId),
+    enabled: !!childId,
   });
 }
 

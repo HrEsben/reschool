@@ -62,8 +62,16 @@ export interface Barometer {
   scaleMax: number;
   displayType: string;
   smileyType?: string;
+  isPublic: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BarometerUserAccess {
+  id: number;
+  barometerId: number;
+  userId: number;
+  createdAt: string;
 }
 
 export interface BarometerEntry {
@@ -794,17 +802,23 @@ export async function createBarometer(
   scaleMax: number = 5,
   displayType: string = 'numbers',
   smileyType: string = 'emojis',
-  description?: string
+  description?: string,
+  isPublic: boolean = true,
+  accessibleUserIds?: number[]
 ): Promise<Barometer | null> {
+  const client = await getClient();
+  
   try {
-    const result = await query(
-      `INSERT INTO barometers (child_id, created_by, topic, description, scale_min, scale_max, display_type, smiley_type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [childId, createdBy, topic, description || null, scaleMin, scaleMax, displayType, smileyType]
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `INSERT INTO barometers (child_id, created_by, topic, description, scale_min, scale_max, display_type, smiley_type, is_public)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [childId, createdBy, topic, description || null, scaleMin, scaleMax, displayType, smileyType, isPublic]
     );
 
     const row = result.rows[0];
-    return {
+    const barometer: Barometer = {
       id: row.id,
       childId: row.child_id,
       createdBy: row.created_by,
@@ -814,12 +828,29 @@ export async function createBarometer(
       scaleMax: row.scale_max,
       displayType: row.display_type,
       smileyType: row.smiley_type,
+      isPublic: row.is_public,
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString()
     };
+
+    // If not public and specific users are provided, add access records
+    if (!isPublic && accessibleUserIds && accessibleUserIds.length > 0) {
+      for (const userId of accessibleUserIds) {
+        await client.query(
+          `INSERT INTO barometer_user_access (barometer_id, user_id) VALUES ($1, $2)`,
+          [barometer.id, userId]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    return barometer;
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error creating barometer:', error);
     return null;
+  } finally {
+    client.release();
   }
 }
 
@@ -857,6 +888,7 @@ export async function updateBarometer(
       scaleMax: row.scale_max,
       displayType: row.display_type,
       smileyType: row.smiley_type,
+      isPublic: row.is_public ?? true, // Default to true for existing records
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString()
     };
@@ -903,6 +935,7 @@ export async function getBarometersForChild(childId: number): Promise<BarometerW
         scaleMax: row.scale_max,
         displayType: row.display_type || 'numbers',
         smileyType: row.smiley_type,
+        isPublic: row.is_public ?? true, // Default to true for existing records
         createdAt: new Date(row.created_at).toISOString(),
         updatedAt: new Date(row.updated_at).toISOString()
       };
@@ -950,6 +983,7 @@ export async function getBarometerById(barometerId: number): Promise<Barometer |
       scaleMax: row.scale_max,
       displayType: row.display_type || 'numbers',
       smileyType: row.smiley_type,
+      isPublic: row.is_public ?? true, // Default to true for existing records
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString()
     };
@@ -1100,5 +1134,202 @@ export async function deleteBarometerEntry(entryId: number): Promise<boolean> {
   } catch (error) {
     console.error('Error deleting barometer entry:', error);
     return false;
+  }
+}
+
+// ================== BAROMETER ACCESS CONTROL FUNCTIONS ==================
+
+// Add access for specific users to a barometer
+export async function addBarometerUserAccess(barometerId: number, userIds: number[]): Promise<boolean> {
+  const client = await getClient();
+  
+  try {
+    await client.query('BEGIN');
+    
+    for (const userId of userIds) {
+      await client.query(
+        `INSERT INTO barometer_user_access (barometer_id, user_id) 
+         VALUES ($1, $2) 
+         ON CONFLICT (barometer_id, user_id) DO NOTHING`,
+        [barometerId, userId]
+      );
+    }
+    
+    await client.query('COMMIT');
+    return true;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error adding barometer user access:', error);
+    return false;
+  } finally {
+    client.release();
+  }
+}
+
+// Remove access for specific users from a barometer
+export async function removeBarometerUserAccess(barometerId: number, userIds: number[]): Promise<boolean> {
+  try {
+    const result = await query(
+      `DELETE FROM barometer_user_access 
+       WHERE barometer_id = $1 AND user_id = ANY($2::int[])`,
+      [barometerId, userIds]
+    );
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Error removing barometer user access:', error);
+    return false;
+  }
+}
+
+// Get users who have access to a barometer
+export async function getBarometerAccessUsers(barometerId: number): Promise<UserWithRelation[]> {
+  try {
+    const result = await query(
+      `SELECT 
+         u.id,
+         u.stack_auth_id,
+         u.email,
+         u.display_name,
+         u.profile_image_url,
+         ucr.relation,
+         ucr.custom_relation_name,
+         ucr.is_administrator,
+         bua.created_at
+       FROM barometer_user_access bua
+       JOIN users u ON bua.user_id = u.id
+       JOIN barometers b ON bua.barometer_id = b.id
+       JOIN user_child_relations ucr ON u.id = ucr.user_id AND b.child_id = ucr.child_id
+       WHERE bua.barometer_id = $1
+       ORDER BY ucr.is_administrator DESC, bua.created_at ASC`,
+      [barometerId]
+    );
+
+    return result.rows.map(row => ({
+      id: row.id,
+      stackAuthId: row.stack_auth_id,
+      email: row.email,
+      displayName: row.display_name,
+      profileImageUrl: row.profile_image_url,
+      relation: row.relation,
+      customRelationName: row.custom_relation_name,
+      isAdministrator: row.is_administrator,
+      createdAt: new Date(row.created_at).toISOString()
+    }));
+  } catch (error) {
+    console.error('Error getting barometer access users:', error);
+    return [];
+  }
+}
+
+// Check if a user has access to a barometer
+export async function checkUserBarometerAccess(userId: number, barometerId: number): Promise<boolean> {
+  try {
+    const result = await query(
+      `SELECT b.is_public, b.child_id, 
+              bua.user_id as has_specific_access,
+              ucr.user_id as is_child_user
+       FROM barometers b
+       LEFT JOIN barometer_user_access bua ON b.id = bua.barometer_id AND bua.user_id = $1
+       LEFT JOIN user_child_relations ucr ON b.child_id = ucr.child_id AND ucr.user_id = $1
+       WHERE b.id = $2`,
+      [userId, barometerId]
+    );
+
+    if (result.rows.length === 0) {
+      return false; // Barometer doesn't exist
+    }
+
+    const row = result.rows[0];
+    
+    // User must be connected to the child
+    if (!row.is_child_user) {
+      return false;
+    }
+
+    // If barometer is public, all connected users have access
+    if (row.is_public) {
+      return true;
+    }
+
+    // If barometer is private, user must have specific access
+    return !!row.has_specific_access;
+  } catch (error) {
+    console.error('Error checking user barometer access:', error);
+    return false;
+  }
+}
+
+// Get barometers for a child that a specific user has access to
+export async function getAccessibleBarometersForChild(childId: number, userId: number): Promise<BarometerWithLatestEntry[]> {
+  try {
+    const result = await query(
+      `SELECT 
+         b.*,
+         be.id as latest_entry_id,
+         be.entry_date as latest_entry_date,
+         be.rating as latest_rating,
+         be.comment as latest_comment,
+         be.recorded_by as latest_recorded_by,
+         be.created_at as latest_entry_created_at,
+         u.display_name as recorded_by_name
+       FROM barometers b
+       LEFT JOIN LATERAL (
+         SELECT * FROM barometer_entries 
+         WHERE barometer_id = b.id 
+         ORDER BY entry_date DESC 
+         LIMIT 1
+       ) be ON true
+       LEFT JOIN users u ON be.recorded_by = u.id
+       WHERE b.child_id = $1 
+       AND (
+         b.is_public = true 
+         OR EXISTS (
+           SELECT 1 FROM barometer_user_access bua 
+           WHERE bua.barometer_id = b.id AND bua.user_id = $2
+         )
+       )
+       AND EXISTS (
+         SELECT 1 FROM user_child_relations ucr 
+         WHERE ucr.child_id = $1 AND ucr.user_id = $2
+       )
+       ORDER BY b.created_at DESC`,
+      [childId, userId]
+    );
+
+    return result.rows.map(row => {
+      const barometer: BarometerWithLatestEntry = {
+        id: row.id,
+        childId: row.child_id,
+        createdBy: row.created_by,
+        topic: row.topic,
+        description: row.description,
+        scaleMin: row.scale_min,
+        scaleMax: row.scale_max,
+        displayType: row.display_type || 'numbers',
+        smileyType: row.smiley_type,
+        isPublic: row.is_public,
+        createdAt: new Date(row.created_at).toISOString(),
+        updatedAt: new Date(row.updated_at).toISOString()
+      };
+
+      if (row.latest_entry_id) {
+        barometer.latestEntry = {
+          id: row.latest_entry_id,
+          barometerId: row.id,
+          recordedBy: row.latest_recorded_by,
+          entryDate: row.latest_entry_date,
+          rating: row.latest_rating,
+          comment: row.latest_comment,
+          createdAt: new Date(row.latest_entry_created_at).toISOString(),
+          updatedAt: new Date(row.latest_entry_created_at).toISOString()
+        };
+        barometer.recordedByName = row.recorded_by_name;
+      }
+
+      return barometer;
+    });
+  } catch (error) {
+    console.error('Error getting accessible barometers for child:', error);
+    return [];
   }
 }

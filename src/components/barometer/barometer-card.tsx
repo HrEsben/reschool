@@ -38,6 +38,7 @@ interface Barometer {
   scaleMax: number;
   displayType: string;
   smileyType?: string;
+  isPublic?: boolean;
   createdAt: string;
   updatedAt: string;
   latestEntry?: BarometerEntry;
@@ -589,7 +590,22 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
     >
       <Box p={4} borderBottom="1px solid" borderColor="gray.100">
         <HStack justify="space-between">
-                    <Heading size="md">{barometer.topic || 'Untitled Barometer'}</Heading>
+          <HStack gap={2}>
+            <Heading size="md">{barometer.topic || 'Untitled Barometer'}</Heading>
+            <Box
+              px={2}
+              py={1}
+              borderRadius="md"
+              fontSize="xs"
+              fontWeight="medium"
+              bg={barometer.isPublic ? "green.100" : "orange.100"}
+              color={barometer.isPublic ? "green.700" : "orange.700"}
+              border="1px solid"
+              borderColor={barometer.isPublic ? "green.200" : "orange.200"}
+            >
+              {barometer.isPublic ? "Alle voksne" : "Begrænsede adgang"}
+            </Box>
+          </HStack>
           <HStack gap={2}>
             <Button
               variant="ghost"

@@ -71,6 +71,24 @@ export async function runMigration() {
     await query(`CREATE INDEX IF NOT EXISTS idx_invitations_child_id ON invitations(child_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_invitations_status ON invitations(status)`);
 
+    // Add barometer access control tables
+    await query(`
+      CREATE TABLE IF NOT EXISTS barometer_user_access (
+        id SERIAL PRIMARY KEY,
+        barometer_id INTEGER REFERENCES barometers(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(barometer_id, user_id)
+      )
+    `);
+
+    await query(`CREATE INDEX IF NOT EXISTS idx_barometer_user_access_barometer_id ON barometer_user_access(barometer_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_barometer_user_access_user_id ON barometer_user_access(user_id)`);
+
+    // Add is_public column to barometers table
+    await query(`ALTER TABLE barometers ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_barometers_is_public ON barometers(is_public)`);
+
     console.log('Database migration completed successfully!');
     return true;
   } catch (error) {

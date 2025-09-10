@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stackServerApp } from '@/stack';
 import { 
   createBarometer, 
-  getBarometersForChild, 
+  getAccessibleBarometersForChild, 
   getUserByStackAuthId,
-  isUserAdministratorForChild 
+  isUserAdministratorForChild,
+  getUsersForChild
 } from '@/lib/database-service';
 
 export async function GET(
@@ -28,7 +29,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid child ID' }, { status: 400 });
     }
 
-    const barometers = await getBarometersForChild(childId);
+    const barometers = await getAccessibleBarometersForChild(childId, dbUser.id);
     return NextResponse.json({ barometers });
 
   } catch (error) {
@@ -65,7 +66,16 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { topic, description, scaleMin = 1, scaleMax = 5, displayType = 'numbers', smileyType = 'emojis' } = body;
+    const { 
+      topic, 
+      description, 
+      scaleMin = 1, 
+      scaleMax = 5, 
+      displayType = 'numbers', 
+      smileyType = 'emojis',
+      isPublic = true,
+      accessibleUserIds = []
+    } = body;
 
     if (!topic || typeof topic !== 'string' || topic.trim().length === 0) {
       return NextResponse.json({ error: 'Topic is required' }, { status: 400 });
@@ -94,7 +104,40 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid smiley type' }, { status: 400 });
     }
 
-    const barometer = await createBarometer(childId, dbUser.id, topic.trim(), scaleMin, scaleMax, displayType, smileyType, description?.trim());
+    // Validate access control parameters
+    if (typeof isPublic !== 'boolean') {
+      return NextResponse.json({ error: 'isPublic must be a boolean' }, { status: 400 });
+    }
+
+    if (!Array.isArray(accessibleUserIds)) {
+      return NextResponse.json({ error: 'accessibleUserIds must be an array' }, { status: 400 });
+    }
+
+    // If not public, validate that accessibleUserIds contains valid user IDs for this child
+    if (!isPublic && accessibleUserIds.length > 0) {
+      const childUsers = await getUsersForChild(childId);
+      const validUserIds = childUsers.map(user => user.id);
+      const invalidUserIds = accessibleUserIds.filter(id => !validUserIds.includes(id));
+      
+      if (invalidUserIds.length > 0) {
+        return NextResponse.json({ 
+          error: `Invalid user IDs: ${invalidUserIds.join(', ')}. Users must be connected to this child.` 
+        }, { status: 400 });
+      }
+    }
+
+    const barometer = await createBarometer(
+      childId, 
+      dbUser.id, 
+      topic.trim(), 
+      scaleMin, 
+      scaleMax, 
+      displayType, 
+      smileyType, 
+      description?.trim(),
+      isPublic,
+      !isPublic ? accessibleUserIds : undefined
+    );
     
     if (!barometer) {
       return NextResponse.json({ error: 'Failed to create barometer' }, { status: 500 });

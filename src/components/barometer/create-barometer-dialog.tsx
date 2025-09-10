@@ -13,10 +13,13 @@ import {
   Heading,
   SegmentGroup,
   Slider,
+  Grid,
+  Icon,
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { showToast } from '@/components/ui/simple-toast';
 import { NumberIcon } from '@/components/ui/icons';
+import { useChildUsers } from '@/lib/queries';
 
 interface CreateBarometerDialogProps {
   childId: number;
@@ -35,6 +38,13 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
   const [smileyType, setSmileyType] = useState(['emojis']);
   const [percentageValue, setPercentageValue] = useState([50]); // For slider preview
   const [loading, setLoading] = useState(false);
+  
+  // Access control state
+  const [isPublic, setIsPublic] = useState(true);
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  
+  // Fetch child users for access control selection
+  const { data: childUsers = [], isLoading: usersLoading } = useChildUsers(childId.toString());
 
   // Auto-set scale when display type changes
   const handleDisplayTypeChange = (newDisplayType: string[]) => {
@@ -260,6 +270,23 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
     );
   };
 
+  // Access control handlers
+  const handleUserSelection = (userId: number, isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedUserIds(prev => [...prev, userId]);
+    } else {
+      setSelectedUserIds(prev => prev.filter(id => id !== userId));
+    }
+  };
+
+  const handleSelectAllUsers = (selectAll: boolean) => {
+    if (selectAll) {
+      setSelectedUserIds(childUsers.map((user: any) => user.id));
+    } else {
+      setSelectedUserIds([]);
+    }
+  };
+
   const generatePreviewRating = () => {
     const currentDisplayType = displayType[0] || 'numbers';
     
@@ -368,6 +395,17 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
       return;
     }
 
+    // Validate access control
+    if (!isPublic && selectedUserIds.length === 0) {
+      showToast({
+        title: 'Fejl',
+        description: 'Hvis barometeret ikke er offentligt, skal du vælge mindst én voksen der har adgang',
+        type: 'error',
+        duration: 5000,
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       // Set scale values based on display type
@@ -391,6 +429,8 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
           scaleMax: finalScaleMax,
           displayType: displayType[0] || 'numbers',
           smileyType: displayType[0] === 'smileys' ? (smileyType[0] || 'emojis') : null,
+          isPublic: isPublic,
+          accessibleUserIds: !isPublic ? selectedUserIds : []
         }),
       });
 
@@ -413,6 +453,8 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
       setScaleMax(5);
       setDisplayType(['numbers']);
       setSmileyType(['emojis']);
+      setIsPublic(true);
+      setSelectedUserIds([]);
       
       if (onOpenChange) {
         onOpenChange(false);
@@ -453,9 +495,13 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
   const handleCancel = () => {
     // Reset form
     setTopic('');
+    setDescription('');
     setScaleMin(1);
     setScaleMax(5);
     setDisplayType(['numbers']);
+    setSmileyType(['emojis']);
+    setIsPublic(true);
+    setSelectedUserIds([]);
     
     if (onOpenChange) {
       onOpenChange(false);
@@ -687,6 +733,104 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
                 </Slider.Root>
               </VStack>
             </Box>
+          )}
+        </VStack>
+
+        {/* Access Control Section */}
+        <VStack gap={4} align="stretch" p={4} bg="gray.50" borderRadius="md">
+          <Text fontSize="lg" fontWeight="semibold" color="gray.700">
+            Adgang til målestok
+          </Text>
+          
+          <Box>
+            <label>
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e: any) => setIsPublic(e.target.checked)}
+                style={{ marginRight: '8px' }}
+              />
+              <Text as="span">Synlig for alle voksne tilknyttet barnet</Text>
+            </label>
+          </Box>
+
+          {!isPublic && (
+            <VStack gap={3} align="stretch">
+              <Box>
+                <Text fontSize="sm" fontWeight="medium" color="gray.600" mb={2}>
+                  Vælg hvilke voksne der skal have adgang:
+                </Text>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleSelectAllUsers(selectedUserIds.length !== childUsers.length)}
+                  colorScheme="blue"
+                >
+                  {selectedUserIds.length === childUsers.length ? 'Fravælg alle' : 'Vælg alle'}
+                </Button>
+              </Box>
+              
+              {childUsers && childUsers.length > 0 ? (
+                <VStack gap={2} align="stretch">
+                  {childUsers.map((user: any) => (
+                    <Box
+                      key={user.id}
+                      p={3}
+                      bg="white"
+                      borderRadius="md"
+                      border="1px solid"
+                      borderColor="gray.200"
+                    >
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={selectedUserIds.includes(user.id)}
+                          onChange={(e: any) => handleUserSelection(user.id, e.target.checked)}
+                          style={{ marginRight: '8px' }}
+                        />
+                        <HStack gap={2} display="inline-flex" alignItems="center">
+                          <Box
+                            w={6}
+                            h={6}
+                            borderRadius="full"
+                            bg="blue.500"
+                            color="white"
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                            fontSize="xs"
+                            fontWeight="bold"
+                          >
+                            {user.displayName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || '?'}
+                          </Box>
+                          <VStack gap={0} align="start">
+                            <Text fontSize="sm" fontWeight="medium">
+                              {user.displayName || user.email}
+                            </Text>
+                            <Text fontSize="xs" color="gray.500">
+                              {user.relation}
+                              {user.customRelationName && ` (${user.customRelationName})`}
+                            </Text>
+                          </VStack>
+                        </HStack>
+                      </label>
+                    </Box>
+                  ))}
+                </VStack>
+              ) : (
+                <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>
+                  {usersLoading ? 'Indlæser voksne...' : 'Ingen voksne tilgængelige'}
+                </Text>
+              )}
+
+              {!isPublic && selectedUserIds.length === 0 && (
+                <Box p={3} bg="orange.50" borderRadius="md" border="1px solid" borderColor="orange.200">
+                  <Text fontSize="sm" color="orange.700">
+                    ⚠️ Du skal vælge mindst én voksen, hvis målestokken ikke skal være synligt for alle.
+                  </Text>
+                </Box>
+              )}
+            </VStack>
           )}
         </VStack>
 
