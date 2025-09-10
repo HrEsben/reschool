@@ -1329,6 +1329,7 @@ export async function getAccessibleBarometersForChild(childId: number, userId: n
        WHERE b.child_id = $1 
        AND (
          b.is_public = true 
+         OR b.created_by = $2
          OR EXISTS (
            SELECT 1 FROM barometer_user_access bua 
            WHERE bua.barometer_id = b.id AND bua.user_id = $2
