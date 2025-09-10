@@ -862,19 +862,47 @@ export async function updateBarometer(
   scaleMax: number,
   displayType: string,
   smileyType?: string,
-  description?: string
+  description?: string,
+  isPublic?: boolean,
+  accessibleUserIds?: number[]
 ): Promise<Barometer | null> {
   try {
+    // Update the barometer itself
     const result = await query(
       `UPDATE barometers 
-       SET topic = $1, description = $2, scale_min = $3, scale_max = $4, display_type = $5, smiley_type = $6, updated_at = NOW()
-       WHERE id = $7 
+       SET topic = $1, description = $2, scale_min = $3, scale_max = $4, display_type = $5, smiley_type = $6, is_public = $7, updated_at = NOW()
+       WHERE id = $8 
        RETURNING *`,
-      [topic, description || null, scaleMin, scaleMax, displayType, smileyType, barometerId]
+      [topic, description || null, scaleMin, scaleMax, displayType, smileyType, isPublic !== undefined ? isPublic : true, barometerId]
     );
 
     if (result.rows.length === 0) {
       return null;
+    }
+
+    // Handle access control updates if visibility settings were provided
+    if (isPublic !== undefined) {
+      if (!isPublic && accessibleUserIds && accessibleUserIds.length > 0) {
+        // Delete existing access records
+        await query(
+          'DELETE FROM barometer_user_access WHERE barometer_id = $1',
+          [barometerId]
+        );
+
+        // Insert new access records
+        for (const userId of accessibleUserIds) {
+          await query(
+            'INSERT INTO barometer_user_access (barometer_id, user_id) VALUES ($1, $2) ON CONFLICT (barometer_id, user_id) DO NOTHING',
+            [barometerId, userId]
+          );
+        }
+      } else {
+        // If public or no specific users, remove all access records
+        await query(
+          'DELETE FROM barometer_user_access WHERE barometer_id = $1',
+          [barometerId]
+        );
+      }
     }
 
     const row = result.rows[0];
@@ -1256,6 +1284,24 @@ export async function checkUserBarometerAccess(userId: number, barometerId: numb
   } catch (error) {
     console.error('Error checking user barometer access:', error);
     return false;
+  }
+}
+
+// Get barometer access list
+export async function getBarometerAccessList(barometerId: number): Promise<{ user_id: number; display_name: string; email: string }[]> {
+  try {
+    const result = await query(
+      `SELECT bua.user_id, u.display_name, u.email 
+       FROM barometer_user_access bua 
+       JOIN users u ON bua.user_id = u.id 
+       WHERE bua.barometer_id = $1`,
+      [barometerId]
+    );
+
+    return result.rows;
+  } catch (error) {
+    console.error('Error getting barometer access list:', error);
+    return [];
   }
 }
 

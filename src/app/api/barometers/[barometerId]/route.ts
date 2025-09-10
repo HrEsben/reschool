@@ -77,7 +77,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { topic, description, scaleMin, scaleMax, displayType, smileyType } = body;
+    const { topic, description, scaleMin, scaleMax, displayType, smileyType, isPublic, accessibleUserIds } = body;
 
     // Validate required fields
     if (!topic || typeof topic !== 'string' || topic.trim().length === 0) {
@@ -135,7 +135,9 @@ export async function PUT(
       scaleMax,
       displayType,
       displayType === 'smileys' ? smileyType : null,
-      description?.trim()
+      description?.trim(),
+      isPublic,
+      accessibleUserIds
     );
 
     if (!updatedBarometer) {
