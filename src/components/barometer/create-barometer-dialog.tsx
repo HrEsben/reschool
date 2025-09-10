@@ -27,9 +27,10 @@ interface CreateBarometerDialogProps {
   trigger: React.ReactNode;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  isUserAdmin?: boolean;
 }
 
-export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, isOpen, onOpenChange }: CreateBarometerDialogProps) {
+export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, isOpen, onOpenChange, isUserAdmin = false }: CreateBarometerDialogProps) {
   const [topic, setTopic] = useState('');
   const [description, setDescription] = useState('');
   const [scaleMin, setScaleMin] = useState(1);
@@ -546,7 +547,9 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
       <Tabs.Root defaultValue="indstillinger" variant="enclosed">
         <Tabs.List>
           <Tabs.Trigger value="indstillinger">Indstillinger</Tabs.Trigger>
-          <Tabs.Trigger value="synlighed">Synlighed</Tabs.Trigger>
+          {isUserAdmin && (
+            <Tabs.Trigger value="synlighed">Synlighed</Tabs.Trigger>
+          )}
         </Tabs.List>
 
         <Tabs.Content value="indstillinger">
@@ -842,11 +845,12 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
           </HStack>
         </Tabs.Content>
 
-        <Tabs.Content value="synlighed">
-          <VStack gap={4} align="stretch" p={4}>
-            <Text fontSize="lg" fontWeight="semibold" color="gray.700">
-              Hvem kan se dette barometer?
-            </Text>
+        {isUserAdmin && (
+          <Tabs.Content value="synlighed">
+            <VStack gap={4} align="stretch" p={4}>
+              <Text fontSize="lg" fontWeight="semibold" color="gray.700">
+                Hvem kan se dette barometer?
+              </Text>
             
             <VStack gap={3} align="stretch">
               {/* Alle option */}
@@ -1060,6 +1064,7 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
             )}
           </VStack>
         </Tabs.Content>
+        )}
       </Tabs.Root>
     </DialogManager>
   );

@@ -173,6 +173,7 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
             <AddToolDialog
               childId={childId}
               onToolAdded={handleToolAdded}
+              isUserAdmin={isUserAdmin}
               trigger={
                 <Button
                   bg="#81b29a"

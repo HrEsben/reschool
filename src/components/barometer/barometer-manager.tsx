@@ -107,6 +107,7 @@ export function BarometerManager({ childId, isUserAdmin }: BarometerManagerProps
           <CreateBarometerDialog
             childId={childId}
             onBarometerCreated={handleBarometerCreated}
+            isUserAdmin={isUserAdmin}
             trigger={
               <Button colorScheme="blue" size="sm">
                 + Nyt barometer

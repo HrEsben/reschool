@@ -11,6 +11,7 @@ import {
   Textarea,
   Heading,
   Slider,
+  useBreakpointValue,
 } from '@chakra-ui/react';
 import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
@@ -700,6 +701,9 @@ export function BarometerCard({
     }
   };
 
+  // Responsive layout: stack badge below title on mobile
+  const isMobile = useBreakpointValue({ base: true, md: false });
+
   return (
     <Box 
       bg="white" 
@@ -709,32 +713,61 @@ export function BarometerCard({
       shadow="sm"
     >
       <Box p={4} borderBottom="1px solid" borderColor="gray.100">
-        <HStack justify="space-between">
-          <HStack gap={2}>
-            <Heading size="md">{barometer.topic || 'Untitled Barometer'}</Heading>
-            <Box
-              px={2}
-              py={1}
-              borderRadius="md"
-              fontSize="xs"
-              fontWeight="medium"
-              bg={getAccessInfo().bg}
-              color={getAccessInfo().color}
-              border="1px solid"
-              borderColor={getAccessInfo().borderColor}
-              cursor="help"
-              title={getAccessTooltip()}
-              onMouseEnter={fetchAccessData}
-              onClick={fetchAccessData}
-              _hover={{
-                transform: 'scale(1.05)',
-                boxShadow: 'sm'
-              }}
-              transition="all 0.2s"
-            >
-              {getAccessInfo().text}
-            </Box>
-          </HStack>
+        <HStack justify="space-between" align="start">
+          <VStack align="start" gap={isMobile ? 2 : 0} flex={1}>
+            <HStack gap={2} align="center">
+              <Heading size="md">{barometer.topic || 'Untitled Barometer'}</Heading>
+              {!isMobile && (
+                <Box
+                  px={2}
+                  py={1}
+                  borderRadius="md"
+                  fontSize="xs"
+                  fontWeight="medium"
+                  bg={getAccessInfo().bg}
+                  color={getAccessInfo().color}
+                  border="1px solid"
+                  borderColor={getAccessInfo().borderColor}
+                  cursor="help"
+                  title={getAccessTooltip()}
+                  onMouseEnter={fetchAccessData}
+                  onClick={fetchAccessData}
+                  _hover={{
+                    transform: 'scale(1.05)',
+                    boxShadow: 'sm'
+                  }}
+                  transition="all 0.2s"
+                >
+                  {getAccessInfo().text}
+                </Box>
+              )}
+            </HStack>
+            {isMobile && (
+              <Box
+                px={2}
+                py={1}
+                borderRadius="md"
+                fontSize="xs"
+                fontWeight="medium"
+                bg={getAccessInfo().bg}
+                color={getAccessInfo().color}
+                border="1px solid"
+                borderColor={getAccessInfo().borderColor}
+                cursor="help"
+                title={getAccessTooltip()}
+                onMouseEnter={fetchAccessData}
+                onClick={fetchAccessData}
+                _hover={{
+                  transform: 'scale(1.05)',
+                  boxShadow: 'sm'
+                }}
+                transition="all 0.2s"
+                alignSelf="start"
+              >
+                {getAccessInfo().text}
+              </Box>
+            )}
+          </VStack>
           <HStack gap={2}>
             <Button
               variant="ghost"
@@ -832,6 +865,7 @@ export function BarometerCard({
             <Button
               onClick={handleSubmit}
               loading={loading}
+              title="Gem registrering"
               flex={1}
               size="md"
               fontWeight="medium"

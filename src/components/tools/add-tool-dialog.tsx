@@ -16,6 +16,7 @@ interface AddToolDialogProps {
   childId: number;
   onToolAdded: () => void;
   trigger: React.ReactNode;
+  isUserAdmin?: boolean;
 }
 
 interface ToolOption {
@@ -44,7 +45,7 @@ const availableTools: ToolOption[] = [
   // }
 ];
 
-export function AddToolDialog({ childId, onToolAdded, trigger }: AddToolDialogProps) {
+export function AddToolDialog({ childId, onToolAdded, trigger, isUserAdmin = false }: AddToolDialogProps) {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [mainDialogOpen, setMainDialogOpen] = useState(false);
@@ -179,6 +180,7 @@ export function AddToolDialog({ childId, onToolAdded, trigger }: AddToolDialogPr
         trigger={<div />} // Empty trigger since we control it programmatically
         isOpen={showCreateDialog}
         onOpenChange={setShowCreateDialog}
+        isUserAdmin={isUserAdmin}
       />
     </>
   );
