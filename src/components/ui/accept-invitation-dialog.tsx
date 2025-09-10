@@ -1,6 +1,6 @@
 'use client';
 
-import { DialogManager } from './dialog-manager';
+import { InfoDialog } from './dialog-manager';
 import { Text, VStack } from '@chakra-ui/react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -69,10 +69,9 @@ export function AcceptInvitationDialog({
   };
 
   return (
-    <DialogManager
+    <InfoDialog
       trigger={trigger}
       title="Acceptér invitation"
-      type="info"
       primaryAction={{
         label: 'Acceptér',
         onClick: handleAccept,
@@ -94,6 +93,6 @@ export function AcceptInvitationDialog({
           Vil du acceptere denne invitation? Du vil få adgang til at se barnets udvikling og tilføje observationer.
         </Text>
       </VStack>
-    </DialogManager>
+    </InfoDialog>
   );
 }

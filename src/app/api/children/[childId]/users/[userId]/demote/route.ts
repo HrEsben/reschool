@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stackServerApp } from '@/stack';
 import { demoteUserFromAdmin } from '@/lib/database-service';
 
+interface ChildUser {
+  id: string;
+  stackAuthId: string;
+  isAdministrator: boolean;
+}
+
+interface ChildData {
+  users: ChildUser[];
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ childId: string; userId: string }> }
@@ -25,16 +35,16 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to verify permissions' }, { status: 403 });
     }
     
-    const childData = await response.json();
-    const currentUserData = childData.users.find((u: any) => u.stackAuthId === user.id);
+    const childData: ChildData = await response.json();
+    const currentUserData = childData.users.find((u: ChildUser) => u.stackAuthId === user.id);
     
     if (!currentUserData?.isAdministrator) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
     // Prevent demoting the last administrator
-    const adminCount = childData.users.filter((u: any) => u.isAdministrator).length;
-    const targetUser = childData.users.find((u: any) => u.id === userId);
+    const adminCount = childData.users.filter((u: ChildUser) => u.isAdministrator).length;
+    const targetUser = childData.users.find((u: ChildUser) => u.id === userId);
     
     if (targetUser?.isAdministrator && adminCount <= 1) {
       return NextResponse.json({ 

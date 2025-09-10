@@ -129,11 +129,10 @@ export async function activatePendingNotifications(email: string, userId: number
     
     if (result.rows.length > 0) {
       // Activate them by setting user_id and clearing pending_email
-      const updateResult = await query(
+      await query(
         'UPDATE notifications SET user_id = $1, pending_email = NULL, updated_at = NOW() WHERE pending_email = $2 AND user_id IS NULL',
         [userId, email]
       );
-      
     }
   } catch (error) {
     console.error('Error activating pending notifications:', error);

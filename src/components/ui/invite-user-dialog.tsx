@@ -10,7 +10,7 @@ import {
   createListCollection
 } from '@chakra-ui/react';
 import { useState } from 'react';
-import { DialogManager } from './dialog-manager';
+import { InfoDialog } from './dialog-manager';
 import { showToast } from './simple-toast';
 
 interface InviteUserDialogProps {
@@ -125,7 +125,7 @@ export function InviteUserDialog({
 
   return (
     <>
-      <DialogManager
+      <InfoDialog
         trigger={trigger}
         title={`Invitér til ${childName}`}
         maxWidth="md"
@@ -246,7 +246,7 @@ export function InviteUserDialog({
             </Checkbox.Root>
           </VStack>
         </VStack>
-      </DialogManager>
+      </InfoDialog>
     </>
   );
 }

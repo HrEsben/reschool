@@ -19,6 +19,7 @@ import { DialogManager } from '@/components/ui/dialog-manager';
 import { showToast } from '@/components/ui/simple-toast';
 import { NumberIcon } from '@/components/ui/icons';
 import { useChildUsers } from '@/lib/queries';
+import { UserWithRelation } from '@/lib/database-service';
 
 interface CreateBarometerDialogProps {
   childId: number;
@@ -295,7 +296,7 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
 
   const handleSelectAllUsers = (selectAll: boolean) => {
     if (selectAll) {
-      setSelectedUserIds(childUsers.map((user: any) => user.id));
+      setSelectedUserIds(childUsers.map((user: UserWithRelation) => user.id));
     } else {
       setSelectedUserIds([]);
     }
@@ -997,7 +998,7 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
                 
                 {childUsers && childUsers.length > 0 ? (
                   <VStack gap={2} align="stretch">
-                    {childUsers.map((user: any) => (
+                    {childUsers.map((user: UserWithRelation) => (
                       <Box
                         key={user.id}
                         p={3}
@@ -1010,7 +1011,7 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
                           <input
                             type="checkbox"
                             checked={selectedUserIds.includes(user.id)}
-                            onChange={(e: any) => handleUserSelection(user.id, e.target.checked)}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleUserSelection(user.id, e.target.checked)}
                             style={{ marginRight: '8px' }}
                           />
                           <HStack gap={2} display="inline-flex" alignItems="center">

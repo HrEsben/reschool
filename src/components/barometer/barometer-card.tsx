@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -61,7 +61,15 @@ interface BarometerCardProps {
   onBarometerUpdated?: () => void;
 }
 
-export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, onBarometerEdit, currentUserId, isUserAdmin, onBarometerUpdated }: BarometerCardProps) {
+export function BarometerCard({ 
+  barometer, 
+  onEntryRecorded, 
+  onBarometerDeleted, 
+  onBarometerEdit, 
+  currentUserId, 
+  isUserAdmin, 
+  onBarometerUpdated // eslint-disable-line @typescript-eslint/no-unused-vars
+}: BarometerCardProps) {
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
@@ -89,7 +97,7 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
   };
 
   // Refresh access data (clear cache and refetch)
-  const refreshAccessData = async () => {
+  const refreshAccessData = useCallback(async () => {
     setAccessDataLoaded(false);
     setAccessUsers([]);
     
@@ -103,15 +111,16 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
         }
       } catch (error) {
         console.error('Error fetching access data:', error);
+      } finally {
+        setAccessDataLoaded(true);
       }
+    } else {
+      setAccessDataLoaded(true);
     }
-    setAccessDataLoaded(true);
-  };
-
-  // Watch for barometer updates to refresh access data
+  }, [barometer.id, barometer.isPublic]);  // Watch for barometer updates to refresh access data
   useEffect(() => {
     refreshAccessData();
-  }, [barometer.isPublic, barometer.updatedAt]);
+  }, [barometer.isPublic, barometer.updatedAt, refreshAccessData]);
 
   // Get access badge text and color
   const getAccessInfo = () => {
