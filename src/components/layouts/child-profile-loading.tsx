@@ -8,7 +8,7 @@ import {
   Table,
   Separator 
 } from '@chakra-ui/react';
-import { useChildBySlug } from '@/lib/queries';
+    import { useChildBySlug } from '@/lib/queries';
 
 interface ChildProfileLoadingProps {
   children: React.ReactNode;

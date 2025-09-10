@@ -26,8 +26,23 @@ interface BarometerEntry {
   customRelationName?: string;
 }
 
+interface Barometer {
+  id: number;
+  childId: number;
+  createdBy: number;
+  topic: string;
+  description?: string;
+  scaleMin: number;
+  scaleMax: number;
+  displayType: string;
+  smileyType?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface ModernTimelineProps {
   entries: BarometerEntry[];
+  barometer: Barometer;
   onDeleteEntry?: (entryId: number) => void;
   canDelete?: boolean;
   limit?: number;
@@ -64,13 +79,140 @@ const getRatingColor = (rating: number): string => {
   return 'coral.400'; // Orange/red for low ratings
 };
 
-// Helper function to get rating emoji
-const getRatingEmoji = (rating: number): string => {
-  if (rating >= 4.5) return '😊';
-  if (rating >= 4) return '🙂';
-  if (rating >= 3) return '😐';
-  if (rating >= 2) return '😕';
-  return '😞';
+// Helper function to get appropriate smiley/rating display based on barometer type
+const getRatingDisplay = (rating: number, barometer: Barometer): string | React.ReactNode => {
+  // For non-smiley display types, show the rating number
+  if (barometer.displayType !== 'smileys') {
+    if (barometer.displayType === 'percentage') {
+      return `${rating}%`;
+    }
+    return rating.toString();
+  }
+
+  // For smiley display types, show the appropriate smiley
+  const range = barometer.scaleMax - barometer.scaleMin;
+  const position = (rating - barometer.scaleMin) / range;
+  const smileyType = barometer.smileyType || 'emojis';
+  
+  // Get smiley based on smiley type
+  if (smileyType === 'emojis') {
+    // Traditional emojis for younger children
+    if (position <= 0.2) return '😢';
+    if (position <= 0.4) return '😟';
+    if (position <= 0.6) return '😐';
+    if (position <= 0.8) return '😊';
+    return '😄';
+  }
+  
+  if (smileyType === 'simple') {
+    // Clean, simple icons for older children
+    if (position <= 0.2) {
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
+          <circle cx="8" cy="10" r="1.5" fill="currentColor"/>
+          <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
+          <path d="M8 16s1.5-2 4-2 4 2 4 2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+        </svg>
+      );
+    }
+    if (position <= 0.4) {
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
+          <circle cx="8" cy="10" r="1.5" fill="currentColor"/>
+          <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
+          <path d="M10 16h4" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+        </svg>
+      );
+    }
+    if (position <= 0.6) {
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
+          <circle cx="8" cy="10" r="1.5" fill="currentColor"/>
+          <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
+          <path d="M9 16h6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+        </svg>
+      );
+    }
+    if (position <= 0.8) {
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
+          <circle cx="8" cy="10" r="1.5" fill="currentColor"/>
+          <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
+          <path d="M8 14s1.5 2 4 2 4-2 4-2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+        </svg>
+      );
+    }
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
+        <circle cx="8" cy="10" r="1.5" fill="currentColor"/>
+        <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
+        <path d="M8 14s1.5 2.5 4 2.5 4-2.5 4-2.5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+      </svg>
+    );
+  }
+  
+  if (smileyType === 'subtle') {
+    // More mature/professional looking for teens
+    if (position <= 0.2) {
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M8 15s1.5-2 4-2 4 2 4 2"/>
+          <path d="M9 9h.01"/>
+          <path d="M15 9h.01"/>
+        </svg>
+      );
+    }
+    if (position <= 0.4) {
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M8 15h8"/>
+          <path d="M9 9h.01"/>
+          <path d="M15 9h.01"/>
+        </svg>
+      );
+    }
+    if (position <= 0.6) {
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9 9h.01"/>
+          <path d="M15 9h.01"/>
+        </svg>
+      );
+    }
+    if (position <= 0.8) {
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M8 13s1.5 2 4 2 4-2 4-2"/>
+          <path d="M9 9h.01"/>
+          <path d="M15 9h.01"/>
+        </svg>
+      );
+    }
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M8 14s1.5 3 4 3 4-3 4-3"/>
+        <path d="M9 9h.01"/>
+        <path d="M15 9h.01"/>
+      </svg>
+    );
+  }
+
+  // Fallback to emojis
+  if (position <= 0.2) return '😢';
+  if (position <= 0.4) return '😟';
+  if (position <= 0.6) return '😐';
+  if (position <= 0.8) return '�';
+  return '�';
 };
 
 // Format date for grouping (e.g., "Torsdag 8. september")
@@ -125,7 +267,7 @@ const groupEntriesByDate = (entries: BarometerEntry[]): Record<string, Barometer
 };
 
 export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>(
-  ({ entries, onDeleteEntry, canDelete = false, limit }, ref) => {
+  ({ entries, barometer, onDeleteEntry, canDelete = false, limit }, ref) => {
     const [localEntries, setLocalEntries] = useState<BarometerEntry[]>(entries);
 
     useImperativeHandle(ref, () => ({
@@ -246,10 +388,10 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
                           flex={1}
                           wrap={{ base: "wrap", sm: "nowrap" }}
                         >
-                          {/* Rating with emoji */}
+                          {/* Rating with appropriate display type */}
                           <Flex align="center" gap={{ base: 1, md: 2 }}>
-                            <Text fontSize={{ base: "md", md: "lg" }}>
-                              {getRatingEmoji(entry.rating)}
+                            <Text fontSize={{ base: "md", md: "lg" }} display="flex" alignItems="center">
+                              {getRatingDisplay(entry.rating, barometer)}
                             </Text>
                             <Badge
                               colorPalette={

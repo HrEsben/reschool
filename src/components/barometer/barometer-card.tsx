@@ -453,10 +453,12 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
     }
     return (
       <Flex 
-        gap={{ base: 1, md: 2 }} 
+        gap={{ base: 1, md: scaleLength > 5 ? 1 : 1.5 }} 
         justifyContent="space-between" 
         alignItems="center" 
         width="100%"
+        maxW="600px"
+        mx="auto"
         flexWrap="nowrap"
         overflowX="auto"
         px={{ base: 2, md: 0 }}
@@ -518,10 +520,12 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
     return (
       <VStack gap={4} align="stretch" width="100%">
         <Flex 
-          gap={{ base: scaleLength > 7 ? 0.5 : 1, md: 2 }} 
+          gap={{ base: scaleLength > 7 ? 0.5 : 1, md: scaleLength > 5 ? 1 : 1.5 }} 
           justifyContent="space-between" 
           alignItems="center" 
           width="100%"
+          maxW="600px"
+          mx="auto"
           flexWrap="nowrap"
           px={{ base: 1, md: 0 }}
         >

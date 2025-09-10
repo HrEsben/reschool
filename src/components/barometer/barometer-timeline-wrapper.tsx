@@ -148,6 +148,7 @@ export const BarometerTimeline = forwardRef<BarometerTimelineRef, BarometerTimel
       <ModernTimeline
         ref={timelineRef}
         entries={entries}
+        barometer={barometer}
         onDeleteEntry={canDelete ? handleDeleteEntry : undefined}
         canDelete={canDelete}
         limit={maxEntries}
