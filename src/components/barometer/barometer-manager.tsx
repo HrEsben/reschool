@@ -126,6 +126,7 @@ export function BarometerManager({ childId, isUserAdmin }: BarometerManagerProps
               onEntryRecorded={handleEntryRecorded}
               onBarometerDeleted={handleBarometerDeleted}
               onBarometerEdit={handleBarometerEdit}
+              onBarometerUpdated={handleBarometerUpdated}
               isUserAdmin={isUserAdmin}
             />
           ))}

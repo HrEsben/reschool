@@ -28,6 +28,12 @@ interface BarometerEntry {
   updatedAt: string;
 }
 
+interface AccessUser {
+  user_id: number;
+  display_name: string;
+  email: string;
+}
+
 interface Barometer {
   id: number;
   childId: number;
@@ -52,15 +58,120 @@ interface BarometerCardProps {
   onBarometerEdit?: (barometer: Barometer) => void;
   currentUserId?: number;
   isUserAdmin?: boolean;
+  onBarometerUpdated?: () => void;
 }
 
-export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, onBarometerEdit, currentUserId, isUserAdmin }: BarometerCardProps) {
+export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, onBarometerEdit, currentUserId, isUserAdmin, onBarometerUpdated }: BarometerCardProps) {
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [deletingBarometer, setDeletingBarometer] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [accessUsers, setAccessUsers] = useState<AccessUser[]>([]);
+  const [accessDataLoaded, setAccessDataLoaded] = useState(false);
   const timelineRef = useRef<BarometerTimelineRef>(null);
+
+  // Fetch access data when needed (for lazy loading on hover/click)
+  const fetchAccessData = async () => {
+    if (accessDataLoaded || barometer.isPublic) return;
+    
+    try {
+      const response = await fetch(`/api/barometers/${barometer.id}/access`);
+      if (response.ok) {
+        const data = await response.json();
+        setAccessUsers(data.accessUsers || []);
+      }
+    } catch (error) {
+      console.error('Error fetching access data:', error);
+    } finally {
+      setAccessDataLoaded(true);
+    }
+  };
+
+  // Refresh access data (clear cache and refetch)
+  const refreshAccessData = async () => {
+    setAccessDataLoaded(false);
+    setAccessUsers([]);
+    
+    // Only fetch if not public
+    if (!barometer.isPublic) {
+      try {
+        const response = await fetch(`/api/barometers/${barometer.id}/access`);
+        if (response.ok) {
+          const data = await response.json();
+          setAccessUsers(data.accessUsers || []);
+        }
+      } catch (error) {
+        console.error('Error fetching access data:', error);
+      }
+    }
+    setAccessDataLoaded(true);
+  };
+
+  // Watch for barometer updates to refresh access data
+  useEffect(() => {
+    refreshAccessData();
+  }, [barometer.isPublic, barometer.updatedAt]);
+
+  // Get access badge text and color
+  const getAccessInfo = () => {
+    if (barometer.isPublic) {
+      return {
+        text: 'Alle voksne',
+        bg: 'green.100',
+        color: 'green.700',
+        borderColor: 'green.200'
+      };
+    }
+
+    // Check if it's creator-only (no specific access users)
+    if (accessUsers.length === 0 && accessDataLoaded) {
+      return {
+        text: 'Kun dig',
+        bg: 'blue.100',
+        color: 'blue.700',
+        borderColor: 'blue.200'
+      };
+    }
+
+    // Show number of users with access
+    if (accessUsers.length > 0) {
+      const count = accessUsers.length;
+      const text = count === 1 ? `${count} voksen` : `${count} voksne`;
+      return {
+        text,
+        bg: 'orange.100',
+        color: 'orange.700',
+        borderColor: 'orange.200'
+      };
+    }
+
+    // Fallback for loading state
+    return {
+      text: 'Begrænset adgang',
+      bg: 'orange.100',
+      color: 'orange.700',
+      borderColor: 'orange.200'
+    };
+  };
+
+  // Get tooltip content for access badge
+  const getAccessTooltip = () => {
+    if (barometer.isPublic) {
+      return 'Alle voksne kan se dette barometer';
+    }
+
+    if (accessUsers.length === 0 && accessDataLoaded) {
+      return 'Kun du kan se dette barometer';
+    }
+
+    if (accessUsers.length > 0) {
+      const names = accessUsers.map(user => user.display_name).join(', ');
+      return `Kan ses af: ${names}`;
+    }
+
+    return 'Begrænset adgang';
+  };
 
   // Calculate color based on rating position in scale using site's color palette
   const getRatingColor = (rating: number) => {
@@ -598,12 +709,21 @@ export function BarometerCard({ barometer, onEntryRecorded, onBarometerDeleted, 
               borderRadius="md"
               fontSize="xs"
               fontWeight="medium"
-              bg={barometer.isPublic ? "green.100" : "orange.100"}
-              color={barometer.isPublic ? "green.700" : "orange.700"}
+              bg={getAccessInfo().bg}
+              color={getAccessInfo().color}
               border="1px solid"
-              borderColor={barometer.isPublic ? "green.200" : "orange.200"}
+              borderColor={getAccessInfo().borderColor}
+              cursor="help"
+              title={getAccessTooltip()}
+              onMouseEnter={fetchAccessData}
+              onClick={fetchAccessData}
+              _hover={{
+                transform: 'scale(1.05)',
+                boxShadow: 'sm'
+              }}
+              transition="all 0.2s"
             >
-              {barometer.isPublic ? "Alle voksne" : "Begrænsede adgang"}
+              {getAccessInfo().text}
             </Box>
           </HStack>
           <HStack gap={2}>

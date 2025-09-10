@@ -43,6 +43,7 @@ interface ChildrenListProps {
 export function ChildrenList({}: ChildrenListProps) {
   const [deletingChildId, setDeletingChildId] = useState<string | null>(null);
   const [childSummaries, setChildSummaries] = useState<Record<string, ChildSummary>>({});
+  const [summariesLoading, setSummariesLoading] = useState(false);
   const router = useRouter();
 
   // Use React Query hooks
@@ -53,6 +54,9 @@ export function ChildrenList({}: ChildrenListProps) {
   // Fetch summary data for each child
   useEffect(() => {
     const fetchChildSummaries = async () => {
+      if (children.length === 0) return;
+      
+      setSummariesLoading(true);
       const summaries: Record<string, ChildSummary> = {};
       
       for (const child of children) {
@@ -95,11 +99,10 @@ export function ChildrenList({}: ChildrenListProps) {
       }
       
       setChildSummaries(summaries);
+      setSummariesLoading(false);
     };
 
-    if (children.length > 0) {
-      fetchChildSummaries();
-    }
+    fetchChildSummaries();
   }, [children]);
 
   const handleDeleteChild = async (child: Child) => {
@@ -157,15 +160,198 @@ export function ChildrenList({}: ChildrenListProps) {
     return (
       <VStack gap={4}>
         {[1, 2, 3].map((i) => (
-          <Box key={i} width="100%" p={4} border="1px solid" borderColor="gray.200" borderRadius="lg">
-            <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Box flex={1}>
-                <Skeleton height="24px" width="50%" mb={2} />
-                <Skeleton height="16px" width="30%" />
+          <Card.Root 
+            key={i}
+            variant="outline"
+            bg="#f4f1de"
+            borderRadius="xl"
+            borderWidth={1}
+            borderColor="#81b29a"
+            overflow="hidden"
+          >
+            <Card.Body p={0}>
+              {/* Header section skeleton */}
+              <Box 
+                bg="linear-gradient(135deg, #81b29a, #f4f1de)"
+                px={{ base: 4, md: 6 }}
+                py={4}
+              >
+                <HStack justify="space-between" align="center">
+                  <Skeleton 
+                    height="28px" 
+                    width="40%" 
+                    borderRadius="md" 
+                    variant="shine"
+                    css={{
+                      "--start-color": "#e07a5f",
+                      "--end-color": "#f2cc8f",
+                    }}
+                  />
+                  <HStack gap={2} display={{ base: "none", md: "flex" }}>
+                    <Skeleton 
+                      height="24px" 
+                      width="80px" 
+                      borderRadius="sm" 
+                      variant="shine"
+                      css={{
+                        "--start-color": "#81b29a",
+                        "--end-color": "#f2cc8f",
+                      }}
+                    />
+                    <Skeleton 
+                      height="24px" 
+                      width="100px" 
+                      borderRadius="sm" 
+                      variant="shine"
+                      css={{
+                        "--start-color": "#3d405b",
+                        "--end-color": "#81b29a",
+                      }}
+                    />
+                  </HStack>
+                </HStack>
               </Box>
-              <Skeleton height="40px" width="100px" />
-            </Box>
-          </Box>
+
+              {/* Content section skeleton */}
+              <Box px={{ base: 4, md: 6 }} py={{ base: 3, md: 4 }}>
+                <VStack gap={3} align="stretch">
+                  {/* Mobile badges skeleton */}
+                  <HStack 
+                    gap={2} 
+                    display={{ base: "flex", md: "none" }}
+                    flexWrap="wrap"
+                  >
+                    <Skeleton 
+                      height="28px" 
+                      width="120px" 
+                      borderRadius="md" 
+                      variant="shine"
+                      css={{
+                        "--start-color": "#e07a5f",
+                        "--end-color": "#81b29a",
+                      }}
+                    />
+                    <Skeleton 
+                      height="28px" 
+                      width="100px" 
+                      borderRadius="md" 
+                      variant="shine"
+                      css={{
+                        "--start-color": "#3d405b",
+                        "--end-color": "#f2cc8f",
+                      }}
+                    />
+                  </HStack>
+
+                  {/* Summary stats skeleton */}
+                  <Flex 
+                    direction={{ base: "column", sm: "row" }} 
+                    gap={{ base: 2, sm: 4 }} 
+                    align={{ base: "stretch", sm: "center" }}
+                    justify="space-between"
+                  >
+                    <HStack gap={{ base: 2, md: 4 }} flexWrap="wrap">
+                      {/* Users count skeleton */}
+                      <HStack gap={1} align="center">
+                        <Skeleton 
+                          height="16px" 
+                          width="16px" 
+                          borderRadius="full" 
+                          variant="shine"
+                          css={{
+                            "--start-color": "#3d405b",
+                            "--end-color": "#81b29a",
+                          }}
+                        />
+                        <Skeleton 
+                          height="16px" 
+                          width="60px" 
+                          borderRadius="sm" 
+                          variant="shine"
+                          css={{
+                            "--start-color": "#e07a5f",
+                            "--end-color": "#f2cc8f",
+                          }}
+                        />
+                      </HStack>
+
+                      {/* Tools count skeleton */}
+                      <HStack gap={1} align="center">
+                        <Skeleton 
+                          height="16px" 
+                          width="16px" 
+                          borderRadius="full" 
+                          variant="shine"
+                          css={{
+                            "--start-color": "#81b29a",
+                            "--end-color": "#f2cc8f",
+                          }}
+                        />
+                        <Skeleton 
+                          height="16px" 
+                          width="70px" 
+                          borderRadius="sm" 
+                          variant="shine"
+                          css={{
+                            "--start-color": "#3d405b",
+                            "--end-color": "#81b29a",
+                          }}
+                        />
+                      </HStack>
+
+                      {/* Activity skeleton */}
+                      <HStack gap={1} align="center">
+                        <Skeleton 
+                          height="16px" 
+                          width="16px" 
+                          borderRadius="full" 
+                          variant="shine"
+                          css={{
+                            "--start-color": "#f2cc8f",
+                            "--end-color": "#e07a5f",
+                          }}
+                        />
+                        <Skeleton 
+                          height="16px" 
+                          width="50px" 
+                          borderRadius="sm" 
+                          variant="shine"
+                          css={{
+                            "--start-color": "#81b29a",
+                            "--end-color": "#f2cc8f",
+                          }}
+                        />
+                      </HStack>
+                    </HStack>
+                    
+                    {/* Action buttons skeleton */}
+                    <HStack gap={{ base: 2, md: 3 }} flexShrink={0}>
+                      <Skeleton 
+                        height="36px" 
+                        width="90px" 
+                        borderRadius="full" 
+                        variant="shine"
+                        css={{
+                          "--start-color": "#81b29a",
+                          "--end-color": "#f2cc8f",
+                        }}
+                      />
+                      <Skeleton 
+                        height="36px" 
+                        width="36px" 
+                        borderRadius="full" 
+                        variant="shine"
+                        css={{
+                          "--start-color": "#e07a5f",
+                          "--end-color": "#3d405b",
+                        }}
+                      />
+                    </HStack>
+                  </Flex>
+                </VStack>
+              </Box>
+            </Card.Body>
+          </Card.Root>
         ))}
       </VStack>
     );
@@ -345,9 +531,22 @@ export function ChildrenList({}: ChildrenListProps) {
                             <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
                           </svg>
                         </Icon>
-                        <Text fontSize={{ base: "xs", md: "sm" }} color="#3d405b" fontWeight="500">
-                          {childSummaries[child.id]?.usersCount || 0} voksne
-                        </Text>
+                        {summariesLoading ? (
+                          <Skeleton 
+                            height="16px" 
+                            width="60px" 
+                            borderRadius="sm" 
+                            variant="shine"
+                            css={{
+                              "--start-color": "#e07a5f",
+                              "--end-color": "#81b29a",
+                            }}
+                          />
+                        ) : (
+                          <Text fontSize={{ base: "xs", md: "sm" }} color="#3d405b" fontWeight="500">
+                            {childSummaries[child.id]?.usersCount || 0} voksne
+                          </Text>
+                        )}
                       </HStack>
 
                       {/* Tools count */}
@@ -357,23 +556,61 @@ export function ChildrenList({}: ChildrenListProps) {
                             <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
                           </svg>
                         </Icon>
-                        <Text fontSize={{ base: "xs", md: "sm" }} color="#3d405b" fontWeight="500">
-                          {childSummaries[child.id]?.barometersCount || 0} værktøjer
-                        </Text>
+                        {summariesLoading ? (
+                          <Skeleton 
+                            height="16px" 
+                            width="70px" 
+                            borderRadius="sm" 
+                            variant="shine"
+                            css={{
+                              "--start-color": "#3d405b",
+                              "--end-color": "#f2cc8f",
+                            }}
+                          />
+                        ) : (
+                          <Text fontSize={{ base: "xs", md: "sm" }} color="#3d405b" fontWeight="500">
+                            {childSummaries[child.id]?.barometersCount || 0} værktøjer
+                          </Text>
+                        )}
                       </HStack>
 
                       {/* Recent activity */}
-                      {(childSummaries[child.id]?.recentEntriesCount || 0) > 0 && (
+                      {summariesLoading ? (
                         <HStack gap={1} align="center">
-                          <Icon color="#f2cc8f" boxSize={{ base: 3, md: 4 }}>
-                            <svg fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
-                            </svg>
-                          </Icon>
-                          <Text fontSize={{ base: "xs", md: "sm" }} color="#3d405b" fontWeight="500">
-                            {childSummaries[child.id]?.recentEntriesCount} nye
-                          </Text>
+                          <Skeleton 
+                            height="16px" 
+                            width="16px" 
+                            borderRadius="full" 
+                            variant="shine"
+                            css={{
+                              "--start-color": "#f2cc8f",
+                              "--end-color": "#e07a5f",
+                            }}
+                          />
+                          <Skeleton 
+                            height="16px" 
+                            width="50px" 
+                            borderRadius="sm" 
+                            variant="shine"
+                            css={{
+                              "--start-color": "#81b29a",
+                              "--end-color": "#f2cc8f",
+                            }}
+                          />
                         </HStack>
+                      ) : (
+                        (childSummaries[child.id]?.recentEntriesCount || 0) > 0 && (
+                          <HStack gap={1} align="center">
+                            <Icon color="#f2cc8f" boxSize={{ base: 3, md: 4 }}>
+                              <svg fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
+                              </svg>
+                            </Icon>
+                            <Text fontSize={{ base: "xs", md: "sm" }} color="#3d405b" fontWeight="500">
+                              {childSummaries[child.id]?.recentEntriesCount} nye
+                            </Text>
+                          </HStack>
+                        )
                       )}
                     </HStack>
                     
