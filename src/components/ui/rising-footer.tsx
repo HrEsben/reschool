@@ -31,16 +31,7 @@ export default function RisingFooter() {
           backgroundClip: 'text'
         }}
       >
-        ReSchool<Text 
-          as="sup" 
-          fontSize={{ base: "3vw", md: "2vw" }}
-          ml={0.5}
-          fontWeight="300"
-          style={{
-            color: '#81b29a',
-            WebkitTextFillColor: '#81b29a'
-          }}
-        >©</Text>
+        ReSchool
       </Text>
     </Box>
   );

@@ -44,7 +44,7 @@ export default function RootLayout({
         <Provider>
           <StackProvider app={stackServerApp}>
             <StackTheme>
-              <div style={{ position: 'relative', zIndex: 10, paddingBottom: '10vh' }}>
+              <div style={{ position: 'relative', zIndex: 10, borderBottom: '1px solid #e5e5e5' }}>
                 {children}
               </div>
               <RisingFooter />

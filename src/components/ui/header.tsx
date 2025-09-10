@@ -141,16 +141,7 @@ export const Header = memo(function Header() {
             order={{ base: 0, md: 0 }}
             cursor="pointer"
           >
-            ReSchool<Text 
-              as="sup" 
-              fontSize="2xs" 
-              ml={0.5}
-              fontWeight="300"
-              style={{
-                color: '#81b29a',
-                WebkitTextFillColor: '#81b29a'
-              }}
-            >©</Text>
+            ReSchool
           </Heading>
         </Link>
         

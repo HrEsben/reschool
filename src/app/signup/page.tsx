@@ -120,16 +120,7 @@ export default function SignupPage() {
                 backgroundClip: 'text'
               }}
             >
-              ReSchool<Text 
-                as="sup" 
-                fontSize="xs" 
-                ml={0.5}
-                fontWeight="300"
-                style={{
-                  color: '#81b29a',
-                  WebkitTextFillColor: '#81b29a'
-                }}
-              >©</Text>
+              ReSchool
             </Heading>
 
             <Text textAlign="center" className="text-delft-blue-600" fontSize="lg">

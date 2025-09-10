@@ -39,19 +39,7 @@ function AuthenticatedHome() {
             fontStretch: 'condensed'
           }}
         >
-          ReSchool<Text 
-            as="span"
-            fontSize="xs" 
-            ml={0.5}
-            fontWeight="300"
-            style={{
-              color: '#81b29a',
-              WebkitTextFillColor: '#81b29a',
-              verticalAlign: 'super',
-              fontSize: '0.5em',
-              lineHeight: '1'
-            }}
-          >©</Text>
+          ReSchool
         </Heading>
         
         {user === null ? (
