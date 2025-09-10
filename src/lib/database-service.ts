@@ -321,6 +321,9 @@ export async function createInvitation(
   customRelationName?: string
 ): Promise<Invitation | null> {
   try {
+    // Normalize email to lowercase for consistent storage
+    const normalizedEmail = email.toLowerCase();
+    
     // Generate unique token
     const token = crypto.randomUUID();
     
@@ -341,7 +344,7 @@ export async function createInvitation(
          status = 'pending',
          updated_at = NOW()
        RETURNING *`,
-      [email, childId, invitedBy, relation, customRelationName, token, expiresAt]
+      [normalizedEmail, childId, invitedBy, relation, customRelationName, token, expiresAt]
     );
 
     const row = result.rows[0];

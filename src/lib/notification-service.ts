@@ -81,12 +81,15 @@ export async function createPendingNotification(
   data?: Record<string, unknown>
 ): Promise<Notification | null> {
   try {
+    // Normalize email to lowercase for consistent storage
+    const normalizedEmail = email.toLowerCase();
+    
     const result = await query(
       `INSERT INTO notifications (pending_email, type, title, message, data, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
        RETURNING *`,
       [
-        email,
+        normalizedEmail,
         type,
         title,
         message,

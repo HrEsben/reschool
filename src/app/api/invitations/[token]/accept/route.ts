@@ -46,8 +46,8 @@ export async function POST(
       return NextResponse.json({ error: 'Invitation is no longer valid' }, { status: 410 });
     }
 
-    // Check if the user's email matches the invitation
-    if (user.primaryEmail !== invitation.email) {
+    // Check if the user's email matches the invitation (case-insensitive)
+    if (user.primaryEmail?.toLowerCase() !== invitation.email.toLowerCase()) {
       return NextResponse.json({ 
         error: 'Your email address does not match the invitation' 
       }, { status: 400 });

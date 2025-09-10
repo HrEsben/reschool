@@ -23,6 +23,9 @@ export async function POST(
       return NextResponse.json({ error: 'Email and relation are required' }, { status: 400 });
     }
 
+    // Normalize email to lowercase for consistent handling
+    const normalizedEmail = email.toLowerCase();
+
     // Get current user from database
     const currentUser = await getUserByStackAuthId(user.id);
     if (!currentUser) {
@@ -41,7 +44,7 @@ export async function POST(
     }
 
     // Check if user is already connected to this child
-    const existingUser = childData.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const existingUser = childData.users.find(u => u.email.toLowerCase() === normalizedEmail);
     if (existingUser) {
       // Temporarily allow testing with existing users for email testing
       console.log('Warning: Allowing invitation to existing user for testing purposes');
@@ -50,7 +53,7 @@ export async function POST(
 
     // Create invitation record in our database first
     const invitation = await createInvitation(
-      email,
+      normalizedEmail,
       childId,
       currentUser.id,
       relation,
@@ -64,7 +67,7 @@ export async function POST(
         // Create notification for the invitation
     const inviterName = currentUser.displayName || currentUser.email || 'En bruger';
     await createInvitationNotification(
-      email,
+      normalizedEmail,
       childData.child.name,
       inviterName,
       invitation.token
@@ -83,7 +86,7 @@ export async function POST(
     
     try {
       await sendInvitationEmail({
-        to: email,
+        to: normalizedEmail,
         childName: childData.child.name,
         inviterName: inviterName,
         inviterRelation: inviterRelation,
@@ -91,11 +94,11 @@ export async function POST(
         inviteUrl
       });
 
-      console.log(`Invitation email sent successfully to ${email} for child ${childData.child.name}`);
+      console.log(`Invitation email sent successfully to ${normalizedEmail} for child ${childData.child.name}`);
 
       return NextResponse.json({ 
         success: true, 
-        message: `Invitation sent successfully to ${email}`,
+        message: `Invitation sent successfully to ${normalizedEmail}`,
         inviteUrl // Include the invite URL in the response for development
       });
     } catch (emailError) {
