@@ -614,6 +614,14 @@ export function ChildrenList({}: ChildrenListProps) {
                       )}
                     </HStack>
                     
+                    {/* Divider before action buttons */}
+                    <Box 
+                      height="1px" 
+                      bg="linear-gradient(90deg, transparent, #81b29a, transparent)" 
+                      mx={-6} 
+                      my={2}
+                    />
+                    
                     {/* Action buttons */}
                     <HStack gap={{ base: 2, md: 3 }} flexShrink={0}>
                       <Button
