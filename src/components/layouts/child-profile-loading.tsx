@@ -8,7 +8,7 @@ import {
   Table,
   Separator 
 } from '@chakra-ui/react';
-import { useChildBySlug, useBarometers } from '@/lib/queries';
+import { useChildBySlug } from '@/lib/queries';
 
 interface ChildProfileLoadingProps {
   children: React.ReactNode;
@@ -17,7 +17,6 @@ interface ChildProfileLoadingProps {
 
 export function ChildProfileLoading({ children, slug }: ChildProfileLoadingProps) {
   const { isLoading: childLoading } = useChildBySlug(slug);
-  const { isLoading: toolsLoading } = useBarometers('temp'); // We'll update this with actual childId once child data loads
 
   // Show coordinated loading skeleton for initial load
   if (childLoading) {

@@ -7,7 +7,6 @@ import {
   Text,
   VStack,
   Skeleton,
-  Center,
   Heading,
   HStack,
   Icon,
