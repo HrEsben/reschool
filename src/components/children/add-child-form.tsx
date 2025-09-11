@@ -14,6 +14,7 @@ import {
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { useCreateChild } from '@/lib/queries';
+import { showToast } from '@/components/ui/simple-toast';
 
 interface AddChildFormProps {
   onChildAdded: () => void;
@@ -29,10 +30,6 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
     childName?: string;
     customRelationName?: string;
   }>({});
-  const [message, setMessage] = useState<{
-    text: string;
-    type: 'success' | 'error';
-  } | null>(null);
   const [open, setOpen] = useState(false);
 
   // Use React Query mutation
@@ -51,11 +48,6 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const showMessage = (text: string, type: 'success' | 'error') => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage(null), 5000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,32 +71,24 @@ export function AddChildForm({ onChildAdded }: AddChildFormProps) {
       setErrors({});
       setOpen(false);
 
-      showMessage('Barnet er blevet tilføjet med succes', 'success');
+      showToast({
+        title: 'Barn tilføjet!',
+        description: 'Barnet er blevet tilføjet med succes',
+        type: 'success'
+      });
       onChildAdded();
     } catch (error) {
       console.error('Error adding child:', error);
-      showMessage(
-        error instanceof Error ? error.message : 'Der opstod en fejl ved tilføjelse af barnet',
-        'error'
-      );
+      showToast({
+        title: 'Fejl',
+        description: error instanceof Error ? error.message : 'Der opstod en fejl ved tilføjelse af barnet',
+        type: 'error'
+      });
     }
   };
 
   return (
     <Box>
-      {message && (
-        <Box
-          mb={4}
-          p={3}
-          borderRadius="lg"
-          className={message.type === 'success' ? 'bg-cambridge-blue-900 border-l-4 border-cambridge-blue-400' : 'bg-burnt-sienna-900 border-l-4 border-burnt-sienna-400'}
-        >
-          <Text className={message.type === 'success' ? 'text-cambridge-blue-600' : 'text-burnt-sienna-600'} fontWeight="500">
-            {message.text}
-          </Text>
-        </Box>
-      )}
-
       <DialogManager
         trigger={
           <Button 

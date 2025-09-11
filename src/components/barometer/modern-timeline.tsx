@@ -543,7 +543,7 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
             {entryToDelete.comment && (
               <Box mt={3} p={3} bg="gray.50" borderRadius="md">
                 <Text fontSize="sm" color="gray.600">
-                  Kommentar: "{entryToDelete.comment}"
+                  Kommentar: &ldquo;{entryToDelete.comment}&rdquo;
                 </Text>
               </Box>
             )}
