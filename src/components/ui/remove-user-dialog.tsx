@@ -37,8 +37,14 @@ export function RemoveUserDialog({
         colorScheme: "gray"
       }}
     >
-      <VStack gap={4} align="stretch">
-        <Text color="gray.700" fontSize="md" lineHeight="tall">
+      <VStack gap={4} align="stretch" width="full">
+        <Text 
+          color="gray.700" 
+          fontSize="md" 
+          lineHeight="tall"
+          wordBreak="break-word"
+          whiteSpace="pre-wrap"
+        >
           Er du sikker på, at du vil fjerne{' '}
           <Text as="span" fontWeight="600" color="navy.700">
             {userName || userEmail}
@@ -53,6 +59,8 @@ export function RemoveUserDialog({
           bg="orange.50" 
           p={3} 
           borderRadius="md"
+          wordBreak="break-word"
+          whiteSpace="pre-wrap"
         >
           Brugeren vil ikke længere have adgang til barnets profil og data.
         </Text>

@@ -205,7 +205,6 @@ export function DialogManager({
         {/* Body */}
         <DialogBody 
           p={6} 
-          overflow="auto"
           maxH="calc(95vh - 200px)"
           overflowX="hidden"
           overflowY="auto"
