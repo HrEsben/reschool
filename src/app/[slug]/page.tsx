@@ -499,8 +499,7 @@ export default function ChildSlugPage() {
                   }) => (
                     <Table.Row 
                       key={`user-${userData.id}`}
-                      _hover={{ bg: "cream.100", cursor: "pointer" }}
-                      onClick={() => router.push(`/users/${userData.id}`)}
+                      _hover={{ bg: "cream.100" }}
                       transition="background-color 0.2s ease"
                     >
                       <Table.Cell>
