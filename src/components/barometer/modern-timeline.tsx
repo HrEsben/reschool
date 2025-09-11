@@ -9,6 +9,7 @@ import {
   Flex,
   Badge,
   Button,
+  Timeline,
 } from '@chakra-ui/react';
 import { TrashIcon } from '@/components/ui/icons';
 import { ErrorDialog } from '@/components/ui/dialog-manager';
@@ -217,8 +218,8 @@ const getRatingDisplay = (rating: number, barometer: Barometer): string | React.
   return '�';
 };
 
-// Format date for grouping (e.g., "Torsdag 8. september")
-const formatDateHeader = (dateString: string): string => {
+// Format date for display (e.g., "Torsdag 8. september, 14:30")
+const formatDateTime = (dateString: string): string => {
   const date = new Date(dateString);
   const today = new Date();
   const yesterday = new Date(today);
@@ -226,13 +227,13 @@ const formatDateHeader = (dateString: string): string => {
   
   // Check if it's today or yesterday
   if (date.toDateString() === today.toDateString()) {
-    return 'I dag';
+    return `I dag, ${date.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
   }
   if (date.toDateString() === yesterday.toDateString()) {
-    return 'I går';
+    return `I går, ${date.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
   }
   
-  // Format as Danish date
+  // Format as Danish date with time
   const weekdays = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
   const months = [
     'januar', 'februar', 'marts', 'april', 'maj', 'juni',
@@ -242,30 +243,9 @@ const formatDateHeader = (dateString: string): string => {
   const weekday = weekdays[date.getDay()];
   const day = date.getDate();
   const month = months[date.getMonth()];
+  const time = date.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit', hour12: false });
   
-  return `${weekday} ${day}. ${month}`;
-};
-
-// Format time (e.g., "14:30")
-const formatTime = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleTimeString('da-DK', { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    hour12: false 
-  });
-};
-
-// Group entries by date
-const groupEntriesByDate = (entries: BarometerEntry[]): Record<string, BarometerEntry[]> => {
-  return entries.reduce((groups, entry) => {
-    const dateKey = entry.entryDate.split('T')[0]; // Get YYYY-MM-DD part
-    if (!groups[dateKey]) {
-      groups[dateKey] = [];
-    }
-    groups[dateKey].push(entry);
-    return groups;
-  }, {} as Record<string, BarometerEntry[]>);
+  return `${weekday} ${day}. ${month}, ${time}`;
 };
 
 export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>(
@@ -279,12 +259,9 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
       }
     }));
 
-    // Apply limit if specified
-    const displayEntries = limit ? localEntries.slice(0, limit) : localEntries;
-    
-    // Group entries by date
-    const groupedEntries = groupEntriesByDate(displayEntries);
-    const sortedDates = Object.keys(groupedEntries).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    // Apply limit if specified and sort by creation date (newest first)
+    const displayEntries = (limit ? localEntries.slice(0, limit) : localEntries)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     const handleDeleteEntry = (entry: BarometerEntry) => {
       setEntryToDelete(entry);
@@ -318,194 +295,145 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
 
     return (
       <VStack gap={4} align="stretch" w="full">
-        {sortedDates.map(dateKey => {
-          const dateEntries = groupedEntries[dateKey].sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-          
-          return (
-            <Box key={dateKey}>
-              {/* Date Header */}
-              <Text 
-                fontSize={{ base: "xs", md: "sm" }}
-                fontWeight="semibold" 
-                color="gray.600" 
-                mb={3}
-                pl={{ base: 1, md: 2 }}
-              >
-                {formatDateHeader(dateKey)}
-              </Text>
+        <Timeline.Root variant="subtle" size={{ base: "sm", md: "md" }}>
+          {displayEntries.map((entry, index) => (
+            <Timeline.Item key={entry.id}>
+              <Timeline.Connector>
+                <Timeline.Separator />
+                <Timeline.Indicator 
+                  bg={getRatingColor(entry.rating)}
+                  borderColor="bg.emphasis"
+                  borderWidth="2px"
+                />
+              </Timeline.Connector>
               
-              {/* Entries for this date */}
-              <VStack gap={2} align="stretch">
-                {dateEntries.map((entry, index) => (
-                  <Box
-                    key={entry.id}
-                    position="relative"
-                    pl={{ base: 6, md: 8 }} // Responsive left padding for timeline space
+              <Timeline.Content>
+                <Timeline.Title>
+                  <Flex 
+                    justify="space-between" 
+                    align="flex-start" 
+                    mb={2}
+                    direction={{ base: "column", sm: "row" }}
+                    gap={{ base: 2, sm: 0 }}
                   >
-                    {/* Timeline connector */}
-                    <Box
-                      position="absolute"
-                      left={{ base: "8px", md: "12px" }}
-                      top={0}
-                      bottom={index === dateEntries.length - 1 ? "50%" : "-8px"}
-                      width="2px"
-                      bg="gray.200"
-                      zIndex={1}
-                    />
-                    
-                    {/* Timeline dot */}
-                    <Box
-                      position="absolute"
-                      left={{ base: "6px", md: "8px" }}
-                      top={{ base: "12px", md: "16px" }}
-                      width={{ base: "8px", md: "10px" }}
-                      height={{ base: "8px", md: "10px" }}
-                      borderRadius="full"
-                      bg={getRatingColor(entry.rating)}
-                      border="2px solid"
-                      borderColor="bg.emphasis"
-                      zIndex={2}
-                    />
-                    
-                    {/* Entry Card */}
-                    <Box
-                      bg="bg.emphasis"
-                      borderRadius="lg"
-                      border="1px solid"
-                      borderColor="gray.200"
-                      p={{ base: 3, md: 4 }}
-                      shadow="sm"
-                      _hover={{
-                        shadow: "md",
-                        borderColor: "gray.300"
-                      }}
-                      transition="all 0.2s"
+                    <Flex 
+                      align="center" 
+                      gap={{ base: 2, md: 3 }} 
+                      flex={1}
+                      wrap={{ base: "wrap", sm: "nowrap" }}
                     >
-                      <Flex 
-                        justify="space-between" 
-                        align="flex-start" 
-                        mb={2}
-                        direction={{ base: "column", sm: "row" }}
-                        gap={{ base: 2, sm: 0 }}
-                      >
-                        <Flex 
-                          align="center" 
-                          gap={{ base: 2, md: 3 }} 
-                          flex={1}
-                          wrap={{ base: "wrap", sm: "nowrap" }}
+                      {/* Rating with appropriate display type */}
+                      <Flex align="center" gap={{ base: 1, md: 2 }}>
+                        <Text fontSize={{ base: "md", md: "lg" }} display="flex" alignItems="center">
+                          {getRatingDisplay(entry.rating, barometer)}
+                        </Text>
+                        <Badge
+                          colorPalette={
+                            entry.rating >= 4 ? 'success' : 
+                            entry.rating >= 3 ? 'warning' : 'coral'
+                          }
+                          size={{ base: "xs", md: "sm" }}
+                          borderRadius="full"
+                          px={{ base: 1, md: 2 }}
                         >
-                          {/* Rating with appropriate display type */}
-                          <Flex align="center" gap={{ base: 1, md: 2 }}>
-                            <Text fontSize={{ base: "md", md: "lg" }} display="flex" alignItems="center">
-                              {getRatingDisplay(entry.rating, barometer)}
-                            </Text>
-                            <Badge
-                              colorPalette={
-                                entry.rating >= 4 ? 'success' : 
-                                entry.rating >= 3 ? 'warning' : 'coral'
-                              }
-                              size={{ base: "xs", md: "sm" }}
-                              borderRadius="full"
-                              px={{ base: 1, md: 2 }}
-                            >
-                              {entry.rating.toFixed(1)}
-                            </Badge>
-                          </Flex>
-                          
-                          {/* User and time info */}
-                          <VStack gap={0} align="flex-start" flex={1} minW={0}>
-                            <HStack 
-                              gap={{ base: 1, md: 2 }} 
-                              align="center"
-                              flexWrap={{ base: "wrap", sm: "nowrap" }}
-                            >
-                              <Text 
-                                fontSize={{ base: "xs", md: "sm" }} 
-                                fontWeight="medium" 
-                                color="gray.800"
-                                lineClamp={1}
-                              >
-                                {entry.recordedByName || 'Ukendt bruger'}
-                              </Text>
-                              {getRelationDisplayName(entry.userRelation, entry.customRelationName) && (
-                                <Badge
-                                  size={{ base: "xs", md: "sm" }}
-                                  colorPalette="navy"
-                                  variant="subtle"
-                                  borderRadius="full"
-                                  px={{ base: 1, md: 2 }}
-                                  flexShrink={0}
-                                >
-                                  {getRelationDisplayName(entry.userRelation, entry.customRelationName)}
-                                </Badge>
-                              )}
-                            </HStack>
-                            <Text fontSize="xs" color="gray.500">
-                              {formatTime(entry.createdAt)}
-                            </Text>
-                          </VStack>
-                        </Flex>
-                        
-                        {/* Delete button */}
-                        {canDelete && onDeleteEntry && (
-                          <Button
-                            variant="ghost"
-                            size={{ base: "xs", md: "sm" }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteEntry(entry);
-                            }}
-                            title="Slet registrering"
-                            p={{ base: 0.5, md: 1 }}
-                            minW="auto"
-                            color="coral.600"
-                            _hover={{ bg: "coral.50", color: "coral.700" }}
-                            _focus={{ 
-                              bg: "coral.50",
-                              boxShadow: "0 0 0 2px var(--chakra-colors-coral-200)",
-                              outline: "none"
-                            }}
-                            _focusVisible={{ 
-                              bg: "coral.50",
-                              boxShadow: "0 0 0 2px var(--chakra-colors-coral-200)",
-                              outline: "none"
-                            }}
-                            borderRadius="md"
-                            flexShrink={0}
-                          >
-                            <TrashIcon size="sm" />
-                          </Button>
-                        )}
+                          {entry.rating.toFixed(1)}
+                        </Badge>
                       </Flex>
                       
-                      {/* Comment */}
-                      {entry.comment && (
-                        <Box
-                          mt={{ base: 2, md: 3 }}
-                          p={{ base: 2, md: 3 }}
-                          bg="gray.50"
-                          borderRadius="md"
-                          border="1px solid"
-                          borderColor="gray.100"
+                      {/* User and relation info */}
+                      <HStack 
+                        gap={{ base: 1, md: 2 }} 
+                        align="center"
+                        flexWrap={{ base: "wrap", sm: "nowrap" }}
+                      >
+                        <Text 
+                          fontSize={{ base: "sm", md: "md" }} 
+                          fontWeight="medium" 
+                          color="gray.800"
+                          lineClamp={1}
                         >
-                          <Text 
-                            fontSize={{ base: "xs", md: "sm" }} 
-                            color="gray.700" 
-                            lineHeight="1.5"
+                          {entry.recordedByName || 'Ukendt bruger'}
+                        </Text>
+                        {getRelationDisplayName(entry.userRelation, entry.customRelationName) && (
+                          <Badge
+                            size={{ base: "xs", md: "sm" }}
+                            colorPalette="navy"
+                            variant="subtle"
+                            borderRadius="full"
+                            px={{ base: 1, md: 2 }}
+                            flexShrink={0}
                           >
-                            &ldquo;{entry.comment}&rdquo;
-                          </Text>
-                        </Box>
-                      )}
-                    </Box>
-                  </Box>
-                ))}
-              </VStack>
-            </Box>
-          );
-        })}
+                            {getRelationDisplayName(entry.userRelation, entry.customRelationName)}
+                          </Badge>
+                        )}
+                      </HStack>
+                    </Flex>
+                    
+                    {/* Delete button */}
+                    {canDelete && onDeleteEntry && (
+                      <Button
+                        variant="ghost"
+                        size={{ base: "xs", md: "sm" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteEntry(entry);
+                        }}
+                        title="Slet registrering"
+                        p={{ base: 0.5, md: 1 }}
+                        minW="auto"
+                        color="coral.600"
+                        _hover={{ bg: "coral.50", color: "coral.700" }}
+                        _focus={{ 
+                          bg: "coral.50",
+                          boxShadow: "0 0 0 2px var(--chakra-colors-coral-200)",
+                          outline: "none"
+                        }}
+                        _focusVisible={{ 
+                          bg: "coral.50",
+                          boxShadow: "0 0 0 2px var(--chakra-colors-coral-200)",
+                          outline: "none"
+                        }}
+                        borderRadius="md"
+                        flexShrink={0}
+                      >
+                        <TrashIcon size="sm" />
+                      </Button>
+                    )}
+                  </Flex>
+                </Timeline.Title>
+                
+                <Timeline.Description>
+                  <VStack gap={2} align="flex-start" w="full">
+                    {/* Date and time info */}
+                    <Text fontSize="xs" color="gray.500">
+                      {formatDateTime(entry.createdAt)}
+                    </Text>
+                    
+                    {/* Comment */}
+                    {entry.comment && (
+                      <Box
+                        w="full"
+                        p={{ base: 2, md: 3 }}
+                        bg="gray.50"
+                        borderRadius="md"
+                        border="1px solid"
+                        borderColor="gray.100"
+                      >
+                        <Text 
+                          fontSize={{ base: "xs", md: "sm" }} 
+                          color="gray.700" 
+                          lineHeight="1.5"
+                        >
+                          &ldquo;{entry.comment}&rdquo;
+                        </Text>
+                      </Box>
+                    )}
+                  </VStack>
+                </Timeline.Description>
+              </Timeline.Content>
+            </Timeline.Item>
+          ))}
+        </Timeline.Root>
         
         {/* Show more indicator if limited */}
         {limit && entries.length > limit && (
@@ -538,7 +466,7 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
             }}
           >
             <Text>
-              Er du sikker på, at du vil slette denne registrering? Denne handling kan ikke fortrydes.
+              Er du sikker på, at du vil slette denne registrering? Denna handling kan ikke fortrydes.
             </Text>
             {entryToDelete.comment && (
               <Box mt={3} p={3} bg="gray.50" borderRadius="md">
