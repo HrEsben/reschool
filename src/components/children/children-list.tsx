@@ -423,7 +423,7 @@ export function ChildrenList({}: ChildrenListProps) {
               >
                 <HStack justify="space-between" align="center">
                   <Heading 
-                    size={{ base: "lg", md: "md" }} 
+                    size={{ base: "xl", md: "lg" }} 
                     color="white" 
                     fontWeight="600" 
                     letterSpacing="-0.02em"
