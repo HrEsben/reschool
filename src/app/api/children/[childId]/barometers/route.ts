@@ -77,6 +77,13 @@ export async function POST(
       accessibleUserIds = []
     } = body;
 
+    console.log('Debug: Received barometer creation request:', {
+      topic,
+      isPublic,
+      accessibleUserIds,
+      userIdsLength: accessibleUserIds.length
+    }); // Debug log
+
     if (!topic || typeof topic !== 'string' || topic.trim().length === 0) {
       return NextResponse.json({ error: 'Topic is required' }, { status: 400 });
     }
@@ -138,6 +145,12 @@ export async function POST(
       isPublic,
       !isPublic ? accessibleUserIds : undefined
     );
+    
+    console.log('Debug: Created barometer:', {
+      id: barometer?.id,
+      isPublic: barometer?.isPublic,
+      accessUserIds: !isPublic ? accessibleUserIds : 'N/A (public)'
+    }); // Debug log
     
     if (!barometer) {
       return NextResponse.json({ error: 'Failed to create barometer' }, { status: 500 });

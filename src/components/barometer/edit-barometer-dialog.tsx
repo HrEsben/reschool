@@ -13,12 +13,15 @@ import {
   SegmentGroup,
   Slider,
   Tabs,
+  CheckboxCard,
+  Badge,
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { showToast } from '@/components/ui/simple-toast';
 import { NumberIcon } from '@/components/ui/icons';
 import { useChildUsers } from '@/lib/queries';
 import { UserWithRelation } from '@/lib/database-service';
+import { useUser } from '@stackframe/stack';
 
 interface AccessUser {
   user_id: number;
@@ -50,6 +53,7 @@ interface EditBarometerDialogProps {
 }
 
 export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, isOpen, onOpenChange }: EditBarometerDialogProps) {
+  const stackUser = useUser();
   const [topic, setTopic] = useState('');
   const [description, setDescription] = useState('');
   const [scaleMin, setScaleMin] = useState(1);
@@ -67,6 +71,26 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
   // Fetch child users for access control selection
   const { data: childUsers = [], isLoading: usersLoading } = useChildUsers(barometer.childId.toString());
 
+  // Find current user in child users list
+  const currentUser = childUsers.find((user: UserWithRelation) => user.stackAuthId === stackUser?.id);
+  const currentUserId = currentUser?.id;
+
+  // Helper function to get all effective selected users (including auto-selected)
+  const getEffectiveSelectedUsers = () => {
+    const autoSelectedUsers = childUsers.filter((user: UserWithRelation) => 
+      user.id === barometer.createdBy || 
+      user.relation === 'Administrator' || 
+      user.isAdministrator
+    );
+    const manuallySelectedUsers = childUsers.filter((user: UserWithRelation) => 
+      selectedUserIds.includes(user.id) && 
+      user.id !== barometer.createdBy && 
+      user.relation !== 'Administrator' && 
+      !user.isAdministrator
+    );
+    return [...autoSelectedUsers, ...manuallySelectedUsers];
+  };
+
   // Fetch current barometer access settings
   const fetchBarometerAccess = useCallback(async () => {
     try {
@@ -74,9 +98,11 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
       if (response.ok) {
         const data = await response.json();
         if (data.accessUsers && data.accessUsers.length > 0) {
+          const accessUserIds = data.accessUsers.map((user: AccessUser) => user.user_id);
+          setSelectedUserIds(accessUserIds);
           setVisibilityOption('custom');
-          setSelectedUserIds(data.accessUsers.map((user: AccessUser) => user.user_id));
         } else {
+          // No access users means private (only creator)
           setVisibilityOption('kun_mig');
           setSelectedUserIds([]);
         }
@@ -206,7 +232,15 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
     if (selectAll) {
       setSelectedUserIds(childUsers.map((user: UserWithRelation) => user.id));
     } else {
-      setSelectedUserIds([]);
+      // Even when deselecting all, keep creator and administrators
+      const mustKeepUserIds = childUsers
+        .filter((user: UserWithRelation) => 
+          user.id === barometer.createdBy || 
+          user.relation === 'Administrator' || 
+          user.isAdministrator
+        )
+        .map((user: UserWithRelation) => user.id);
+      setSelectedUserIds(mustKeepUserIds);
     }
   };
 
@@ -502,7 +536,7 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
     }
 
     // Validate visibility settings
-    if (visibilityOption === 'custom' && selectedUserIds.length === 0) {
+    if (visibilityOption === 'custom' && getEffectiveSelectedUsers().length === 0) {
       showToast({
         title: 'Fejl',
         description: 'Hvis du vælger tilpasset synlighed, skal du vælge mindst én voksen der har adgang',
@@ -556,7 +590,7 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
           displayType: displayType[0] || 'numbers',
           smileyType: displayType[0] === 'smileys' ? (smileyType[0] || 'emojis') : null,
           isPublic: visibilityOption === 'alle',
-          accessibleUserIds: visibilityOption === 'custom' ? selectedUserIds : []
+          accessibleUserIds: visibilityOption === 'custom' ? getEffectiveSelectedUsers().map(user => user.id) : []
         }),
       });
 
@@ -972,7 +1006,7 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
                   <VStack gap={1} align="start">
                     <Text fontWeight="semibold">Alle voksne</Text>
                     <Text fontSize="sm" color="gray.600">
-                      Alle voksne tilknyttet barnet kan se og tilføje målinger
+                      Alle voksne tilknyttet barnet kan se og tilføje målinger (inkl. nye voksne)
                     </Text>
                   </VStack>
                 </HStack>
@@ -1058,7 +1092,7 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
                   <VStack gap={1} align="start">
                     <Text fontWeight="semibold">Udvalgte voksne</Text>
                     <Text fontSize="sm" color="gray.600">
-                      Vælg specifikt hvilke voksne der skal have adgang
+                      Vælg specifikt hvilke voksne der skal have adgang (nye voksne får ikke automatisk adgang)
                     </Text>
                   </VStack>
                 </HStack>
@@ -1072,62 +1106,107 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
                   <Text fontSize="sm" fontWeight="medium" color="gray.600" mb={2}>
                     Vælg hvilke voksne der skal have adgang:
                   </Text>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleSelectAllUsers(selectedUserIds.length !== childUsers.length)}
-                    colorScheme="sage"
-                  >
-                    {selectedUserIds.length === childUsers.length ? 'Fravælg alle' : 'Vælg alle'}
-                  </Button>
+                  <HStack justify="space-between" align="center">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const selectableUsers = childUsers.filter((user: UserWithRelation) => 
+                          user.id !== barometer.createdBy && 
+                          user.relation !== 'Administrator' && 
+                          !user.isAdministrator
+                        );
+                        const allSelectableSelected = selectableUsers.every((user: UserWithRelation) => 
+                          selectedUserIds.includes(user.id)
+                        );
+                        handleSelectAllUsers(!allSelectableSelected);
+                      }}
+                      colorScheme="sage"
+                    >
+                      {(() => {
+                        const selectableUsers = childUsers.filter((user: UserWithRelation) => 
+                          user.id !== barometer.createdBy && 
+                          user.relation !== 'Administrator' && 
+                          !user.isAdministrator
+                        );
+                        const allSelectableSelected = selectableUsers.every((user: UserWithRelation) => 
+                          selectedUserIds.includes(user.id)
+                        );
+                        return allSelectableSelected ? 'Fravælg alle' : 'Vælg alle';
+                      })()}
+                    </Button>
+                    
+                    {selectedUserIds.length === childUsers.length && childUsers.length > 0 && (
+                      <Text fontSize="xs" color="amber.600" fontWeight="medium">
+                        ⚠️ Kun nuværende voksne - nye får ikke automatisk adgang
+                      </Text>
+                    )}
+                  </HStack>
                 </Box>
                 
                 {childUsers && childUsers.length > 0 ? (
                   <VStack gap={2} align="stretch">
-                    {childUsers.map((user: UserWithRelation) => (
-                      <Box
-                        key={user.id}
-                        p={3}
-                        bg="white"
-                        borderRadius="md"
-                        border="1px solid"
-                        borderColor="gray.200"
-                      >
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={selectedUserIds.includes(user.id)}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleUserSelection(user.id, e.target.checked)}
-                            style={{ marginRight: '8px' }}
-                          />
-                          <HStack gap={2} display="inline-flex" alignItems="center">
-                            <Box
-                              w={6}
-                              h={6}
-                              borderRadius="full"
-                              bg="sage.500"
-                              color="white"
-                              display="flex"
-                              alignItems="center"
-                              justifyContent="center"
-                              fontSize="xs"
-                              fontWeight="bold"
-                            >
-                              {user.displayName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || '?'}
-                            </Box>
-                            <VStack gap={0} align="start">
-                              <Text fontSize="sm" fontWeight="medium">
-                                {user.displayName || user.email}
-                              </Text>
-                              <Text fontSize="xs" color="gray.500">
-                                {user.relation}
-                                {user.customRelationName && ` (${user.customRelationName})`}
-                              </Text>
-                            </VStack>
-                          </HStack>
-                        </label>
-                      </Box>
-                    ))}
+                    {childUsers.map((user: UserWithRelation) => {
+                      const isCreator = user.id === barometer.createdBy;
+                      const isAdministrator = user.relation === 'Administrator' || user.isAdministrator;
+                      const isDisabled = isCreator || isAdministrator;
+                      
+                      return (
+                        <CheckboxCard.Root
+                          key={user.id}
+                          checked={selectedUserIds.includes(user.id) || isDisabled}
+                          disabled={isDisabled}
+                          onCheckedChange={(details) => {
+                            if (!isDisabled) {
+                              handleUserSelection(user.id, !!details.checked);
+                            }
+                          }}
+                          outline="none"
+                          _focus={{ outline: "none", boxShadow: "none" }}
+                          _focusVisible={{ outline: "none", boxShadow: "none" }}
+                        >
+                          <CheckboxCard.HiddenInput />
+                          <CheckboxCard.Control>
+                            <CheckboxCard.Content>
+                              <HStack gap={3} align="center">
+                                <Box
+                                  w={8}
+                                  h={8}
+                                  borderRadius="full"
+                                  bg="sage.500"
+                                  color="white"
+                                  display="flex"
+                                  alignItems="center"
+                                  justifyContent="center"
+                                  fontSize="sm"
+                                  fontWeight="bold"
+                                >
+                                  {user.displayName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || '?'}
+                                </Box>
+                                <VStack gap={0} align="start" flex={1}>
+                                  <CheckboxCard.Label fontSize="sm" fontWeight="medium">
+                                    {user.displayName || user.email}
+                                  </CheckboxCard.Label>
+                                  <HStack gap={1} align="center">
+                                    <CheckboxCard.Description fontSize="xs" color="gray.500">
+                                      {user.relation}
+                                      {user.customRelationName && ` (${user.customRelationName})`}
+                                    </CheckboxCard.Description>
+                                    {isCreator && (
+                                      <Badge size="xs" colorScheme="blue">Ejer</Badge>
+                                    )}
+                                    {isAdministrator && !isCreator && (
+                                      <Badge size="xs" colorScheme="purple">Administrator</Badge>
+                                    )}
+                                  </HStack>
+                                </VStack>
+                              </HStack>
+                            </CheckboxCard.Content>
+                            <CheckboxCard.Indicator />
+                          </CheckboxCard.Control>
+                        </CheckboxCard.Root>
+                      );
+                    })}
                   </VStack>
                 ) : (
                   <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>
@@ -1135,7 +1214,7 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
                   </Text>
                 )}
 
-                {visibilityOption === 'custom' && selectedUserIds.length === 0 && (
+                {visibilityOption === 'custom' && getEffectiveSelectedUsers().length === 0 && (
                   <Box p={3} bg="orange.50" borderRadius="md" border="1px solid" borderColor="orange.200">
                     <Text fontSize="sm" color="orange.700">
                       ⚠️ Du skal vælge mindst én voksen når du bruger tilpasset synlighed.

@@ -35,7 +35,7 @@ export async function GET(
     }
 
     // Check if user has access to this barometer
-    const hasAccess = await checkUserBarometerAccess(barometerId, dbUser.id);
+    const hasAccess = await checkUserBarometerAccess(dbUser.id, barometerId);
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }

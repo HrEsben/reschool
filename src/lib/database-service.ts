@@ -878,9 +878,18 @@ export async function createBarometer(
       updatedAt: new Date(row.updated_at).toISOString()
     };
 
-    // If not public and specific users are provided, add access records
-    if (!isPublic && accessibleUserIds && accessibleUserIds.length > 0) {
-      for (const userId of accessibleUserIds) {
+    // If not public, add access records
+    if (!isPublic) {
+      // Always include the creator
+      const usersWithAccess = new Set([createdBy]);
+      
+      // Add specified users if provided
+      if (accessibleUserIds && accessibleUserIds.length > 0) {
+        accessibleUserIds.forEach(userId => usersWithAccess.add(userId));
+      }
+      
+      // Insert access records for all users
+      for (const userId of usersWithAccess) {
         await client.query(
           `INSERT INTO barometer_user_access (barometer_id, user_id) VALUES ($1, $2)`,
           [barometer.id, userId]
@@ -927,22 +936,40 @@ export async function updateBarometer(
 
     // Handle access control updates if visibility settings were provided
     if (isPublic !== undefined) {
-      if (!isPublic && accessibleUserIds && accessibleUserIds.length > 0) {
+      if (!isPublic) {
         // Delete existing access records
         await query(
           'DELETE FROM barometer_user_access WHERE barometer_id = $1',
           [barometerId]
         );
 
-        // Insert new access records
-        for (const userId of accessibleUserIds) {
-          await query(
-            'INSERT INTO barometer_user_access (barometer_id, user_id) VALUES ($1, $2) ON CONFLICT (barometer_id, user_id) DO NOTHING',
-            [barometerId, userId]
-          );
+        // Get the creator ID of the barometer
+        const creatorResult = await query(
+          'SELECT created_by FROM barometers WHERE id = $1',
+          [barometerId]
+        );
+        
+        if (creatorResult.rows.length > 0) {
+          const createdBy = creatorResult.rows[0].created_by;
+          
+          // Always include the creator
+          const usersWithAccess = new Set([createdBy]);
+          
+          // Add specified users if provided
+          if (accessibleUserIds && accessibleUserIds.length > 0) {
+            accessibleUserIds.forEach(userId => usersWithAccess.add(userId));
+          }
+          
+          // Insert new access records for all users
+          for (const userId of usersWithAccess) {
+            await query(
+              'INSERT INTO barometer_user_access (barometer_id, user_id) VALUES ($1, $2) ON CONFLICT (barometer_id, user_id) DO NOTHING',
+              [barometerId, userId]
+            );
+          }
         }
       } else {
-        // If public or no specific users, remove all access records
+        // If public, remove all access records
         await query(
           'DELETE FROM barometer_user_access WHERE barometer_id = $1',
           [barometerId]
@@ -1298,7 +1325,7 @@ export async function getBarometerAccessUsers(barometerId: number): Promise<User
 export async function checkUserBarometerAccess(userId: number, barometerId: number): Promise<boolean> {
   try {
     const result = await query(
-      `SELECT b.is_public, b.child_id, 
+      `SELECT b.is_public, b.child_id, b.created_by,
               bua.user_id as has_specific_access,
               ucr.user_id as is_child_user
        FROM barometers b
@@ -1321,6 +1348,11 @@ export async function checkUserBarometerAccess(userId: number, barometerId: numb
 
     // If barometer is public, all connected users have access
     if (row.is_public) {
+      return true;
+    }
+
+    // If user is the creator, they always have access
+    if (row.created_by === userId) {
       return true;
     }
 

@@ -15,6 +15,7 @@ import {
 } from '@chakra-ui/react';
 import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
+import { ToggleTip } from '@/components/ui/toggle-tip';
 import { BarometerTimeline, BarometerTimelineRef } from './barometer-timeline-wrapper';
 import { SettingsIcon, TrashIcon } from '@/components/ui/icons';
 
@@ -118,24 +119,36 @@ export function BarometerCard({
     } else {
       setAccessDataLoaded(true);
     }
-  }, [barometer.id, barometer.isPublic]);  // Watch for barometer updates to refresh access data
+  }, [barometer.id, barometer.isPublic]);
+
+  // Load access data immediately on mount for non-public barometers
   useEffect(() => {
     refreshAccessData();
-  }, [barometer.isPublic, barometer.updatedAt, refreshAccessData]);
+  }, [refreshAccessData]);
 
-  // Get access badge text and color
+  // Get badge info based on access level
   const getAccessInfo = () => {
+    // Check if it's public first
     if (barometer.isPublic) {
       return {
-        text: 'Alle voksne',
+        text: 'Alle',
         bg: 'green.100',
         color: 'green.700',
         borderColor: 'green.200'
       };
     }
 
+    if (!accessDataLoaded) {
+      return {
+        text: 'Indlæser...',
+        bg: 'gray.100',
+        color: 'gray.700',
+        borderColor: 'gray.200'
+      };
+    }
+
     // Check if it's creator-only (no specific access users)
-    if (accessUsers.length === 0 && accessDataLoaded) {
+    if (accessUsers.length === 0) {
       return {
         text: 'Kun dig',
         bg: 'blue.100',
@@ -156,22 +169,24 @@ export function BarometerCard({
       };
     }
 
-    // Fallback for loading state
+    // Fallback
     return {
       text: 'Begrænset adgang',
       bg: 'orange.100',
       color: 'orange.700',
       borderColor: 'orange.200'
     };
-  };
-
-  // Get tooltip content for access badge
+  };  // Get tooltip content for access badge
   const getAccessTooltip = () => {
     if (barometer.isPublic) {
       return 'Alle voksne kan se dette barometer';
     }
 
-    if (accessUsers.length === 0 && accessDataLoaded) {
+    if (!accessDataLoaded) {
+      return 'Indlæser adgangsoplysninger...';
+    }
+
+    if (accessUsers.length === 0) {
       return 'Kun du kan se dette barometer';
     }
 
@@ -181,6 +196,50 @@ export function BarometerCard({
     }
 
     return 'Begrænset adgang';
+  };
+
+  // Get formatted user names for ToggleTip content
+  const getToggleTipContent = () => {
+    if (barometer.isPublic) {
+      return (
+        <VStack gap={1} align="start">
+          <Text fontSize="sm" fontWeight="medium" color="gray.700">Alle voksne</Text>
+          <Text fontSize="xs" color="gray.500">Alle voksne tilknyttet barnet kan se dette barometer</Text>
+        </VStack>
+      );
+    }
+
+    if (!accessDataLoaded) {
+      return (
+        <Text fontSize="sm" color="gray.600">Indlæser adgangsoplysninger...</Text>
+      );
+    }
+
+    if (accessUsers.length === 0) {
+      return (
+        <VStack gap={1} align="start">
+          <Text fontSize="sm" fontWeight="medium" color="gray.700">Kun dig</Text>
+          <Text fontSize="xs" color="gray.500">Kun du kan se dette barometer</Text>
+        </VStack>
+      );
+    }
+
+    if (accessUsers.length > 0) {
+      return (
+        <VStack gap={1} align="start">
+          <Text fontSize="sm" fontWeight="medium" color="gray.700">Kan ses af:</Text>
+          {accessUsers.map((user, index) => (
+            <Text key={index} fontSize="xs" color="gray.600">
+              • {user.display_name}
+            </Text>
+          ))}
+        </VStack>
+      );
+    }
+
+    return (
+      <Text fontSize="sm" color="gray.600">Begrænset adgang</Text>
+    );
   };
 
   // Calculate color based on rating position in scale using site's color palette
@@ -718,6 +777,41 @@ export function BarometerCard({
             <HStack gap={2} align="center">
               <Heading size="md">{barometer.topic || 'Untitled Barometer'}</Heading>
               {!isMobile && (
+                <ToggleTip 
+                  content={getToggleTipContent()}
+                  showArrow={true}
+                  positioning={{ placement: "bottom" }}
+                >
+                  <Box
+                    px={2}
+                    py={1}
+                    borderRadius="md"
+                    fontSize="xs"
+                    fontWeight="medium"
+                    bg={getAccessInfo().bg}
+                    color={getAccessInfo().color}
+                    border="1px solid"
+                    borderColor={getAccessInfo().borderColor}
+                    cursor="pointer"
+                    onMouseEnter={fetchAccessData}
+                    onClick={fetchAccessData}
+                    _hover={{
+                      transform: 'scale(1.05)',
+                      boxShadow: 'sm'
+                    }}
+                    transition="all 0.2s"
+                  >
+                    {getAccessInfo().text}
+                  </Box>
+                </ToggleTip>
+              )}
+            </HStack>
+            {isMobile && (
+              <ToggleTip 
+                content={getToggleTipContent()}
+                showArrow={true}
+                positioning={{ placement: "bottom" }}
+              >
                 <Box
                   px={2}
                   py={1}
@@ -728,8 +822,7 @@ export function BarometerCard({
                   color={getAccessInfo().color}
                   border="1px solid"
                   borderColor={getAccessInfo().borderColor}
-                  cursor="help"
-                  title={getAccessTooltip()}
+                  cursor="pointer"
                   onMouseEnter={fetchAccessData}
                   onClick={fetchAccessData}
                   _hover={{
@@ -737,35 +830,11 @@ export function BarometerCard({
                     boxShadow: 'sm'
                   }}
                   transition="all 0.2s"
+                  alignSelf="start"
                 >
                   {getAccessInfo().text}
                 </Box>
-              )}
-            </HStack>
-            {isMobile && (
-              <Box
-                px={2}
-                py={1}
-                borderRadius="md"
-                fontSize="xs"
-                fontWeight="medium"
-                bg={getAccessInfo().bg}
-                color={getAccessInfo().color}
-                border="1px solid"
-                borderColor={getAccessInfo().borderColor}
-                cursor="help"
-                title={getAccessTooltip()}
-                onMouseEnter={fetchAccessData}
-                onClick={fetchAccessData}
-                _hover={{
-                  transform: 'scale(1.05)',
-                  boxShadow: 'sm'
-                }}
-                transition="all 0.2s"
-                alignSelf="start"
-              >
-                {getAccessInfo().text}
-              </Box>
+              </ToggleTip>
             )}
           </VStack>
           <HStack gap={2}>
