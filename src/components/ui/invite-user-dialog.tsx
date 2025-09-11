@@ -6,11 +6,11 @@ import {
   Box,
   Input,
   Select,
-  Checkbox,
-  createListCollection
+  createListCollection,
+  Checkbox
 } from '@chakra-ui/react';
 import { useState } from 'react';
-import { InfoDialog } from './dialog-manager';
+import { DialogManager } from './dialog-manager';
 import { showToast } from './simple-toast';
 
 interface InviteUserDialogProps {
@@ -125,7 +125,7 @@ export function InviteUserDialog({
 
   return (
     <>
-      <InfoDialog
+      <DialogManager
         trigger={trigger}
         title={`Invitér til ${childName}`}
         maxWidth="md"
@@ -146,8 +146,8 @@ export function InviteUserDialog({
           variant: 'outline'
         }}
       >
-        <VStack gap={3.5} align="stretch">
-          <Text color="fg.default" fontSize="md" lineHeight="1.5">
+        <VStack gap={4} align="stretch">
+          <Text color="fg.default" fontSize="md" lineHeight="1.6">
             Invitér en person til at følge {childName} ved at indtaste deres email og vælge deres relation til barnet.
           </Text>
 
@@ -156,7 +156,7 @@ export function InviteUserDialog({
               bg="rgba(224, 122, 95, 0.1)"
               border="1px solid rgba(224, 122, 95, 0.3)"
               borderRadius="md"
-              p={2.5}
+              p={3}
             >
               <Text color="#e07a5f" fontSize="sm" fontWeight="500">
                 {error}
@@ -165,7 +165,7 @@ export function InviteUserDialog({
           )}
 
           {/* Email Input */}
-          <VStack align="stretch" gap={1.5}>
+          <VStack align="stretch" gap={2}>
             <Text fontWeight="600" color="#3d405b" fontSize="sm">
               Email adresse
             </Text>
@@ -190,7 +190,7 @@ export function InviteUserDialog({
           </VStack>
 
           {/* Relation Select */}
-          <VStack align="stretch" gap={1.5}>
+          <VStack align="stretch" gap={2}>
             <Text fontWeight="600" color="#3d405b" fontSize="sm">
               Relation til {childName}
             </Text>
@@ -227,7 +227,7 @@ export function InviteUserDialog({
           </VStack>
 
           {/* Admin Privilege Checkbox */}
-          <VStack align="stretch" gap={1.5}>
+          <VStack align="stretch" gap={2}>
             <Text fontWeight="600" color="#3d405b" fontSize="sm">
               Administrator privilegier
             </Text>
@@ -237,16 +237,18 @@ export function InviteUserDialog({
               colorPalette="sage"
             >
               <Checkbox.HiddenInput />
-              <Checkbox.Control />
+              <Checkbox.Control>
+                <Checkbox.Indicator />
+              </Checkbox.Control>
               <Checkbox.Label>
-                <Text fontSize="sm" color="#3d405b" lineHeight="1.4">
+                <Text fontSize="sm" color="#3d405b">
                   Giv administratorrettigheder (kan invitere andre og administrere barnet)
                 </Text>
               </Checkbox.Label>
             </Checkbox.Root>
           </VStack>
         </VStack>
-      </InfoDialog>
+      </DialogManager>
     </>
   );
 }
