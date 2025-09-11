@@ -152,7 +152,7 @@ export function DialogManager({
       
       <DialogContent 
         maxW={maxWidth}
-        w="90vw"
+        w={{ base: "95vw", sm: "90vw", md: "auto" }}
         position="fixed"
         top="50vh"
         left="50vw"
@@ -163,10 +163,11 @@ export function DialogManager({
         border="2px solid"
         borderColor={styles.borderColor}
         p={0}
-        maxH="90vh"
+        maxH="95vh"
         overflow="hidden"
         margin="0 !important"
         boxShadow="xl"
+        minW={{ base: "280px", md: "400px" }}
       >
         {/* Header */}
         <DialogHeader 
@@ -202,7 +203,13 @@ export function DialogManager({
         </DialogHeader>
         
         {/* Body */}
-        <DialogBody p={6} overflow="auto">
+        <DialogBody 
+          p={6} 
+          overflow="auto"
+          maxH="calc(95vh - 200px)"
+          overflowX="hidden"
+          overflowY="auto"
+        >
           {children}
         </DialogBody>
         

@@ -553,9 +553,19 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
         </Tabs.List>
 
         <Tabs.Content value="indstillinger">
-          <HStack gap={0} align="start">
+          <Flex 
+            direction={{ base: "column", lg: "row" }}
+            gap={{ base: 6, lg: 0 }}
+            align="start"
+          >
             {/* Form Section */}
-            <VStack gap={4} align="stretch" flex={1} pr={6}>
+            <VStack 
+              gap={4} 
+              align="stretch" 
+              flex={1} 
+              pr={{ base: 0, lg: 6 }}
+              minW={0}
+            >
           <Box>
             <Text mb={2} fontWeight="medium">Emne</Text>
             <Input
@@ -761,11 +771,23 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
           )}
         </VStack>
 
-        {/* Vertical Divider */}
-        <Box w="1px" bg="gray.200" alignSelf="stretch" minH="400px" />
+        {/* Responsive Divider */}
+        <Box 
+          w={{ base: "100%", lg: "1px" }}
+          h={{ base: "1px", lg: "400px" }}
+          bg="gray.200" 
+          alignSelf="stretch"
+          display={{ base: "block", lg: "block" }}
+        />
 
         {/* Preview Section */}
-        <VStack gap={4} align="stretch" flex={1} pl={6}>
+        <VStack 
+          gap={4} 
+          align="stretch" 
+          flex={1} 
+          pl={{ base: 0, lg: 6 }}
+          minW={0}
+        >
           <Text fontSize="sm" fontWeight="medium" color="gray.700">
             Forhåndsvisning:
           </Text>
@@ -842,7 +864,7 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
             )}
           </VStack>
         </VStack>
-          </HStack>
+          </Flex>
         </Tabs.Content>
 
         {isUserAdmin && (
