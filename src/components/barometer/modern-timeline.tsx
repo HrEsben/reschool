@@ -296,7 +296,7 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
     return (
       <VStack gap={4} align="stretch" w="full">
         <Timeline.Root variant="subtle" size={{ base: "sm", md: "md" }}>
-          {displayEntries.map((entry, index) => (
+          {displayEntries.map((entry) => (
             <Timeline.Item key={entry.id}>
               <Timeline.Connector>
                 <Timeline.Separator />

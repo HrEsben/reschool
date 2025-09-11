@@ -176,26 +176,6 @@ export function BarometerCard({
       color: 'orange.700',
       borderColor: 'orange.200'
     };
-  };  // Get tooltip content for access badge
-  const getAccessTooltip = () => {
-    if (barometer.isPublic) {
-      return 'Alle voksne kan se dette barometer';
-    }
-
-    if (!accessDataLoaded) {
-      return 'Indlæser adgangsoplysninger...';
-    }
-
-    if (accessUsers.length === 0) {
-      return 'Kun du kan se dette barometer';
-    }
-
-    if (accessUsers.length > 0) {
-      const names = accessUsers.map(user => user.display_name).join(', ');
-      return `Kan ses af: ${names}`;
-    }
-
-    return 'Begrænset adgang';
   };
 
   // Get formatted user names for ToggleTip content

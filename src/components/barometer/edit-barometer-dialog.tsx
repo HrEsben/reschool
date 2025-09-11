@@ -21,7 +21,6 @@ import { showToast } from '@/components/ui/simple-toast';
 import { NumberIcon } from '@/components/ui/icons';
 import { useChildUsers } from '@/lib/queries';
 import { UserWithRelation } from '@/lib/database-service';
-import { useUser } from '@stackframe/stack';
 
 interface AccessUser {
   user_id: number;
@@ -53,7 +52,6 @@ interface EditBarometerDialogProps {
 }
 
 export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, isOpen, onOpenChange }: EditBarometerDialogProps) {
-  const stackUser = useUser();
   const [topic, setTopic] = useState('');
   const [description, setDescription] = useState('');
   const [scaleMin, setScaleMin] = useState(1);
@@ -70,10 +68,6 @@ export function EditBarometerDialog({ barometer, onBarometerUpdated, trigger, is
   
   // Fetch child users for access control selection
   const { data: childUsers = [], isLoading: usersLoading } = useChildUsers(barometer.childId.toString());
-
-  // Find current user in child users list
-  const currentUser = childUsers.find((user: UserWithRelation) => user.stackAuthId === stackUser?.id);
-  const currentUserId = currentUser?.id;
 
   // Helper function to get all effective selected users (including auto-selected)
   const getEffectiveSelectedUsers = () => {
