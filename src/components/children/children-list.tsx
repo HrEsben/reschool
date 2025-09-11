@@ -19,6 +19,7 @@ import {
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 import { useChildren, useDeleteChild, usePrefetchBarometers } from '@/lib/queries';
 import { PocketKnife } from 'lucide-react';
+import { showToast } from '@/components/ui/simple-toast';
 
 interface Child {
   id: string;
@@ -114,9 +115,20 @@ export function ChildrenList({}: ChildrenListProps) {
       // The cache is automatically updated via the mutation's onSuccess
     } catch (error) {
       console.error('Error deleting child:', error);
-      // You can add toast notification here if needed
+           showToast({
+        title: 'Fejl!',
+        description: `Barnet blev ikke fjernet. Prøv igen senere.`,
+        type: 'error',
+        duration: 3000,
+      });
     } finally {
       setDeletingChildId(null);
+                 showToast({
+        title: 'Succes!',
+        description: `Barnet er blevet slettet.`,
+        type: 'success',
+        duration: 3000,
+      });
     }
   };
 
