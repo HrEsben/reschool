@@ -769,29 +769,31 @@ export function BarometerCard({
             )}
           </VStack>
           <HStack gap={2}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleEditBarometer}
-              title="Rediger barometer"
-              p={1}
-              minW="auto"
-              color="navy.600"
-              _hover={{ bg: "navy.50", color: "navy.700" }}
-              _focus={{ 
-                bg: "navy.50",
-                boxShadow: "0 0 0 2px var(--chakra-colors-navy-200)",
-                outline: "none"
-              }}
-              _focusVisible={{ 
-                bg: "navy.50",
-                boxShadow: "0 0 0 2px var(--chakra-colors-navy-200)",
-                outline: "none"
-              }}
-              borderRadius="md"
-            >
-              <SettingsIcon size="sm" />
-            </Button>
+            {isUserAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleEditBarometer}
+                title="Rediger barometer"
+                p={1}
+                minW="auto"
+                color="navy.600"
+                _hover={{ bg: "navy.50", color: "navy.700" }}
+                _focus={{ 
+                  bg: "navy.50",
+                  boxShadow: "0 0 0 2px var(--chakra-colors-navy-200)",
+                  outline: "none"
+                }}
+                _focusVisible={{ 
+                  bg: "navy.50",
+                  boxShadow: "0 0 0 2px var(--chakra-colors-navy-200)",
+                  outline: "none"
+                }}
+                borderRadius="md"
+              >
+                <SettingsIcon size="sm" />
+              </Button>
+            )}
             {isUserAdmin && (
               <Button
                 variant="ghost"

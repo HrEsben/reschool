@@ -211,7 +211,7 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
                     barometer={barometer}
                     onEntryRecorded={handleEntryRecorded}
                     onBarometerDeleted={handleBarometerDeleted}
-                    onBarometerEdit={handleBarometerEdit}
+                    onBarometerEdit={isUserAdmin ? handleBarometerEdit : undefined}
                     currentUserId={currentUserId || undefined}
                     isUserAdmin={isUserAdmin}
                   />
@@ -238,7 +238,7 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
       )}
 
       {/* Edit Barometer Dialog */}
-      {editingBarometer && (
+      {isUserAdmin && editingBarometer && (
         <EditBarometerDialog
           barometer={editingBarometer}
           onBarometerUpdated={handleBarometerUpdated}
