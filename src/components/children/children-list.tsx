@@ -18,6 +18,7 @@ import {
 } from '@chakra-ui/react';
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 import { useChildren, useDeleteChild, usePrefetchBarometers } from '@/lib/queries';
+import { PocketKnife } from 'lucide-react';
 
 interface Child {
   id: string;
@@ -554,10 +555,8 @@ export function ChildrenList({}: ChildrenListProps) {
 
                       {/* Tools count */}
                       <HStack gap={1} align="center">
-                        <Icon color="#81b29a" boxSize={{ base: 3, md: 4 }}>
-                          <svg fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V3zM4 7a1 1 0 00-1 1v8a1 1 0 001 1h12a1 1 0 001-1V8a1 1 0 00-1-1H4zm1 2a1 1 0 011-1h2a1 1 0 110 2H6a1 1 0 01-1-1zm6-1a1 1 0 100 2h2a1 1 0 100-2h-2zm-5 4a1 1 0 011-1h2a1 1 0 110 2H7a1 1 0 01-1-1zm6-1a1 1 0 100 2h1a1 1 0 100-2h-1z" clipRule="evenodd"/>
-                          </svg>
+                        <Icon color="rgb(129, 178, 154)" boxSize={{ base: 3, md: 4 }}>
+                          <PocketKnife />
                         </Icon>
                         {summariesLoading ? (
                           <Skeleton 
