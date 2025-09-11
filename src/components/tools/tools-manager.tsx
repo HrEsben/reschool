@@ -159,45 +159,6 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
 
   return (
     <VStack gap={4} align="stretch">
-      {/* Header with Add Tool Button - styled like Voksne section */}
-      <HStack justify="space-between" align="start">
-        <VStack align="start" gap={2}>
-          <Heading size="lg" color="fg.default" fontWeight="600">
-            Værktøjer
-          </Heading>
-          <Box className="w-16 h-1 bg-delft-blue-500 rounded-full"></Box>
-        </VStack>
-        
-        <Box>
-          {isUserAdmin && (
-            <AddToolDialog
-              childId={childId}
-              onToolAdded={handleToolAdded}
-              isUserAdmin={isUserAdmin}
-              trigger={
-                <Button
-                  bg="#81b29a"
-                  color="white"
-                  size="md"
-                  _hover={{
-                    bg: "#6a9b82"
-                  }}
-                >
-                  <Icon mr={2}>
-                    <svg fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                    </svg>
-                  </Icon>
-                  Tilføj
-                </Button>
-              }
-            />
-          )}
-        </Box>
-      </HStack>
-
-      <Separator />
-
       {/* Tools Display */}
       {hasTools ? (
         <VStack gap={6} align="stretch">
@@ -221,20 +182,81 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
           )}
 
           {/* Future tool sections will be added here */}
+          
+          {/* Add Tool Button - moved below tools */}
+          {isUserAdmin && (
+            <Box pt={4}>
+              <Separator mb={4} />
+              <Box display="flex" justifyContent="flex-end">
+                <AddToolDialog
+                  childId={childId}
+                  onToolAdded={handleToolAdded}
+                  isUserAdmin={isUserAdmin}
+                  trigger={
+                    <Button
+                      bg="#81b29a"
+                      color="white"
+                      size="md"
+                      _hover={{
+                        bg: "#6a9b82"
+                      }}
+                    >
+                      <Icon mr={2}>
+                        <svg fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                        </svg>
+                      </Icon>
+                      Tilføj
+                    </Button>
+                  }
+                />
+              </Box>
+            </Box>
+          )}
         </VStack>
       ) : (
-        <Box py={8} textAlign="center">
-          <Text color="gray.500" fontSize="md">
-            {isUserAdmin 
-              ? 'Ingen værktøjer endnu' 
-              : 'Ingen værktøjer tilgængelige'}
-          </Text>
-          <Text color="gray.400" fontSize="sm" mt={2}>
-            {isUserAdmin 
-              ? 'Klik på "Tilføj" for at komme i gang med at spore barnets udvikling'
-              : 'Administratorer kan tilføje værktøjer til at spore barnets udvikling'}
-          </Text>
-        </Box>
+        <VStack gap={4} align="stretch">
+          <Box py={8} textAlign="center">
+            <Text color="gray.500" fontSize="md">
+              {isUserAdmin 
+                ? 'Ingen værktøjer endnu' 
+                : 'Ingen værktøjer tilgængelige'}
+            </Text>
+            <Text color="gray.400" fontSize="sm" mt={2}>
+              {isUserAdmin 
+                ? 'Klik på "Tilføj" for at komme i gang med at spore barnets udvikling'
+                : 'Administratorer kan tilføje værktøjer til at spore barnets udvikling'}
+            </Text>
+          </Box>
+          
+          {/* Add Tool Button - shown even when no tools exist */}
+          {isUserAdmin && (
+            <Box display="flex" justifyContent="flex-end">
+              <AddToolDialog
+                childId={childId}
+                onToolAdded={handleToolAdded}
+                isUserAdmin={isUserAdmin}
+                trigger={
+                  <Button
+                    bg="#81b29a"
+                    color="white"
+                    size="md"
+                    _hover={{
+                      bg: "#6a9b82"
+                    }}
+                  >
+                    <Icon mr={2}>
+                      <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                      </svg>
+                    </Icon>
+                    Tilføj
+                  </Button>
+                }
+              />
+            </Box>
+          )}
+        </VStack>
       )}
 
       {/* Edit Barometer Dialog */}

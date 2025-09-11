@@ -401,11 +401,19 @@ export default function ChildSlugPage() {
     <AuthenticatedLayout>
       <Box p={{ base: 4, md: 8 }}>
         <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
-          {/* Child Header - simplified */}
+          {/* Child Header with breadcrumb-style tools section */}
           <VStack align="start" gap={2}>
-            <Heading size="xl" color="navy.800" mb={4} fontWeight="700">
-              {childData.child.name}
-            </Heading>
+            <HStack align="baseline" gap={3} wrap="wrap">
+              <Heading size="xl" color="navy.800" fontWeight="700">
+                {childData.child.name}
+              </Heading>
+              <Text color="gray.400" fontSize="xl" fontWeight="300">
+                /
+              </Text>
+              <Heading size="lg" color="delft-blue.600" fontWeight="600">
+                Værktøjer
+              </Heading>
+            </HStack>
             <Box className="w-20 h-1 bg-sunset-500 rounded-full"></Box>
           </VStack>
 
