@@ -75,11 +75,31 @@ const getRelationDisplayName = (userRelation?: string, customRelationName?: stri
   }
 };
 
-// Helper function to get rating color based on value
-const getRatingColor = (rating: number): string => {
-  if (rating >= 4) return 'success.400'; // Green for good ratings
-  if (rating >= 3) return 'golden.400'; // Yellow for neutral ratings
-  return 'coral.400'; // Orange/red for low ratings
+// Helper function to get unique color for each contributor based on site's color palette
+const getContributorColor = (contributorName: string): string => {
+  // Create a consistent color mapping based on the contributor's name
+  const colors = [
+    '#81b29a', // cambridge-blue-500 (teal/green)
+    '#e07a5f', // burnt-sienna-500 (warm orange)
+    '#3d405b', // delft-blue-500 (deep blue)
+    '#f2cc8f', // sunset-500 (warm yellow/gold)
+    '#9ac1ae', // cambridge-blue-600 (lighter teal)
+    '#e79680', // burnt-sienna-600 (lighter orange)
+    '#5a5e87', // delft-blue-600 (lighter blue)
+    '#f4d5a4', // sunset-600 (lighter gold)
+  ];
+  
+  // Generate a hash from the contributor name for consistent color assignment
+  let hash = 0;
+  for (let i = 0; i < contributorName.length; i++) {
+    const char = contributorName.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  // Use absolute value and modulo to get a positive index
+  const colorIndex = Math.abs(hash) % colors.length;
+  return colors[colorIndex];
 };
 
 // Helper function to get appropriate smiley/rating display based on barometer type
@@ -301,7 +321,7 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
               <Timeline.Connector>
                 <Timeline.Separator />
                 <Timeline.Indicator 
-                  bg={getRatingColor(entry.rating)}
+                  bg={getContributorColor(entry.recordedByName || 'Unknown')}
                   borderColor="bg.emphasis"
                   borderWidth="2px"
                 />
