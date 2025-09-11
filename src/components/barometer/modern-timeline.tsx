@@ -307,98 +307,94 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
                 />
               </Timeline.Connector>
               
-              <Timeline.Content>
+              <Timeline.Content position="relative">
+                {/* Delete button positioned in upper right corner */}
+                {canDelete && onDeleteEntry && (
+                  <Button
+                    variant="ghost"
+                    size={{ base: "xs", md: "sm" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteEntry(entry);
+                    }}
+                    title="Slet registrering"
+                    position="absolute"
+                    top={0}
+                    right={0}
+                    p={{ base: 1, md: 1.5 }}
+                    minW="auto"
+                    color="coral.600"
+                    _hover={{ bg: "coral.50", color: "coral.700" }}
+                    _focus={{ 
+                      bg: "coral.50",
+                      boxShadow: "0 0 0 2px var(--chakra-colors-coral-200)",
+                      outline: "none"
+                    }}
+                    _focusVisible={{ 
+                      bg: "coral.50",
+                      boxShadow: "0 0 0 2px var(--chakra-colors-coral-200)",
+                      outline: "none"
+                    }}
+                    borderRadius="md"
+                    zIndex={1}
+                  >
+                    <TrashIcon size="sm" />
+                  </Button>
+                )}
+                
                 <Timeline.Title>
                   <Flex 
-                    justify="space-between" 
-                    align="flex-start" 
+                    align="center" 
+                    gap={{ base: 2, md: 3 }} 
+                    wrap={{ base: "wrap", sm: "nowrap" }}
+                    pr={{ base: 8, md: 10 }} // Add padding to avoid overlap with delete button
                     mb={2}
-                    direction={{ base: "column", sm: "row" }}
-                    gap={{ base: 2, sm: 0 }}
                   >
-                    <Flex 
-                      align="center" 
-                      gap={{ base: 2, md: 3 }} 
-                      flex={1}
-                      wrap={{ base: "wrap", sm: "nowrap" }}
-                    >
-                      {/* Rating with appropriate display type */}
-                      <Flex align="center" gap={{ base: 1, md: 2 }}>
-                        <Text fontSize={{ base: "md", md: "lg" }} display="flex" alignItems="center">
-                          {getRatingDisplay(entry.rating, barometer)}
-                        </Text>
-                        <Badge
-                          colorPalette={
-                            entry.rating >= 4 ? 'success' : 
-                            entry.rating >= 3 ? 'warning' : 'coral'
-                          }
-                          size={{ base: "xs", md: "sm" }}
-                          borderRadius="full"
-                          px={{ base: 1, md: 2 }}
-                        >
-                          {entry.rating.toFixed(1)}
-                        </Badge>
-                      </Flex>
-                      
-                      {/* User and relation info */}
-                      <HStack 
-                        gap={{ base: 1, md: 2 }} 
-                        align="center"
-                        flexWrap={{ base: "wrap", sm: "nowrap" }}
+                    {/* Rating with appropriate display type */}
+                    <Flex align="center" gap={{ base: 1, md: 2 }}>
+                      <Text fontSize={{ base: "md", md: "lg" }} display="flex" alignItems="center">
+                        {getRatingDisplay(entry.rating, barometer)}
+                      </Text>
+                      <Badge
+                        colorPalette={
+                          entry.rating >= 4 ? 'success' : 
+                          entry.rating >= 3 ? 'warning' : 'coral'
+                        }
+                        size={{ base: "xs", md: "sm" }}
+                        borderRadius="full"
+                        px={{ base: 1, md: 2 }}
                       >
-                        <Text 
-                          fontSize={{ base: "sm", md: "md" }} 
-                          fontWeight="medium" 
-                          color="gray.800"
-                          lineClamp={1}
-                        >
-                          {entry.recordedByName || 'Ukendt bruger'}
-                        </Text>
-                        {getRelationDisplayName(entry.userRelation, entry.customRelationName) && (
-                          <Badge
-                            size={{ base: "xs", md: "sm" }}
-                            colorPalette="navy"
-                            variant="subtle"
-                            borderRadius="full"
-                            px={{ base: 1, md: 2 }}
-                            flexShrink={0}
-                          >
-                            {getRelationDisplayName(entry.userRelation, entry.customRelationName)}
-                          </Badge>
-                        )}
-                      </HStack>
+                        {entry.rating.toFixed(1)}
+                      </Badge>
                     </Flex>
                     
-                    {/* Delete button */}
-                    {canDelete && onDeleteEntry && (
-                      <Button
-                        variant="ghost"
-                        size={{ base: "xs", md: "sm" }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteEntry(entry);
-                        }}
-                        title="Slet registrering"
-                        p={{ base: 0.5, md: 1 }}
-                        minW="auto"
-                        color="coral.600"
-                        _hover={{ bg: "coral.50", color: "coral.700" }}
-                        _focus={{ 
-                          bg: "coral.50",
-                          boxShadow: "0 0 0 2px var(--chakra-colors-coral-200)",
-                          outline: "none"
-                        }}
-                        _focusVisible={{ 
-                          bg: "coral.50",
-                          boxShadow: "0 0 0 2px var(--chakra-colors-coral-200)",
-                          outline: "none"
-                        }}
-                        borderRadius="md"
-                        flexShrink={0}
+                    {/* User and relation info */}
+                    <HStack 
+                      gap={{ base: 1, md: 2 }} 
+                      align="center"
+                      flexWrap={{ base: "wrap", sm: "nowrap" }}
+                    >
+                      <Text 
+                        fontSize={{ base: "sm", md: "md" }} 
+                        fontWeight="medium" 
+                        color="gray.800"
+                        lineClamp={1}
                       >
-                        <TrashIcon size="sm" />
-                      </Button>
-                    )}
+                        {entry.recordedByName || 'Ukendt bruger'}
+                      </Text>
+                      {getRelationDisplayName(entry.userRelation, entry.customRelationName) && (
+                        <Badge
+                          size={{ base: "xs", md: "sm" }}
+                          colorPalette="navy"
+                          variant="subtle"
+                          borderRadius="full"
+                          px={{ base: 1, md: 2 }}
+                          flexShrink={0}
+                        >
+                          {getRelationDisplayName(entry.userRelation, entry.customRelationName)}
+                        </Badge>
+                      )}
+                    </HStack>
                   </Flex>
                 </Timeline.Title>
                 
