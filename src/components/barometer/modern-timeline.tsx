@@ -11,6 +11,7 @@ import {
   Button,
 } from '@chakra-ui/react';
 import { TrashIcon } from '@/components/ui/icons';
+import { ErrorDialog } from '@/components/ui/dialog-manager';
 
 interface BarometerEntry {
   id: number;
@@ -270,6 +271,7 @@ const groupEntriesByDate = (entries: BarometerEntry[]): Record<string, Barometer
 export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>(
   ({ entries, barometer, onDeleteEntry, canDelete = false, limit }, ref) => {
     const [localEntries, setLocalEntries] = useState<BarometerEntry[]>(entries);
+    const [entryToDelete, setEntryToDelete] = useState<BarometerEntry | null>(null);
 
     useImperativeHandle(ref, () => ({
       refresh: () => {
@@ -284,11 +286,16 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
     const groupedEntries = groupEntriesByDate(displayEntries);
     const sortedDates = Object.keys(groupedEntries).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
-    const handleDeleteEntry = (entryId: number) => {
-      if (onDeleteEntry) {
-        onDeleteEntry(entryId);
+    const handleDeleteEntry = (entry: BarometerEntry) => {
+      setEntryToDelete(entry);
+    };
+
+    const confirmDeleteEntry = () => {
+      if (entryToDelete && onDeleteEntry) {
+        onDeleteEntry(entryToDelete.id);
         // Optimistically update local state
-        setLocalEntries(prev => prev.filter(entry => entry.id !== entryId));
+        setLocalEntries(prev => prev.filter(entry => entry.id !== entryToDelete.id));
+        setEntryToDelete(null);
       }
     };
 
@@ -448,7 +455,7 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
                             size={{ base: "xs", md: "sm" }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteEntry(entry.id);
+                              handleDeleteEntry(entry);
                             }}
                             title="Slet registrering"
                             p={{ base: 0.5, md: 1 }}
@@ -507,6 +514,40 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
               Viser {limit} af {entries.length} registreringer
             </Text>
           </Box>
+        )}
+        
+        {/* Delete confirmation dialog */}
+        {entryToDelete && (
+          <ErrorDialog
+            trigger={<div style={{ display: 'none' }} />}
+            title="Slet registrering"
+            icon="⚠️"
+            isOpen={!!entryToDelete}
+            onOpenChange={(open) => {
+              if (!open) setEntryToDelete(null);
+            }}
+            primaryAction={{
+              label: "Slet",
+              onClick: confirmDeleteEntry,
+              colorScheme: "red"
+            }}
+            secondaryAction={{
+              label: "Annuller",
+              onClick: () => setEntryToDelete(null),
+              variant: "outline"
+            }}
+          >
+            <Text>
+              Er du sikker på, at du vil slette denne registrering? Denne handling kan ikke fortrydes.
+            </Text>
+            {entryToDelete.comment && (
+              <Box mt={3} p={3} bg="gray.50" borderRadius="md">
+                <Text fontSize="sm" color="gray.600">
+                  Kommentar: "{entryToDelete.comment}"
+                </Text>
+              </Box>
+            )}
+          </ErrorDialog>
         )}
       </VStack>
     );
