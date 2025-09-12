@@ -16,6 +16,7 @@ import { AddToolDialog } from './add-tool-dialog';
 import { BarometerCard } from '@/components/barometer/barometer-card';
 import { EditBarometerDialog } from '@/components/barometer/edit-barometer-dialog';
 import { DagensSmileyCard } from '@/components/dagens-smiley/dagens-smiley-card';
+import { EditDagensSmileyDialog } from '@/components/dagens-smiley/edit-dagens-smiley-dialog';
 import { useBarometers, useDagensSmiley } from '@/lib/queries';
 
 interface BarometerEntry {
@@ -80,6 +81,8 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
   const { data: dagensSmiley = [], isLoading: smileyLoading, error: smileyError } = useDagensSmiley(childId.toString());
   const [editingBarometer, setEditingBarometer] = useState<Barometer | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingSmiley, setEditingSmiley] = useState<DagensSmiley | null>(null);
+  const [isSmileyEditDialogOpen, setIsSmileyEditDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const user = useUser();
 
@@ -128,6 +131,17 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
     // TanStack Query will automatically refresh due to cache invalidation
     setEditingBarometer(null);
     setIsEditDialogOpen(false);
+  };
+
+  const handleSmileyEdit = (smiley: DagensSmiley) => {
+    setEditingSmiley(smiley);
+    setIsSmileyEditDialogOpen(true);
+  };
+
+  const handleSmileyUpdated = () => {
+    // TanStack Query will automatically refresh due to cache invalidation
+    setEditingSmiley(null);
+    setIsSmileyEditDialogOpen(false);
   };
 
   if (isLoading) {
@@ -278,6 +292,8 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
                     smiley={smiley}
                     onEntryRecorded={handleEntryRecorded}
                     onSmileyDeleted={handleEntryRecorded}
+                    onSmileyEdit={isUserAdmin ? handleSmileyEdit : undefined}
+                    onSmileyUpdated={handleSmileyUpdated}
                     currentUserId={currentUserId || undefined}
                     isUserAdmin={isUserAdmin}
                     childName={childName}
@@ -373,6 +389,18 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
           trigger={<Button style={{ display: 'none' }}>Hidden Trigger</Button>}
           isOpen={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
+        />
+      )}
+
+      {/* Edit Dagens Smiley Dialog */}
+      {isUserAdmin && editingSmiley && (
+        <EditDagensSmileyDialog
+          smiley={editingSmiley}
+          onSmileyUpdated={handleSmileyUpdated}
+          trigger={<Button style={{ display: 'none' }}>Hidden Trigger</Button>}
+          isOpen={isSmileyEditDialogOpen}
+          onOpenChange={setIsSmileyEditDialogOpen}
+          isUserAdmin={isUserAdmin}
         />
       )}
     </VStack>

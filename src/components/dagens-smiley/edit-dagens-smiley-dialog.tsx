@@ -1,16 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Input,
   VStack,
   Text,
   HStack,
-  Button,
-  Flex,
   Badge,
-  Heading,
   Tabs,
   CheckboxCard,
   Textarea,
@@ -20,29 +17,77 @@ import { showToast } from '@/components/ui/simple-toast';
 import { useChildUsers } from '@/lib/queries';
 import { UserWithRelation } from '@/lib/database-service';
 import { useUser } from '@stackframe/stack';
-import { SMILEY_OPTIONS } from '@/lib/openmoji';
 
-interface CreateDagensSmileyDialogProps {
+interface DagensSmiley {
+  id: number;
   childId: number;
-  onSmileyCreated: () => void;
+  createdBy: number;
+  topic: string;
+  description?: string;
+  isPublic?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface EditDagensSmileyDialogProps {
+  smiley: DagensSmiley;
+  onSmileyUpdated: () => void;
   trigger: React.ReactNode;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   isUserAdmin?: boolean;
 }
 
-export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, isOpen, onOpenChange, isUserAdmin = false }: CreateDagensSmileyDialogProps) {
+export function EditDagensSmileyDialog({ 
+  smiley, 
+  onSmileyUpdated, 
+  trigger,
+  isOpen,
+  onOpenChange,
+  isUserAdmin = false 
+}: EditDagensSmileyDialogProps) {
   const stackUser = useUser();
-  const [topic, setTopic] = useState('');
-  const [description, setDescription] = useState('');
+  const [topic, setTopic] = useState(smiley.topic);
+  const [description, setDescription] = useState(smiley.description || '');
   const [loading, setLoading] = useState(false);
   
   // Visibility control state
-  const [visibilityOption, setVisibilityOption] = useState<'alle' | 'kun_mig' | 'custom'>('alle');
+  const [visibilityOption, setVisibilityOption] = useState<'alle' | 'kun_mig' | 'custom'>(
+    smiley.isPublic ? 'alle' : 'kun_mig'
+  );
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   
   // Fetch child users for access control selection
-  const { data: childUsers = [] } = useChildUsers(childId.toString());
+  const { data: childUsers = [] } = useChildUsers(smiley.childId.toString());
+
+  // Load current access settings when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setTopic(smiley.topic);
+      setDescription(smiley.description || '');
+      setVisibilityOption(smiley.isPublic ? 'alle' : 'kun_mig');
+      
+      // Load current access users if needed
+      if (!smiley.isPublic) {
+        fetchCurrentAccessUsers();
+      }
+    }
+  }, [isOpen, smiley]);
+
+  const fetchCurrentAccessUsers = async () => {
+    try {
+      const response = await fetch(`/api/dagens-smiley/${smiley.id}/access`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.accessUsers && data.accessUsers.length > 0) {
+          setVisibilityOption('custom');
+          setSelectedUserIds(data.accessUsers.map((user: any) => user.id));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching access users:', error);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!stackUser || !topic.trim()) {
@@ -61,8 +106,8 @@ export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, is
       const isPublic = visibilityOption === 'alle';
       const accessibleUserIds = visibilityOption === 'custom' ? selectedUserIds : [];
 
-      const response = await fetch(`/api/children/${childId}/dagens-smiley`, {
-        method: 'POST',
+      const response = await fetch(`/api/dagens-smiley/${smiley.id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -75,31 +120,25 @@ export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, is
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create dagens smiley');
+        throw new Error('Failed to update dagens smiley');
       }
 
       showToast({
         title: 'Succes',
-        description: 'Dagens smiley oprettet',
+        description: 'Dagens smiley opdateret',
         type: 'success',
         duration: 3000,
       });
-
-      // Reset form
-      setTopic('');
-      setDescription('');
-      setVisibilityOption('alle');
-      setSelectedUserIds([]);
       
-      onSmileyCreated();
+      onSmileyUpdated();
       if (onOpenChange) {
         onOpenChange(false);
       }
     } catch (error) {
-      console.error('Error creating dagens smiley:', error);
+      console.error('Error updating dagens smiley:', error);
       showToast({
         title: 'Fejl',
-        description: 'Kunne ikke oprette dagens smiley',
+        description: 'Der opstod en fejl ved opdatering af dagens smiley',
         type: 'error',
         duration: 3000,
       });
@@ -109,16 +148,11 @@ export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, is
   };
 
   const handleCancel = () => {
-    setTopic('');
-    setDescription('');
-    setVisibilityOption('alle');
-    setSelectedUserIds([]);
     if (onOpenChange) {
       onOpenChange(false);
     }
   };
 
-  // Visibility control handlers
   const handleVisibilityChange = (option: 'alle' | 'kun_mig' | 'custom') => {
     setVisibilityOption(option);
     if (option !== 'custom') {
@@ -126,91 +160,39 @@ export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, is
     }
   };
 
-  const handleUserSelection = (userId: number, checked: boolean) => {
+  const handleUserToggle = (userId: number) => {
     setSelectedUserIds(prev => 
-      checked 
-        ? [...prev, userId]
-        : prev.filter(id => id !== userId)
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
     );
   };
 
-  const generatePreview = () => {
-    return (
-      <VStack gap={3} align="stretch">
-        {/* Mini Smiley Tool Preview */}
-        <Box 
-          bg="white" 
-          borderRadius="md" 
-          border="1px solid" 
-          borderColor="gray.200" 
-          p={3}
-          shadow="sm"
-        >
-          <VStack gap={3} align="stretch">
-            {/* Header */}
-            <HStack justify="space-between">
-              <Heading 
-                size="sm" 
-                color={topic.trim() ? "black" : "gray.400"}
-              >
-                {topic.trim() || "Emne"}
-              </Heading>
-              <HStack gap={1}>
-                <Badge colorScheme="blue" fontSize="xs">
-                  Dagens smiley
-                </Badge>
-              </HStack>
-            </HStack>
-            
-            {/* Description */}
-            {description.trim() && (
-              <Text fontSize="xs" color="gray.600">
-                {description.trim()}
-              </Text>
-            )}
-
-            {/* Emoji Selection Preview */}
-            <Box>
-              <Text mb={2} fontWeight="medium" fontSize="xs" color="gray.600">
-                Vælg hvordan du har det i dag:
-              </Text>
-              <HStack gap={1} wrap="wrap">
-                {SMILEY_OPTIONS.slice(0, 8).map((smiley) => (
-                  <Button
-                    key={smiley.unicode}
-                    variant="outline"
-                    size="xs"
-                    minW="30px"
-                    h="30px"
-                    fontSize="sm"
-                    cursor="default"
-                    borderColor="gray.300"
-                    color="gray.800"
-                    _hover={{}}
-                  >
-                    {smiley.unicode}
-                  </Button>
-                ))}
-                <Text fontSize="xs" color="gray.500">...</Text>
-              </HStack>
-            </Box>
-          </VStack>
-        </Box>
-      </VStack>
-    );
+  const getRelationDisplayName = (relation: string): string => {
+    const relationMap: { [key: string]: string } = {
+      'mor': 'Mor',
+      'far': 'Far',
+      'stepmor': 'Stedmor',
+      'stepfar': 'Stedfar',
+      'bedsteforælder': 'Bedsteforælder',
+      'værge': 'Værge',
+      'pædagog': 'Pædagog',
+      'anden': 'Anden'
+    };
+    return relationMap[relation] || relation;
   };
 
   return (
     <DialogManager
       trigger={trigger}
-      title="Opret dagens smiley"
+      title="Rediger dagens smiley"
       type="default"
       primaryAction={{
-        label: "Opret",
+        label: "Gem ændringer",
         onClick: handleSubmit,
         colorScheme: "sage",
         isLoading: loading,
-        loadingText: "Opretter..."
+        loadingText: "Gemmer..."
       }}
       secondaryAction={{
         label: "Annuller",
@@ -299,31 +281,18 @@ export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, is
                         border="2px solid"
                         borderColor={visibilityOption === 'alle' ? 'sage.500' : 'gray.300'}
                         bg={visibilityOption === 'alle' ? 'sage.500' : 'white'}
-                        position="relative"
-                      >
-                        {visibilityOption === 'alle' && (
-                          <Box
-                            position="absolute"
-                            top="50%"
-                            left="50%"
-                            transform="translate(-50%, -50%)"
-                            w={2}
-                            h={2}
-                            borderRadius="full"
-                            bg="white"
-                          />
-                        )}
-                      </Box>
-                      <VStack gap={1} align="start">
-                        <Text fontWeight="medium">Alle voksne</Text>
+                        flexShrink={0}
+                      />
+                      <VStack align="start" gap={1}>
+                        <Text fontWeight="medium">Alle med adgang til barnet</Text>
                         <Text fontSize="sm" color="gray.600">
-                          Alle voksne tilknyttet barnet kan se og bruge dette værktøj
+                          Alle forældre, værger og pædagoger kan se og bruge dette værktøj
                         </Text>
                       </VStack>
                     </HStack>
                   </Box>
 
-                  {/* Creator only option */}
+                  {/* Private option */}
                   <Box
                     p={3}
                     borderRadius="md"
@@ -342,22 +311,9 @@ export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, is
                         border="2px solid"
                         borderColor={visibilityOption === 'kun_mig' ? 'sage.500' : 'gray.300'}
                         bg={visibilityOption === 'kun_mig' ? 'sage.500' : 'white'}
-                        position="relative"
-                      >
-                        {visibilityOption === 'kun_mig' && (
-                          <Box
-                            position="absolute"
-                            top="50%"
-                            left="50%"
-                            transform="translate(-50%, -50%)"
-                            w={2}
-                            h={2}
-                            borderRadius="full"
-                            bg="white"
-                          />
-                        )}
-                      </Box>
-                      <VStack gap={1} align="start">
+                        flexShrink={0}
+                      />
+                      <VStack align="start" gap={1}>
                         <Text fontWeight="medium">Kun mig</Text>
                         <Text fontSize="sm" color="gray.600">
                           Kun du kan se og bruge dette værktøj
@@ -366,7 +322,7 @@ export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, is
                     </HStack>
                   </Box>
 
-                  {/* Custom access option */}
+                  {/* Custom option */}
                   <Box
                     p={3}
                     borderRadius="md"
@@ -385,25 +341,12 @@ export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, is
                         border="2px solid"
                         borderColor={visibilityOption === 'custom' ? 'sage.500' : 'gray.300'}
                         bg={visibilityOption === 'custom' ? 'sage.500' : 'white'}
-                        position="relative"
-                      >
-                        {visibilityOption === 'custom' && (
-                          <Box
-                            position="absolute"
-                            top="50%"
-                            left="50%"
-                            transform="translate(-50%, -50%)"
-                            w={2}
-                            h={2}
-                            borderRadius="full"
-                            bg="white"
-                          />
-                        )}
-                      </Box>
-                      <VStack gap={1} align="start">
-                        <Text fontWeight="medium">Udvalgte personer</Text>
+                        flexShrink={0}
+                      />
+                      <VStack align="start" gap={1}>
+                        <Text fontWeight="medium">Vælg specifikke personer</Text>
                         <Text fontSize="sm" color="gray.600">
-                          Vælg specifikke personer der skal have adgang
+                          Vælg præcis hvem der skal have adgang
                         </Text>
                       </VStack>
                     </HStack>
@@ -411,33 +354,31 @@ export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, is
                 </VStack>
               </Box>
 
-              {/* User Selection */}
+              {/* User Selection (only shown when custom is selected) */}
               {visibilityOption === 'custom' && (
                 <Box>
                   <Text mb={3} fontWeight="medium">Vælg personer:</Text>
-                  <VStack gap={2} align="stretch" maxH="300px" overflowY="auto">
+                  <VStack gap={2} align="stretch">
                     {childUsers.map((user: UserWithRelation) => (
                       <CheckboxCard.Root
                         key={user.id}
                         checked={selectedUserIds.includes(user.id)}
-                        onCheckedChange={(checked) => handleUserSelection(user.id, !!checked.checked)}
+                        onChange={() => handleUserToggle(user.id)}
                       >
                         <CheckboxCard.HiddenInput />
                         <CheckboxCard.Control>
                           <CheckboxCard.Indicator />
                         </CheckboxCard.Control>
                         <CheckboxCard.Content>
-                          <VStack gap={1} align="start">
+                        <HStack justify="space-between" width="100%">
+                          <VStack align="start" gap={0}>
                             <Text fontWeight="medium">{user.displayName}</Text>
-                            <HStack gap={2}>
-                              <Text fontSize="sm" color="gray.600">
-                                {user.customRelationName || user.relation}
-                              </Text>
-                              {user.isAdministrator && (
-                                <Badge colorScheme="blue" size="sm">Administrator</Badge>
-                              )}
-                            </HStack>
+                            <Text fontSize="sm" color="gray.600">{user.email}</Text>
                           </VStack>
+                          <Badge variant="subtle" colorScheme="gray">
+                            {getRelationDisplayName(user.relation)}
+                          </Badge>
+                        </HStack>
                         </CheckboxCard.Content>
                       </CheckboxCard.Root>
                     ))}
