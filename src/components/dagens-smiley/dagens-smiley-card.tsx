@@ -571,7 +571,7 @@ export function DagensSmileyCard({
 
       {/* Delete Dialog */}
       <DialogManager
-        trigger={<></>}
+        trigger={<div style={{ display: 'none' }} />}
         title="Slet dagens smiley"
         type="error"
         isOpen={showDeleteDialog}

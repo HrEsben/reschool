@@ -121,25 +121,23 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
     >
       <VStack gap={6} align="stretch">
         {/* Steps Component */}
-        <Steps.Root step={currentStep} count={2} colorPalette="sage">
+        <Steps.Root step={currentStep} count={2} colorPalette="sage" variant="subtle">
           <Steps.List>
             <Steps.Item index={0}>
               <Steps.Trigger>
-                <Steps.Indicator />
-                <VStack gap={0} textAlign="center">
-                  <Steps.Title>Vælg smiley</Steps.Title>
-                  <Steps.Description>Hvilken smiley passer bedst?</Steps.Description>
-                </VStack>
+                <Steps.Indicator>
+                  🙂
+                </Steps.Indicator>
+                <Steps.Title>Vælg smiley</Steps.Title>
               </Steps.Trigger>
               <Steps.Separator />
             </Steps.Item>
             <Steps.Item index={1}>
               <Steps.Trigger>
-                <Steps.Indicator />
-                <VStack gap={0} textAlign="center">
-                  <Steps.Title>Beskriv dit valg</Steps.Title>
-                  <Steps.Description>Forklar hvorfor du valgte denne smiley</Steps.Description>
-                </VStack>
+                <Steps.Indicator>
+                  💬
+                </Steps.Indicator>
+                <Steps.Title>Beskriv dit valg</Steps.Title>
               </Steps.Trigger>
             </Steps.Item>
           </Steps.List>
@@ -157,10 +155,15 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
               {SMILEY_OPTIONS.map((option) => (
                 <Button
                   key={option.unicode}
+                  type="button"
                   variant="outline"
                   size="lg"
                   h={isMobile ? "64px" : "72px"}
-                  onClick={() => handleEmojiSelect(option.unicode)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleEmojiSelect(option.unicode);
+                  }}
                   bg={selectedEmoji === option.unicode ? "sage.50" : "white"}
                   borderColor={selectedEmoji === option.unicode ? "sage.400" : "gray.200"}
                   color={selectedEmoji === option.unicode ? "sage.600" : "gray.600"}
