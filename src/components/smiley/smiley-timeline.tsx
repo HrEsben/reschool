@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, forwardRef, useImperativeHandle } from 'react';
+import { useState, forwardRef, useImperativeHandle, useEffect } from 'react';
 import {
   Box,
   Text,
@@ -131,17 +131,23 @@ const formatDateTime = (dateString: string): string => {
 
 export const SmileyTimeline = forwardRef<SmileyTimelineRef, SmileyTimelineProps>(
   ({ entries, smiley, onDeleteEntry, canDelete = false, limit }, ref) => { // eslint-disable-line @typescript-eslint/no-unused-vars
-    const [localEntries, setLocalEntries] = useState<DagensSmileyEntry[]>(entries);
+    const [localEntries, setLocalEntries] = useState<DagensSmileyEntry[]>(Array.isArray(entries) ? entries : []);
     const [entryToDelete, setEntryToDelete] = useState<DagensSmileyEntry | null>(null);
+
+    // Update local entries when entries prop changes
+    useEffect(() => {
+      setLocalEntries(Array.isArray(entries) ? entries : []);
+    }, [entries]);
 
     useImperativeHandle(ref, () => ({
       refresh: () => {
-        setLocalEntries(entries);
+        setLocalEntries(Array.isArray(entries) ? entries : []);
       }
     }));
 
     // Apply limit if specified and sort by creation date (newest first)
-    const displayEntries = (limit ? localEntries.slice(0, limit) : localEntries)
+    const safeEntries = Array.isArray(localEntries) ? localEntries : [];
+    const displayEntries = (limit ? safeEntries.slice(0, limit) : safeEntries)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     const handleDeleteEntry = (entry: DagensSmileyEntry) => {

@@ -75,7 +75,7 @@ export function DagensSmileyCard({
   const timelineRef = useRef<SmileyTimelineRef>(null);
 
   // Fetch entries for the timeline
-  const { data: entries = [], refetch: refetchEntries } = useQuery({
+  const { data: entriesData, refetch: refetchEntries } = useQuery({
     queryKey: ['dagens-smiley-entries', smiley.id],
     queryFn: async () => {
       const response = await fetch(`/api/dagens-smiley/${smiley.id}/entries`);
@@ -85,6 +85,9 @@ export function DagensSmileyCard({
       return response.json();
     }
   });
+
+  // Extract entries array from the response
+  const entries = entriesData?.entries || [];
 
   // Fetch access data when needed (for lazy loading on hover/click)
   const fetchAccessData = async () => {
