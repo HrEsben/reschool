@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Button,
@@ -8,17 +8,15 @@ import {
   VStack,
   HStack,
   Flex,
-  Textarea,
   Heading,
-  useBreakpointValue,
-  SimpleGrid,
 } from '@chakra-ui/react';
 import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { ToggleTip } from '@/components/ui/toggle-tip';
 import { SettingsIcon, TrashIcon } from '@/components/ui/icons';
 import { SmileyTimeline, SmileyTimelineRef } from '@/components/smiley/smiley-timeline';
-import { SMILEY_OPTIONS, getSmileyByUnicode } from '@/lib/openmoji';
+import { SmileySelectionDialog } from './smiley-selection-dialog';
+import { useQuery } from '@tanstack/react-query';
 
 interface DagensSmileyEntry {
   id: number;
@@ -69,8 +67,6 @@ export function DagensSmileyCard({
   isUserAdmin, 
   onSmileyUpdated // eslint-disable-line @typescript-eslint/no-unused-vars
 }: DagensSmileyCardProps) {
-  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
-  const [reasoning, setReasoning] = useState('');
   const [loading, setLoading] = useState(false);
   const [deletingSmiley, setDeletingSmiley] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -78,10 +74,17 @@ export function DagensSmileyCard({
   const [accessDataLoaded, setAccessDataLoaded] = useState(false);
   const timelineRef = useRef<SmileyTimelineRef>(null);
 
-  // Responsive settings
-  const isMobile = useBreakpointValue({ base: true, md: false });
-  const smileySize = useBreakpointValue({ base: '32px', md: '40px' });
-  const gridColumns = useBreakpointValue({ base: 6, sm: 8, md: 10, lg: 12 });
+  // Fetch entries for the timeline
+  const { data: entries = [], refetch: refetchEntries } = useQuery({
+    queryKey: ['dagens-smiley-entries', smiley.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/dagens-smiley/${smiley.id}/entries`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch entries');
+      }
+      return response.json();
+    }
+  });
 
   // Fetch access data when needed (for lazy loading on hover/click)
   const fetchAccessData = async () => {
@@ -100,17 +103,8 @@ export function DagensSmileyCard({
     }
   };
 
-  // Reset form when smiley changes or when a new entry is recorded
-  useEffect(() => {
-    setSelectedEmoji(null);
-    setReasoning('');
-  }, [smiley.id]);
-
-  const handleEmojiSelect = useCallback((emoji: string) => {
-    setSelectedEmoji(selectedEmoji === emoji ? null : emoji);
-  }, [selectedEmoji]);
-
-  const handleSubmit = async () => {
+  // Handle dialog submission
+  const handleSmileySubmit = async (selectedEmoji: string, reasoning: string) => {
     if (!selectedEmoji) {
       showToast({
         title: 'Fejl',
@@ -140,27 +134,30 @@ export function DagensSmileyCard({
 
       showToast({
         title: 'Succes',
-        description: 'Din smiley er registreret!',
+        description: 'Din smiley er gemt!',
         type: 'success',
         duration: 3000,
       });
 
-      setSelectedEmoji(null);
-      setReasoning('');
-      onEntryRecorded();
-
-      // Refresh timeline if it's open
+      // Refresh timeline and entries
       if (timelineRef.current) {
         timelineRef.current.refresh();
+      }
+      refetchEntries();
+
+      // Notify parent component
+      if (onEntryRecorded) {
+        onEntryRecorded();
       }
     } catch (error) {
       console.error('Error recording entry:', error);
       showToast({
         title: 'Fejl',
-        description: 'Kunne ikke registrere smiley',
+        description: 'Kunne ikke gemme din smiley',
         type: 'error',
         duration: 3000,
       });
+      throw error; // Re-throw to prevent dialog from closing
     } finally {
       setLoading(false);
     }
@@ -458,83 +455,30 @@ export function DagensSmileyCard({
             </Box>
           )}
 
-          {/* Smiley Selection */}
-          <VStack gap={4} align="stretch">
-            <Text fontSize="md" fontWeight="medium" color="gray.700">
-              Hvordan føler du dig omkring {smiley.topic.toLowerCase()} i dag?
-            </Text>
-            
-            <SimpleGrid columns={gridColumns} gap={2}>
-              {SMILEY_OPTIONS.map((option) => (
-                <Button
-                  key={option.unicode}
-                  variant="outline"
-                  size="lg"
-                  fontSize={smileySize}
-                  h={isMobile ? "48px" : "56px"}
-                  onClick={() => handleEmojiSelect(option.unicode)}
-                  bg={selectedEmoji === option.unicode ? "blue.50" : "white"}
-                  borderColor={selectedEmoji === option.unicode ? "blue.400" : "gray.200"}
-                  color={selectedEmoji === option.unicode ? "blue.600" : "gray.600"}
-                  _hover={{
-                    borderColor: "blue.300",
-                    bg: "blue.25",
-                    transform: "scale(1.05)"
-                  }}
-                  _active={{
-                    transform: "scale(0.95)"
-                  }}
-                  transition="all 0.2s"
-                  title={`${option.name} - ${option.description}`}
-                >
-                  {option.unicode}
-                </Button>
-              ))}
-            </SimpleGrid>
-          </VStack>
-
-          {/* Reasoning Input */}
-          {selectedEmoji && (
-            <VStack gap={3} align="stretch">
-              <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                Hvorfor valgte du denne smiley? {getSmileyByUnicode(selectedEmoji)?.unicode}
-              </Text>
-              <Textarea
-                value={reasoning}
-                onChange={(e) => setReasoning(e.target.value)}
-                placeholder="Beskriv hvorfor du føler dig sådan..."
-                resize="vertical"
-                minH="80px"
-                bg="white"
-                borderColor="gray.200"
-                _focus={{
-                  borderColor: "blue.400",
-                  boxShadow: "0 0 0 1px var(--chakra-colors-blue-400)"
+          {/* Add New Entry Button with Dialog */}
+          <SmileySelectionDialog
+            trigger={
+              <Button
+                colorScheme="blue"
+                size="lg"
+                width="100%"
+                _hover={{
+                  transform: "scale(1.02)"
                 }}
-              />
-            </VStack>
-          )}
-
-          {/* Submit Button */}
-          <Button
-            onClick={handleSubmit}
+                transition="all 0.2s"
+              >
+                Tilføj dagens smiley
+              </Button>
+            }
+            smileyTopic={smiley.topic}
+            onSubmit={handleSmileySubmit}
             loading={loading}
-            loadingText="Gemmer..."
-            colorScheme="blue"
-            size="lg"
-            disabled={!selectedEmoji}
-            _disabled={{
-              opacity: 0.6,
-              cursor: 'not-allowed'
-            }}
-          >
-            Gem min smiley
-          </Button>
+          />
 
           {/* Timeline */}
           <SmileyTimeline
             ref={timelineRef}
-            entries={[]} // You'll need to fetch entries separately or pass them as prop
+            entries={entries}
             smiley={smiley}
             canDelete={isUserAdmin}
             onDeleteEntry={handleDeleteEntry}
