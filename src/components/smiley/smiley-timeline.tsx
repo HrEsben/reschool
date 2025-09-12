@@ -244,53 +244,55 @@ export const SmileyTimeline = forwardRef<SmileyTimelineRef, SmileyTimelineProps>
                       pr={{ base: 8, md: 10 }} // Add padding to avoid overlap with delete button
                       mb={2}
                     >
-                      {/* Selected emoji with larger display */}
-                      <Flex align="center" gap={{ base: 1, md: 2 }}>
+                      {/* Selected emoji with new attribution format */}
+                      <Flex 
+                        align="center" 
+                        gap={{ base: 1, md: 2 }}
+                        flexWrap="wrap"
+                      >
                         <OpenMojiEmoji 
                           unicode={entry.selectedEmoji} 
                           size={emojiSize}
                         />
-                        {/* Child name attribution badge */}
-                        {childName && (
-                          <Badge
-                            colorPalette="sage"
-                            size={{ base: "xs", md: "sm" }}
-                            variant="subtle"
-                            borderRadius="full"
-                            px={{ base: 1, md: 2 }}
-                          >
-                            Udfyldt af {childName}
-                          </Badge>
-                        )}
-                      </Flex>
-                      
-                      {/* User and relation info */}
-                      <HStack 
-                        gap={{ base: 1, md: 2 }} 
-                        align="center"
-                        flexWrap={{ base: "wrap", sm: "nowrap" }}
-                      >
-                        <Text 
-                          fontSize={{ base: "sm", md: "md" }} 
-                          fontWeight="medium" 
-                          color="gray.800"
-                          lineClamp={1}
+                        
+                        {/* New format: Udfyldt af [Child] sammen med [User, relation] */}
+                        <Flex 
+                          align="center" 
+                          gap={1} 
+                          fontSize={{ base: "sm", md: "md" }}
+                          flexWrap="wrap"
                         >
-                          {entry.recordedByName || 'Ukendt bruger'}
-                        </Text>
-                        {getRelationDisplayName(entry.userRelation, entry.customRelationName) && (
+                          <Text color="gray.600">Udfyldt af</Text>
+                          {childName && (
+                            <Badge
+                              colorPalette="sage"
+                              size={{ base: "xs", md: "sm" }}
+                              variant="subtle"
+                              borderRadius="full"
+                              px={{ base: 1, md: 2 }}
+                            >
+                              {childName}
+                            </Badge>
+                          )}
+                          <Text color="gray.600">sammen med</Text>
                           <Badge
                             size={{ base: "xs", md: "sm" }}
-                            colorPalette="navy"
                             variant="subtle"
                             borderRadius="full"
                             px={{ base: 1, md: 2 }}
                             flexShrink={0}
+                            css={{
+                              backgroundColor: getContributorColor(entry.recordedByName || 'Unknown'),
+                              color: 'white'
+                            }}
                           >
-                            {getRelationDisplayName(entry.userRelation, entry.customRelationName)}
+                            {entry.recordedByName || 'Ukendt bruger'}
+                            {getRelationDisplayName(entry.userRelation, entry.customRelationName) && 
+                              `, ${getRelationDisplayName(entry.userRelation, entry.customRelationName)}`
+                            }
                           </Badge>
-                        )}
-                      </HStack>
+                        </Flex>
+                      </Flex>
                     </Flex>
                   </Timeline.Title>
                   

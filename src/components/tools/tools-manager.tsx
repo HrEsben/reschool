@@ -136,10 +136,35 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
         {/* Tools Header Skeleton */}
         <HStack justify="space-between" align="center">
           <VStack align="start" gap={2}>
-            <Skeleton height="28px" width="200px" />
-            <Skeleton height="4px" width="64px" borderRadius="full" />
+            <Skeleton 
+              height="28px" 
+              width="200px" 
+              variant="shine"
+              css={{
+                "--start-color": "#f5f5f5",
+                "--end-color": "#e5e5e5",
+              }}
+            />
+            <Skeleton 
+              height="4px" 
+              width="64px" 
+              borderRadius="full" 
+              variant="shine"
+              css={{
+                "--start-color": "#e5e5e5",
+                "--end-color": "#d4d4d4",
+              }}
+            />
           </VStack>
-          <Skeleton height="40px" width="120px" />
+          <Skeleton 
+            height="40px" 
+            width="120px" 
+            variant="shine"
+            css={{
+              "--start-color": "#f0f4f3",
+              "--end-color": "#e5e5e5",
+            }}
+          />
         </HStack>
         
         <Separator />
@@ -151,13 +176,47 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
               <Box key={i} p={4} border="1px solid" borderColor="gray.200" borderRadius="lg" width="100%">
                 <VStack align="stretch" gap={3}>
                   <HStack justify="space-between" align="center">
-                    <Skeleton height="20px" width="40%" />
-                    <Skeleton height="32px" width="80px" />
+                    <Skeleton 
+                      height="20px" 
+                      width="40%" 
+                      variant="shine"
+                      css={{
+                        "--start-color": "#f5f5f5",
+                        "--end-color": "#e5e5e5",
+                      }}
+                    />
+                    <Skeleton 
+                      height="32px" 
+                      width="80px" 
+                      variant="shine"
+                      css={{
+                        "--start-color": "#f0f4f3",
+                        "--end-color": "#e5e5e5",
+                      }}
+                    />
                   </HStack>
-                  <Skeleton height="60px" width="100%" />
+                  <Skeleton 
+                    height="60px" 
+                    width="100%" 
+                    variant="shine"
+                    css={{
+                      "--start-color": "#f8f8f8",
+                      "--end-color": "#f0f0f0",
+                    }}
+                  />
                   <HStack gap={2}>
                     {[1, 2, 3, 4, 5].map((j) => (
-                      <Skeleton key={j} height="40px" width="40px" borderRadius="full" />
+                      <Skeleton 
+                        key={j} 
+                        height="40px" 
+                        width="40px" 
+                        borderRadius="full" 
+                        variant="shine"
+                        css={{
+                          "--start-color": "#f5f5f5",
+                          "--end-color": "#e8e8e8",
+                        }}
+                      />
                     ))}
                   </HStack>
                 </VStack>

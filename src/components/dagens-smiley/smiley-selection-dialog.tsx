@@ -129,7 +129,8 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
           : {
               label: "Tilbage",
               onClick: handlePrevStep,
-              isDisabled: loading
+              isDisabled: loading,
+              preventAutoClose: true
             }
       }
     >
@@ -238,11 +239,7 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
               <OpenMojiEmoji 
                 unicode={selectedEmoji} 
                 size={64}
-                mb={2}
               />
-              <Text fontSize="sm" color="gray.600">
-                Du valgte: {getSmileyByUnicode(selectedEmoji)?.name}
-              </Text>
             </Box>
 
             {/* Reasoning Input */}

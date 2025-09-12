@@ -92,19 +92,39 @@ export function DagensSmileyCard({
   // Extract entries array from the response
   const entries = entriesData?.entries || [];
 
-  // Helper function to get today's date in YYYY-MM-DD format
+  // Helper function to get today's date in YYYY-MM-DD format (local timezone)
   const getTodayDateString = () => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
-  // Helper function to get today's entry
+  // Helper function to get today's entry - check both sources
   const getTodaysEntry = () => {
     const todayString = getTodayDateString();
-    return entries.find((entry: DagensSmileyEntry) => {
-      const entryDate = new Date(entry.entryDate).toISOString().split('T')[0];
-      return entryDate === todayString;
+    
+    // First check entries from the timeline query
+    const timelineEntry = entries.find((entry: DagensSmileyEntry) => {
+      // Convert entry date to local date string to match our comparison
+      const entryDate = new Date(entry.entryDate);
+      const entryDateString = `${entryDate.getFullYear()}-${String(entryDate.getMonth() + 1).padStart(2, '0')}-${String(entryDate.getDate()).padStart(2, '0')}`;
+      return entryDateString === todayString;
     });
+    
+    if (timelineEntry) return timelineEntry;
+    
+    // Also check if the smiley's latestEntry is for today
+    if (smiley.latestEntry) {
+      const latestDate = new Date(smiley.latestEntry.entryDate);
+      const latestDateString = `${latestDate.getFullYear()}-${String(latestDate.getMonth() + 1).padStart(2, '0')}-${String(latestDate.getDate()).padStart(2, '0')}`;
+      if (latestDateString === todayString) {
+        return smiley.latestEntry;
+      }
+    }
+    
+    return null;
   };
 
   // Helper function to format today's date in Danish
@@ -387,7 +407,7 @@ export function DagensSmileyCard({
         <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
           <VStack align="start" gap={1} flex={1} minW={0}>
             <Text fontSize="lg" fontWeight="semibold" color="sage.700">
-              📅 {getFormattedTodayDate()}
+              {getFormattedTodayDate()}
             </Text>
           </VStack>
           <HStack gap={2}>
