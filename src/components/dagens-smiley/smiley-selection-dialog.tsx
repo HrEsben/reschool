@@ -94,7 +94,8 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
               label: "Vælg smiley",
               onClick: handleNextStep,
               colorScheme: "sage",
-              isDisabled: !selectedEmoji
+              isDisabled: !selectedEmoji,
+              preventAutoClose: true
             }
           : {
               label: "Gem smiley",
@@ -128,7 +129,7 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
                 <Steps.Indicator>
                   🙂
                 </Steps.Indicator>
-                <Steps.Title>Vælg smiley</Steps.Title>
+                {/* <Steps.Title>Vælg smiley</Steps.Title> */}
               </Steps.Trigger>
               <Steps.Separator />
             </Steps.Item>
@@ -137,7 +138,7 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
                 <Steps.Indicator>
                   💬
                 </Steps.Indicator>
-                <Steps.Title>Beskriv dit valg</Steps.Title>
+                {/* <Steps.Title>Beskriv dit valg</Steps.Title> */}
               </Steps.Trigger>
             </Steps.Item>
           </Steps.List>
