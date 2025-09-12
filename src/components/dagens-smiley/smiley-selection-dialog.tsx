@@ -34,9 +34,9 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
-  // Responsive settings
+  // Responsive settings - 4 columns on large screens for bigger emojis
   const isMobile = useBreakpointValue({ base: true, md: false });
-  const gridColumns = useBreakpointValue({ base: 4, sm: 6, md: 8 });
+  const gridColumns = useBreakpointValue({ base: 3, sm: 4, md: 4, lg: 4 });
 
   const handleEmojiSelect = (emoji: string) => {
     console.log('Selected emoji:', emoji, 'Current selected:', selectedEmoji); // Debug log
@@ -178,36 +178,45 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
             </Text>
             
             {/* Smiley Selection Grid */}
-            <SimpleGrid columns={gridColumns} gap={3}>
+            <SimpleGrid columns={gridColumns} gap={6}>
               {SMILEY_OPTIONS.map((option) => (
                 <Button
                   key={option.unicode}
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   size="lg"
-                  h={isMobile ? "64px" : "72px"}
+                  h={isMobile ? "80px" : "100px"}
+                  w={isMobile ? "80px" : "100px"}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     handleEmojiSelect(option.unicode);
                   }}
-                  bg={selectedEmoji === option.unicode ? "sage.50" : "white"}
-                  borderColor={selectedEmoji === option.unicode ? "sage.400" : "gray.200"}
-                  color={selectedEmoji === option.unicode ? "sage.600" : "gray.600"}
+                  bg="transparent"
+                  border="none"
+                  borderRadius="lg"
                   _hover={{
-                    borderColor: "sage.300",
-                    bg: "sage.25",
-                    transform: "scale(1.05)"
+                    bg: "sage.50",
+                    transform: "scale(1.1)"
                   }}
                   _active={{
                     transform: "scale(0.95)"
                   }}
                   transition="all 0.2s"
                   title={`${option.name} - ${option.description}`}
+                  position="relative"
+                  _before={selectedEmoji === option.unicode ? {
+                    content: '""',
+                    position: "absolute",
+                    inset: "-4px",
+                    bg: "sage.100",
+                    borderRadius: "xl",
+                    zIndex: -1
+                  } : {}}
                 >
                   <OpenMojiEmoji 
                     unicode={option.unicode} 
-                    size={isMobile ? 32 : 40}
+                    size={isMobile ? 56 : 72}
                   />
                 </Button>
               ))}
