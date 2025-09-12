@@ -72,9 +72,10 @@ interface DagensSmiley { // eslint-disable-line @typescript-eslint/no-unused-var
 interface ToolsManagerProps {
   childId: number;
   isUserAdmin: boolean;
+  childName: string;
 }
 
-export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
+export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerProps) {
   const { data: barometers = [], isLoading: loading, error: queryError } = useBarometers(childId.toString());
   const { data: dagensSmiley = [], isLoading: smileyLoading, error: smileyError } = useDagensSmiley(childId.toString());
   const [editingBarometer, setEditingBarometer] = useState<Barometer | null>(null);
@@ -220,6 +221,7 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
                     onSmileyDeleted={handleEntryRecorded}
                     currentUserId={currentUserId || undefined}
                     isUserAdmin={isUserAdmin}
+                    childName={childName}
                   />
                 ))}
               </VStack>

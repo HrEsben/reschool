@@ -7,7 +7,9 @@ import {
   VStack,
   SimpleGrid,
   Textarea,
-  useBreakpointValue
+  useBreakpointValue,
+  Steps,
+  Box
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { SMILEY_OPTIONS, getSmileyByUnicode } from '@/lib/openmoji';
@@ -28,6 +30,7 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
   const [reasoning, setReasoning] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
 
   // Responsive settings
   const isMobile = useBreakpointValue({ base: true, md: false });
@@ -35,17 +38,31 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
   const smileySize = "3xl"; // Double the size
 
   const handleEmojiSelect = (emoji: string) => {
+    console.log('Selected emoji:', emoji, 'Current selected:', selectedEmoji); // Debug log
     setSelectedEmoji(selectedEmoji === emoji ? null : emoji);
   };
 
+  const handleNextStep = () => {
+    if (currentStep === 0 && selectedEmoji) {
+      setCurrentStep(1);
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (currentStep === 1) {
+      setCurrentStep(0);
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!selectedEmoji) return;
+    if (!selectedEmoji || !reasoning.trim()) return;
     
     try {
       await onSubmit(selectedEmoji, reasoning);
       // Reset form and close dialog
       setSelectedEmoji(null);
       setReasoning('');
+      setCurrentStep(0);
       setIsOpen(false);
     } catch (error) {
       // Error handling is done in parent component
@@ -59,6 +76,7 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
       // Reset form when closing
       setSelectedEmoji(null);
       setReasoning('');
+      setCurrentStep(0);
     }
   };
 
@@ -70,68 +88,134 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
       isOpen={isOpen}
       onOpenChange={setIsOpen}
       maxWidth="600px"
-      primaryAction={{
-        label: "Gem min smiley",
-        onClick: handleSubmit,
-        colorScheme: "blue",
-        isLoading: loading,
-        loadingText: "Gemmer...",
-        isDisabled: !selectedEmoji
-      }}
-      secondaryAction={{
-        label: "Annuller",
-        onClick: handleClose,
-        isDisabled: loading
-      }}
+      primaryAction={
+        currentStep === 0
+          ? {
+              label: "Vælg smiley",
+              onClick: handleNextStep,
+              colorScheme: "sage",
+              isDisabled: !selectedEmoji
+            }
+          : {
+              label: "Gem smiley",
+              onClick: handleSubmit,
+              colorScheme: "sage",
+              isLoading: loading,
+              loadingText: "Gemmer...",
+              isDisabled: !selectedEmoji || !reasoning.trim()
+            }
+      }
+      secondaryAction={
+        currentStep === 0
+          ? {
+              label: "Annuller",
+              onClick: handleClose,
+              isDisabled: loading
+            }
+          : {
+              label: "Tilbage",
+              onClick: handlePrevStep,
+              isDisabled: loading
+            }
+      }
     >
       <VStack gap={6} align="stretch">
-        {/* Question */}
-        <Text fontSize="md" fontWeight="medium" color="gray.700" textAlign="center">
-          Hvordan føler du dig omkring {smileyTopic.toLowerCase()} i dag?
-        </Text>
-        
-        {/* Smiley Selection Grid */}
-        <SimpleGrid columns={gridColumns} gap={3}>
-          {SMILEY_OPTIONS.map((option) => (
-            <Button
-              key={option.unicode}
-              variant="outline"
-              size="lg"
-              fontSize={smileySize}
-              h={isMobile ? "64px" : "72px"}
-              onClick={() => handleEmojiSelect(option.unicode)}
-              bg={selectedEmoji === option.unicode ? "blue.50" : "white"}
-              borderColor={selectedEmoji === option.unicode ? "blue.400" : "gray.200"}
-              color={selectedEmoji === option.unicode ? "blue.600" : "gray.600"}
-              _hover={{
-                borderColor: "blue.300",
-                bg: "blue.25",
-                transform: "scale(1.05)"
-              }}
-              _active={{
-                transform: "scale(0.95)"
-              }}
-              transition="all 0.2s"
-              title={`${option.name} - ${option.description}`}
-            >
-              {option.unicode}
-            </Button>
-          ))}
-        </SimpleGrid>
+        {/* Steps Component */}
+        <Steps.Root step={currentStep} count={2} colorPalette="sage">
+          <Steps.List>
+            <Steps.Item index={0}>
+              <Steps.Trigger>
+                <Steps.Indicator />
+                <VStack gap={0} textAlign="center">
+                  <Steps.Title>Vælg smiley</Steps.Title>
+                  <Steps.Description>Hvilken smiley passer bedst?</Steps.Description>
+                </VStack>
+              </Steps.Trigger>
+              <Steps.Separator />
+            </Steps.Item>
+            <Steps.Item index={1}>
+              <Steps.Trigger>
+                <Steps.Indicator />
+                <VStack gap={0} textAlign="center">
+                  <Steps.Title>Beskriv dit valg</Steps.Title>
+                  <Steps.Description>Forklar hvorfor du valgte denne smiley</Steps.Description>
+                </VStack>
+              </Steps.Trigger>
+            </Steps.Item>
+          </Steps.List>
+        </Steps.Root>
 
-        {/* Reasoning Input */}
-        {selectedEmoji && (
-          <VStack gap={3} align="stretch">
-            <Text fontSize="sm" fontWeight="medium" color="gray.700">
-              Hvorfor valgte du denne smiley? {getSmileyByUnicode(selectedEmoji)?.unicode}
+        {/* Step Content */}
+        {currentStep === 0 && (
+          <VStack gap={4} align="stretch">
+            <Text fontSize="md" fontWeight="medium" color="gray.700" textAlign="center">
+              {smileyTopic}: Hvilken smiley passer bedst i dag?
             </Text>
-            <Textarea
-              value={reasoning}
-              onChange={(e) => setReasoning(e.target.value)}
-              placeholder="Fortæl om dine følelser omkring dette emne..."
-              rows={3}
-              resize="vertical"
-            />
+            
+            {/* Smiley Selection Grid */}
+            <SimpleGrid columns={gridColumns} gap={3}>
+              {SMILEY_OPTIONS.map((option) => (
+                <Button
+                  key={option.unicode}
+                  variant="outline"
+                  size="lg"
+                  fontSize={smileySize}
+                  h={isMobile ? "64px" : "72px"}
+                  onClick={() => handleEmojiSelect(option.unicode)}
+                  bg={selectedEmoji === option.unicode ? "sage.50" : "white"}
+                  borderColor={selectedEmoji === option.unicode ? "sage.400" : "gray.200"}
+                  color={selectedEmoji === option.unicode ? "sage.600" : "gray.600"}
+                  _hover={{
+                    borderColor: "sage.300",
+                    bg: "sage.25",
+                    transform: "scale(1.05)"
+                  }}
+                  _active={{
+                    transform: "scale(0.95)"
+                  }}
+                  transition="all 0.2s"
+                  title={`${option.name} - ${option.description}`}
+                >
+                  {option.unicode}
+                </Button>
+              ))}
+            </SimpleGrid>
+          </VStack>
+        )}
+
+        {currentStep === 1 && selectedEmoji && (
+          <VStack gap={4} align="stretch">
+            {/* Selected Smiley Display */}
+            <Box 
+              textAlign="center" 
+              p={4} 
+              bg="sage.50" 
+              borderRadius="lg" 
+              border="1px solid"
+              borderColor="sage.200"
+            >
+              <Text fontSize="4xl" mb={2}>
+                {selectedEmoji}
+              </Text>
+              <Text fontSize="sm" color="gray.600">
+                Du valgte: {getSmileyByUnicode(selectedEmoji)?.name}
+              </Text>
+            </Box>
+
+            {/* Reasoning Input */}
+            <VStack gap={3} align="stretch">
+              <Text fontSize="md" fontWeight="medium" color="gray.700">
+                Hvorfor har du valgt denne smiley?
+              </Text>
+              <Textarea
+                value={reasoning}
+                onChange={(e) => setReasoning(e.target.value)}
+                placeholder="Skriv her hvorfor du valgte denne smiley..."
+                rows={4}
+                resize="vertical"
+                autoFocus
+              />
+            </VStack>
           </VStack>
         )}
       </VStack>

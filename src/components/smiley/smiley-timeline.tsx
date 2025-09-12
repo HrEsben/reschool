@@ -46,6 +46,7 @@ interface SmileyTimelineProps {
   onDeleteEntry?: (entryId: number) => void;
   canDelete?: boolean;
   limit?: number;
+  childName?: string;
 }
 
 export interface SmileyTimelineRef {
@@ -130,7 +131,7 @@ const formatDateTime = (dateString: string): string => {
 };
 
 export const SmileyTimeline = forwardRef<SmileyTimelineRef, SmileyTimelineProps>(
-  ({ entries, smiley, onDeleteEntry, canDelete = false, limit }, ref) => { // eslint-disable-line @typescript-eslint/no-unused-vars
+  ({ entries, smiley, onDeleteEntry, canDelete = false, limit, childName }, ref) => { // eslint-disable-line @typescript-eslint/no-unused-vars
     const [localEntries, setLocalEntries] = useState<DagensSmileyEntry[]>(Array.isArray(entries) ? entries : []);
     const [entryToDelete, setEntryToDelete] = useState<DagensSmileyEntry | null>(null);
 
@@ -309,7 +310,10 @@ export const SmileyTimeline = forwardRef<SmileyTimelineRef, SmileyTimelineProps>
                             color="gray.700" 
                             lineHeight="1.5"
                           >
-                            &ldquo;{entry.reasoning}&rdquo;
+                            <Text as="span" fontWeight="medium" color="gray.800">
+                              {childName ? `Udfyldt af ${childName} sammen med ${entry.recordedByName || 'Ukendt bruger'}` : (entry.recordedByName || 'Ukendt bruger')}:
+                            </Text>
+                            {' '}&ldquo;{entry.reasoning}&rdquo;
                           </Text>
                         </Box>
                       )}

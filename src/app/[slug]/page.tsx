@@ -428,6 +428,7 @@ export default function ChildSlugPage() {
             <ToolsManager 
               childId={childData.child.id} 
               isUserAdmin={isCurrentUserAdmin}
+              childName={childData.child.name}
             />
           </Box>
 

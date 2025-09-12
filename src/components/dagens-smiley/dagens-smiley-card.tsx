@@ -56,6 +56,7 @@ interface DagensSmileyCardProps {
   currentUserId?: number;
   isUserAdmin?: boolean;
   onSmileyUpdated?: () => void;
+  childName: string;
 }
 
 export function DagensSmileyCard({ 
@@ -65,7 +66,8 @@ export function DagensSmileyCard({
   onSmileyEdit, 
   currentUserId, // eslint-disable-line @typescript-eslint/no-unused-vars
   isUserAdmin, 
-  onSmileyUpdated // eslint-disable-line @typescript-eslint/no-unused-vars
+  onSmileyUpdated, // eslint-disable-line @typescript-eslint/no-unused-vars
+  childName
 }: DagensSmileyCardProps) {
   const [loading, setLoading] = useState(false);
   const [deletingSmiley, setDeletingSmiley] = useState(false);
@@ -88,6 +90,37 @@ export function DagensSmileyCard({
 
   // Extract entries array from the response
   const entries = entriesData?.entries || [];
+
+  // Helper function to get today's date in YYYY-MM-DD format
+  const getTodayDateString = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+  // Helper function to get today's entry
+  const getTodaysEntry = () => {
+    const todayString = getTodayDateString();
+    return entries.find((entry: DagensSmileyEntry) => {
+      const entryDate = new Date(entry.entryDate).toISOString().split('T')[0];
+      return entryDate === todayString;
+    });
+  };
+
+  // Helper function to format today's date in Danish
+  const getFormattedTodayDate = () => {
+    const today = new Date();
+    const days = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
+    const months = ['januar', 'februar', 'marts', 'april', 'maj', 'juni', 
+                   'juli', 'august', 'september', 'oktober', 'november', 'december'];
+    
+    const dayName = days[today.getDay()];
+    const day = today.getDate();
+    const monthName = months[today.getMonth()];
+    
+    return `${dayName} d. ${day}. ${monthName}`;
+  };
+
+  const todaysEntry = getTodaysEntry();
 
   // Fetch access data when needed (for lazy loading on hover/click)
   const fetchAccessData = async () => {
@@ -425,8 +458,49 @@ export function DagensSmileyCard({
       {/* Content */}
       <Box p={6}>
         <VStack gap={6} align="stretch">
-          {/* Latest Entry Display */}
-          {smiley.latestEntry && (
+          {/* Today's Status Display */}
+          {todaysEntry ? (
+            // Show today's selected smiley with reasoning
+            <Box
+              bg="sage.50"
+              p={6}
+              borderRadius="lg"
+              border="1px solid"
+              borderColor="sage.200"
+              textAlign="center"
+            >
+              <VStack gap={4} align="center">
+                <Text fontSize="6xl" lineHeight="1">
+                  {todaysEntry.selectedEmoji}
+                </Text>
+                {todaysEntry.reasoning && (
+                  <Text fontSize="md" color="gray.700" textAlign="center">
+                    {todaysEntry.reasoning}
+                  </Text>
+                )}
+                <Text fontSize="sm" color="gray.500">
+                  {getFormattedTodayDate()}
+                </Text>
+              </VStack>
+            </Box>
+          ) : (
+            // Show today's date when no smiley is selected
+            <Box
+              bg="cream.50"
+              p={6}
+              borderRadius="lg"
+              border="1px solid"
+              borderColor="cream.200"
+              textAlign="center"
+            >
+              <Text fontSize="2xl" fontWeight="medium" color="navy.700">
+                {getFormattedTodayDate()}
+              </Text>
+            </Box>
+          )}
+
+          {/* Show latest entry if it's not from today */}
+          {smiley.latestEntry && !todaysEntry && (
             <Box
               bg="sage.50"
               p={4}
@@ -462,7 +536,7 @@ export function DagensSmileyCard({
           <SmileySelectionDialog
             trigger={
               <Button
-                colorScheme="blue"
+                colorScheme="sage"
                 size="lg"
                 width="100%"
                 _hover={{
@@ -470,7 +544,7 @@ export function DagensSmileyCard({
                 }}
                 transition="all 0.2s"
               >
-                Tilføj dagens smiley
+                {todaysEntry ? "Ændr dagens smiley" : "Vælg smiley"}
               </Button>
             }
             smileyTopic={smiley.topic}
@@ -485,6 +559,7 @@ export function DagensSmileyCard({
             smiley={smiley}
             canDelete={isUserAdmin}
             onDeleteEntry={handleDeleteEntry}
+            childName={childName}
           />
         </VStack>
       </Box>
