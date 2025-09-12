@@ -12,6 +12,7 @@ import {
   Box
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
+import { OpenMojiEmoji } from '@/components/ui/openmoji-emoji';
 import { SMILEY_OPTIONS, getSmileyByUnicode } from '@/lib/openmoji';
 
 interface SmileySelectionDialogProps {
@@ -35,7 +36,6 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
   // Responsive settings
   const isMobile = useBreakpointValue({ base: true, md: false });
   const gridColumns = useBreakpointValue({ base: 4, sm: 6, md: 8 });
-  const smileySize = "3xl"; // Double the size
 
   const handleEmojiSelect = (emoji: string) => {
     console.log('Selected emoji:', emoji, 'Current selected:', selectedEmoji); // Debug log
@@ -159,7 +159,6 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
                   key={option.unicode}
                   variant="outline"
                   size="lg"
-                  fontSize={smileySize}
                   h={isMobile ? "64px" : "72px"}
                   onClick={() => handleEmojiSelect(option.unicode)}
                   bg={selectedEmoji === option.unicode ? "sage.50" : "white"}
@@ -176,7 +175,10 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
                   transition="all 0.2s"
                   title={`${option.name} - ${option.description}`}
                 >
-                  {option.unicode}
+                  <OpenMojiEmoji 
+                    unicode={option.unicode} 
+                    size={isMobile ? 32 : 40}
+                  />
                 </Button>
               ))}
             </SimpleGrid>
@@ -194,9 +196,11 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
               border="1px solid"
               borderColor="sage.200"
             >
-              <Text fontSize="4xl" mb={2}>
-                {selectedEmoji}
-              </Text>
+              <OpenMojiEmoji 
+                unicode={selectedEmoji} 
+                size={64}
+                mb={2}
+              />
               <Text fontSize="sm" color="gray.600">
                 Du valgte: {getSmileyByUnicode(selectedEmoji)?.name}
               </Text>

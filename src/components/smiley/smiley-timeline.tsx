@@ -10,9 +10,11 @@ import {
   Badge,
   Button,
   Timeline,
+  useBreakpointValue,
 } from '@chakra-ui/react';
 import { TrashIcon } from '@/components/ui/icons';
 import { ErrorDialog } from '@/components/ui/dialog-manager';
+import { OpenMojiEmoji } from '@/components/ui/openmoji-emoji';
 import { getSmileyByUnicode } from '@/lib/openmoji';
 
 interface DagensSmileyEntry {
@@ -134,6 +136,9 @@ export const SmileyTimeline = forwardRef<SmileyTimelineRef, SmileyTimelineProps>
   ({ entries, smiley, onDeleteEntry, canDelete = false, limit, childName }, ref) => { // eslint-disable-line @typescript-eslint/no-unused-vars
     const [localEntries, setLocalEntries] = useState<DagensSmileyEntry[]>(Array.isArray(entries) ? entries : []);
     const [entryToDelete, setEntryToDelete] = useState<DagensSmileyEntry | null>(null);
+    
+    // Responsive emoji size
+    const emojiSize = useBreakpointValue({ base: 28, md: 36 }) || 28;
 
     // Update local entries when entries prop changes
     useEffect(() => {
@@ -185,8 +190,6 @@ export const SmileyTimeline = forwardRef<SmileyTimelineRef, SmileyTimelineProps>
       <VStack gap={4} align="stretch" w="full">
         <Timeline.Root variant="subtle" size={{ base: "sm", md: "md" }}>
           {displayEntries.map((entry) => {
-            const smileyInfo = getSmileyByUnicode(entry.selectedEmoji);
-            
             return (
               <Timeline.Item key={entry.id}>
                 <Timeline.Connector>
@@ -243,17 +246,20 @@ export const SmileyTimeline = forwardRef<SmileyTimelineRef, SmileyTimelineProps>
                     >
                       {/* Selected emoji with larger display */}
                       <Flex align="center" gap={{ base: 1, md: 2 }}>
-                        <Text fontSize={{ base: "xl", md: "2xl" }}>
-                          {entry.selectedEmoji}
-                        </Text>
-                        {smileyInfo && (
+                        <OpenMojiEmoji 
+                          unicode={entry.selectedEmoji} 
+                          size={emojiSize}
+                        />
+                        {/* Child name attribution badge */}
+                        {childName && (
                           <Badge
-                            colorPalette="blue"
+                            colorPalette="sage"
                             size={{ base: "xs", md: "sm" }}
+                            variant="subtle"
                             borderRadius="full"
                             px={{ base: 1, md: 2 }}
                           >
-                            {smileyInfo.description}
+                            Udfyldt af {childName}
                           </Badge>
                         )}
                       </Flex>
@@ -311,7 +317,7 @@ export const SmileyTimeline = forwardRef<SmileyTimelineRef, SmileyTimelineProps>
                             lineHeight="1.5"
                           >
                             <Text as="span" fontWeight="medium" color="gray.800">
-                              {childName ? `Udfyldt af ${childName} sammen med ${entry.recordedByName || 'Ukendt bruger'}` : (entry.recordedByName || 'Ukendt bruger')}:
+                              {entry.recordedByName || 'Ukendt bruger'}:
                             </Text>
                             {' '}&ldquo;{entry.reasoning}&rdquo;
                           </Text>

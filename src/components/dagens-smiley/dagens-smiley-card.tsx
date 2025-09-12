@@ -14,6 +14,7 @@ import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { ToggleTip } from '@/components/ui/toggle-tip';
 import { SettingsIcon, TrashIcon } from '@/components/ui/icons';
+import { OpenMojiEmoji } from '@/components/ui/openmoji-emoji';
 import { SmileyTimeline, SmileyTimelineRef } from '@/components/smiley/smiley-timeline';
 import { SmileySelectionDialog } from './smiley-selection-dialog';
 import { useQuery } from '@tanstack/react-query';
@@ -470,9 +471,10 @@ export function DagensSmileyCard({
               textAlign="center"
             >
               <VStack gap={4} align="center">
-                <Text fontSize="6xl" lineHeight="1">
-                  {todaysEntry.selectedEmoji}
-                </Text>
+                <OpenMojiEmoji 
+                  unicode={todaysEntry.selectedEmoji} 
+                  size={96}
+                />
                 {todaysEntry.reasoning && (
                   <Text fontSize="md" color="gray.700" textAlign="center">
                     {todaysEntry.reasoning}
@@ -509,11 +511,14 @@ export function DagensSmileyCard({
               borderColor="sage.200"
             >
               <VStack gap={2} align="start">
-                <HStack gap={2} align="center">
+                                <HStack gap={2} align="center">
                   <Text fontSize="sm" fontWeight="medium" color="sage.700">
                     Seneste valg:
                   </Text>
-                  <Text fontSize="2xl">{smiley.latestEntry.selectedEmoji}</Text>
+                  <OpenMojiEmoji 
+                    unicode={smiley.latestEntry.selectedEmoji} 
+                    size={32}
+                  />
                   <Text fontSize="sm" color="gray.600">
                     {new Date(smiley.latestEntry.entryDate).toLocaleDateString('da-DK')}
                   </Text>
