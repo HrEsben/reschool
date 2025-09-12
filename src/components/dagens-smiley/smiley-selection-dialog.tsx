@@ -32,6 +32,7 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
   const [reasoning, setReasoning] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   // Responsive settings
   const isMobile = useBreakpointValue({ base: true, md: false });
@@ -42,8 +43,18 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
     setSelectedEmoji(selectedEmoji === emoji ? null : emoji);
   };
 
+  const handleStepChange = (details: { step: number }) => {
+    // Only allow step changes based on our business logic
+    if (details.step === 1 && selectedEmoji) {
+      setCurrentStep(1);
+    } else if (details.step === 0) {
+      setCurrentStep(0);
+    }
+  };
+
   const handleNextStep = () => {
     if (currentStep === 0 && selectedEmoji) {
+      setCompletedSteps(prev => new Set(prev).add(0));
       setCurrentStep(1);
     }
   };
@@ -58,11 +69,13 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
     if (!selectedEmoji || !reasoning.trim()) return;
     
     try {
+      setCompletedSteps(prev => new Set(prev).add(1));
       await onSubmit(selectedEmoji, reasoning);
       // Reset form and close dialog
       setSelectedEmoji(null);
       setReasoning('');
       setCurrentStep(0);
+      setCompletedSteps(new Set());
       setIsOpen(false);
     } catch (error) {
       // Error handling is done in parent component
@@ -122,22 +135,35 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
     >
       <VStack gap={6} align="stretch">
         {/* Steps Component */}
-        <Steps.Root step={currentStep} count={2} colorPalette="sage" variant="subtle">
+        <Steps.Root 
+          step={currentStep} 
+          count={2} 
+          variant="subtle" 
+          size={"sm"}
+          onStepChange={handleStepChange}
+          css={{
+            // Custom styling to match site's sage color palette
+            "--steps-indicator-bg": "var(--cambridge-blue-100)",
+            "--steps-indicator-color": "var(--cambridge-blue-700)", 
+            "--steps-active-indicator-bg": "var(--cambridge-blue-500)",
+            "--steps-active-indicator-color": "white",
+            "--steps-complete-indicator-bg": "var(--cambridge-blue-600)",
+            "--steps-complete-indicator-color": "white",
+            "--steps-separator-bg": "var(--cambridge-blue-200)",
+            "--steps-active-separator-bg": "var(--cambridge-blue-400)"
+          }}
+        >
           <Steps.List>
             <Steps.Item index={0}>
               <Steps.Trigger>
-                <Steps.Indicator>
-                  🙂
-                </Steps.Indicator>
+                <Steps.Indicator />
                 {/* <Steps.Title>Vælg smiley</Steps.Title> */}
               </Steps.Trigger>
               <Steps.Separator />
             </Steps.Item>
             <Steps.Item index={1}>
               <Steps.Trigger>
-                <Steps.Indicator>
-                  💬
-                </Steps.Indicator>
+                <Steps.Indicator />
                 {/* <Steps.Title>Beskriv dit valg</Steps.Title> */}
               </Steps.Trigger>
             </Steps.Item>

@@ -383,38 +383,14 @@ export function DagensSmileyCard({
       overflow="hidden"
     >
       {/* Header */}
-      <Box bg="cream.50" px={6} py={5} borderBottomWidth="1px" borderBottomColor="gray.100">
-        <Flex justify="space-between" align="flex-start" wrap="wrap" gap={3}>
-          <VStack align="start" gap={2} flex={1} minW={0}>
-            <Heading 
-              size="lg" 
-              color="navy.800"
-              lineClamp={1}
-              wordBreak="break-word"
-              mb={1}
-            >
-              {smiley.topic}
-            </Heading>
-            {smiley.description && (
-              <Text fontSize="sm" color="gray.600" lineClamp={2} mb={2}>
-                {smiley.description}
-              </Text>
-            )}
-            {/* Today's date prominently displayed in header */}
-            <Box
-              bg="sage.100"
-              px={3}
-              py={2}
-              borderRadius="md"
-              border="1px solid"
-              borderColor="sage.200"
-            >
-              <Text fontSize="sm" fontWeight="semibold" color="sage.700">
-                📅 {getFormattedTodayDate()}
-              </Text>
-            </Box>
+      <Box bg="cream.50" px={6} py={4} borderBottomWidth="1px" borderBottomColor="gray.100">
+        <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
+          <VStack align="start" gap={1} flex={1} minW={0}>
+            <Text fontSize="lg" fontWeight="semibold" color="sage.700">
+              📅 {getFormattedTodayDate()}
+            </Text>
           </VStack>
-          <VStack gap={2} align="end">
+          <HStack gap={2}>
             {/* Visibility Badge */}
             <ToggleTip 
               content={getToggleTipContent()}
@@ -466,13 +442,29 @@ export function DagensSmileyCard({
                 </Button>
               </HStack>
             )}
-          </VStack>
+          </HStack>
         </Flex>
       </Box>
 
       {/* Content */}
       <Box p={6}>
         <VStack gap={6} align="stretch">
+          {/* Topic and Description as large headers */}
+          <VStack gap={3} align="stretch" textAlign="center">
+            <Heading 
+              size="xl" 
+              color="navy.800"
+              lineHeight="shorter"
+            >
+              {smiley.topic}
+            </Heading>
+            {smiley.description && (
+              <Text fontSize="lg" color="gray.600" lineHeight="shorter">
+                {smiley.description}
+              </Text>
+            )}
+          </VStack>
+
           {/* Today's Status Display */}
           {todaysEntry ? (
             // Show today's selected smiley with reasoning
@@ -518,50 +510,16 @@ export function DagensSmileyCard({
             </Box>
           )}
 
-          {/* Show latest entry if it's not from today */}
-          {smiley.latestEntry && !todaysEntry && (
-            <Box
-              bg="sage.50"
-              p={4}
-              borderRadius="lg"
-              border="1px solid"
-              borderColor="sage.200"
-            >
-              <VStack gap={2} align="start">
-                                <HStack gap={2} align="center">
-                  <Text fontSize="sm" fontWeight="medium" color="sage.700">
-                    Seneste valg:
-                  </Text>
-                  <OpenMojiEmoji 
-                    unicode={smiley.latestEntry.selectedEmoji} 
-                    size={32}
-                  />
-                  <Text fontSize="sm" color="gray.600">
-                    {new Date(smiley.latestEntry.entryDate).toLocaleDateString('da-DK')}
-                  </Text>
-                </HStack>
-                {smiley.latestEntry.reasoning && (
-                  <Text fontSize="sm" color="gray.700">
-                    <strong>Begrundelse:</strong> {smiley.latestEntry.reasoning}
-                  </Text>
-                )}
-                {smiley.recordedByName && (
-                  <Text fontSize="xs" color="gray.500">
-                    Registreret af: {smiley.recordedByName}
-                  </Text>
-                )}
-              </VStack>
-            </Box>
-          )}
-
           {/* Add New Entry Button with Dialog */}
           <SmileySelectionDialog
             trigger={
               <Button
-                colorScheme="sage"
+                bg="sage.500"
+                color="white"
+                _hover={{ bg: "sage.600" }}
                 size="lg"
                 width="100%"
-                _hover={{
+                _active={{
                   transform: "scale(1.02)"
                 }}
                 transition="all 0.2s"

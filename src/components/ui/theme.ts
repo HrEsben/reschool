@@ -199,6 +199,7 @@ const config = defineConfig({
       },
     },
     
+    // Explicitly register color palettes for components
     semanticTokens: {
       colors: {
         // Bright background colors
