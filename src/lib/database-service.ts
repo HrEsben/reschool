@@ -91,6 +91,40 @@ export interface BarometerWithLatestEntry extends Barometer {
   recordedByName?: string;
 }
 
+export interface DagensSmiley {
+  id: number;
+  childId: number;
+  createdBy: number;
+  topic: string;
+  description?: string;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DagensSmileyUserAccess {
+  id: number;
+  smileyId: number;
+  userId: number;
+  createdAt: string;
+}
+
+export interface DagensSmileyEntry {
+  id: number;
+  smileyId: number;
+  recordedBy: number;
+  entryDate: string; // YYYY-MM-DD format
+  selectedEmoji: string; // Unicode emoji
+  reasoning?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DagensSmileyWithLatestEntry extends DagensSmiley {
+  latestEntry?: DagensSmileyEntry;
+  recordedByName?: string;
+}
+
 interface StackAuthUser {
   id: string;
   primaryEmail: string | null;
@@ -1454,6 +1488,594 @@ export async function getAccessibleBarometersForChild(childId: number, userId: n
     });
   } catch (error) {
     console.error('Error getting accessible barometers for child:', error);
+    return [];
+  }
+}
+
+// ================== DAGENS SMILEY FUNCTIONS ==================
+
+// Create a new dagens smiley
+export async function createDagensSmiley(
+  childId: number,
+  createdBy: number,
+  topic: string,
+  description?: string,
+  isPublic: boolean = true,
+  accessibleUserIds?: number[]
+): Promise<DagensSmiley | null> {
+  const client = await getClient();
+  
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `INSERT INTO dagens_smiley (child_id, created_by, topic, description, is_public)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [childId, createdBy, topic, description || null, isPublic]
+    );
+
+    const row = result.rows[0];
+    const smiley: DagensSmiley = {
+      id: row.id,
+      childId: row.child_id,
+      createdBy: row.created_by,
+      topic: row.topic,
+      description: row.description,
+      isPublic: row.is_public,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+
+    // If not public, add access records
+    if (!isPublic) {
+      const userIds = new Set([createdBy]); // Creator always has access
+      if (accessibleUserIds && accessibleUserIds.length > 0) {
+        accessibleUserIds.forEach(id => userIds.add(id));
+      }
+
+      for (const userId of userIds) {
+        await client.query(
+          'INSERT INTO dagens_smiley_user_access (smiley_id, user_id) VALUES ($1, $2)',
+          [smiley.id, userId]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    return smiley;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error creating dagens smiley:', error);
+    return null;
+  } finally {
+    client.release();
+  }
+}
+
+// Update an existing dagens smiley
+export async function updateDagensSmiley(
+  smileyId: number,
+  topic: string,
+  description?: string,
+  isPublic?: boolean,
+  accessibleUserIds?: number[]
+): Promise<DagensSmiley | null> {
+  const client = await getClient();
+  
+  try {
+    await client.query('BEGIN');
+
+    // Update the smiley
+    const result = await client.query(
+      `UPDATE dagens_smiley 
+       SET topic = $2, description = $3, is_public = $4, updated_at = NOW()
+       WHERE id = $1 RETURNING *`,
+      [smileyId, topic, description || null, isPublic]
+    );
+
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    const row = result.rows[0];
+    const smiley: DagensSmiley = {
+      id: row.id,
+      childId: row.child_id,
+      createdBy: row.created_by,
+      topic: row.topic,
+      description: row.description,
+      isPublic: row.is_public,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+
+    // Handle access control changes if specified
+    if (isPublic !== undefined && accessibleUserIds !== undefined) {
+      if (!isPublic) {
+        // Remove all existing access
+        await client.query('DELETE FROM dagens_smiley_user_access WHERE smiley_id = $1', [smileyId]);
+        
+        // Add new access
+        const userIds = new Set([smiley.createdBy]); // Creator always has access
+        if (accessibleUserIds.length > 0) {
+          accessibleUserIds.forEach(id => userIds.add(id));
+        }
+
+        for (const userId of userIds) {
+          await client.query(
+            'INSERT INTO dagens_smiley_user_access (smiley_id, user_id) VALUES ($1, $2)',
+            [smileyId, userId]
+          );
+        }
+      } else {
+        // If making public, remove all access records
+        await client.query('DELETE FROM dagens_smiley_user_access WHERE smiley_id = $1', [smileyId]);
+      }
+    }
+
+    await client.query('COMMIT');
+    return smiley;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating dagens smiley:', error);
+    return null;
+  } finally {
+    client.release();
+  }
+}
+
+// Get all dagens smiley for a child
+export async function getDagensSmileyForChild(childId: number): Promise<DagensSmileyWithLatestEntry[]> {
+  try {
+    const result = await query(
+      `SELECT 
+         ds.*,
+         dse.id as latest_entry_id,
+         dse.recorded_by as latest_recorded_by,
+         dse.entry_date as latest_entry_date,
+         dse.selected_emoji as latest_selected_emoji,
+         dse.reasoning as latest_reasoning,
+         dse.created_at as latest_entry_created_at,
+         u.display_name as recorded_by_name
+       FROM dagens_smiley ds
+       LEFT JOIN dagens_smiley_entries dse ON ds.id = dse.smiley_id 
+         AND dse.id = (
+           SELECT id FROM dagens_smiley_entries dse2 
+           WHERE dse2.smiley_id = ds.id 
+           ORDER BY dse2.entry_date DESC 
+           LIMIT 1
+         )
+       LEFT JOIN users u ON dse.recorded_by = u.id
+       WHERE ds.child_id = $1
+       ORDER BY ds.created_at DESC`,
+      [childId]
+    );
+
+    return result.rows.map(row => {
+      const smiley: DagensSmileyWithLatestEntry = {
+        id: row.id,
+        childId: row.child_id,
+        createdBy: row.created_by,
+        topic: row.topic,
+        description: row.description,
+        isPublic: row.is_public,
+        createdAt: new Date(row.created_at).toISOString(),
+        updatedAt: new Date(row.updated_at).toISOString()
+      };
+
+      if (row.latest_entry_id) {
+        smiley.latestEntry = {
+          id: row.latest_entry_id,
+          smileyId: row.id,
+          recordedBy: row.latest_recorded_by,
+          entryDate: row.latest_entry_date,
+          selectedEmoji: row.latest_selected_emoji,
+          reasoning: row.latest_reasoning,
+          createdAt: new Date(row.latest_entry_created_at).toISOString(),
+          updatedAt: new Date(row.latest_entry_created_at).toISOString()
+        };
+        smiley.recordedByName = row.recorded_by_name;
+      }
+
+      return smiley;
+    });
+  } catch (error) {
+    console.error('Error getting dagens smiley for child:', error);
+    return [];
+  }
+}
+
+// Get a single dagens smiley by ID
+export async function getDagensSmileyById(smileyId: number): Promise<DagensSmiley | null> {
+  try {
+    const result = await query(
+      'SELECT * FROM dagens_smiley WHERE id = $1',
+      [smileyId]
+    );
+
+    if (result.rows.length === 0) return null;
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      childId: row.child_id,
+      createdBy: row.created_by,
+      topic: row.topic,
+      description: row.description,
+      isPublic: row.is_public,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error getting dagens smiley by ID:', error);
+    return null;
+  }
+}
+
+// Create or update a dagens smiley entry for today
+export async function recordDagensSmileyEntry(
+  smileyId: number,
+  recordedBy: number,
+  selectedEmoji: string,
+  reasoning?: string,
+  entryDate?: string // Optional, defaults to today
+): Promise<DagensSmileyEntry | null> {
+  try {
+    const date = entryDate || new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+    // First, try to update existing entry for today
+    const updateResult = await query(
+      `UPDATE dagens_smiley_entries 
+       SET selected_emoji = $3, reasoning = $4, updated_at = NOW()
+       WHERE smiley_id = $1 AND entry_date = $2 
+       RETURNING *`,
+      [smileyId, date, selectedEmoji, reasoning || null]
+    );
+
+    if (updateResult.rows.length > 0) {
+      // Entry updated
+      const row = updateResult.rows[0];
+      return {
+        id: row.id,
+        smileyId: row.smiley_id,
+        recordedBy: row.recorded_by,
+        entryDate: row.entry_date,
+        selectedEmoji: row.selected_emoji,
+        reasoning: row.reasoning,
+        createdAt: new Date(row.created_at).toISOString(),
+        updatedAt: new Date(row.updated_at).toISOString()
+      };
+    }
+
+    // If no existing entry, create new one
+    const insertResult = await query(
+      `INSERT INTO dagens_smiley_entries (smiley_id, recorded_by, entry_date, selected_emoji, reasoning)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [smileyId, recordedBy, date, selectedEmoji, reasoning || null]
+    );
+
+    if (insertResult.rows.length === 0) return null;
+
+    const row = insertResult.rows[0];
+    return {
+      id: row.id,
+      smileyId: row.smiley_id,
+      recordedBy: row.recorded_by,
+      entryDate: row.entry_date,
+      selectedEmoji: row.selected_emoji,
+      reasoning: row.reasoning,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error recording dagens smiley entry:', error);
+    return null;
+  }
+}
+
+// Get dagens smiley entries for a specific smiley
+export async function getDagensSmileyEntries(
+  smileyId: number,
+  limit: number = 30
+): Promise<(DagensSmileyEntry & { recordedByName?: string; userRelation?: string; customRelationName?: string })[]> {
+  try {
+    const result = await query(
+      `SELECT 
+         dse.*,
+         u.display_name as recorded_by_name,
+         ucr.relation as user_relation,
+         ucr.custom_relation_name
+       FROM dagens_smiley_entries dse
+       LEFT JOIN users u ON dse.recorded_by = u.id
+       LEFT JOIN dagens_smiley ds ON dse.smiley_id = ds.id
+       LEFT JOIN user_child_relations ucr ON u.id = ucr.user_id AND ds.child_id = ucr.child_id
+       WHERE dse.smiley_id = $1
+       ORDER BY dse.entry_date DESC
+       LIMIT $2`,
+      [smileyId, limit]
+    );
+
+    return result.rows.map(row => ({
+      id: row.id,
+      smileyId: row.smiley_id,
+      recordedBy: row.recorded_by,
+      entryDate: row.entry_date,
+      selectedEmoji: row.selected_emoji,
+      reasoning: row.reasoning,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString(),
+      recordedByName: row.recorded_by_name,
+      userRelation: row.user_relation,
+      customRelationName: row.custom_relation_name
+    }));
+  } catch (error) {
+    console.error('Error getting dagens smiley entries:', error);
+    return [];
+  }
+}
+
+// Delete a dagens smiley (and all its entries)
+export async function deleteDagensSmiley(smileyId: number): Promise<boolean> {
+  try {
+    const result = await query(
+      'DELETE FROM dagens_smiley WHERE id = $1',
+      [smileyId]
+    );
+
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Error deleting dagens smiley:', error);
+    return false;
+  }
+}
+
+// Get a dagens smiley entry by ID with child information
+export async function getDagensSmileyEntryById(entryId: number): Promise<(DagensSmileyEntry & { childId: number }) | null> {
+  try {
+    const result = await query(
+      `SELECT dse.*, ds.child_id 
+       FROM dagens_smiley_entries dse 
+       JOIN dagens_smiley ds ON dse.smiley_id = ds.id 
+       WHERE dse.id = $1`,
+      [entryId]
+    );
+
+    if (result.rows.length === 0) return null;
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      smileyId: row.smiley_id,
+      recordedBy: row.recorded_by,
+      entryDate: row.entry_date,
+      selectedEmoji: row.selected_emoji,
+      reasoning: row.reasoning,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString(),
+      childId: row.child_id
+    };
+  } catch (error) {
+    console.error('Error getting dagens smiley entry by ID:', error);
+    return null;
+  }
+}
+
+// Delete a dagens smiley entry
+export async function deleteDagensSmileyEntry(entryId: number): Promise<boolean> {
+  try {
+    const result = await query(
+      'DELETE FROM dagens_smiley_entries WHERE id = $1',
+      [entryId]
+    );
+
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Error deleting dagens smiley entry:', error);
+    return false;
+  }
+}
+
+// ================== DAGENS SMILEY ACCESS CONTROL FUNCTIONS ==================
+
+// Add access for specific users to a dagens smiley
+export async function addDagensSmileyUserAccess(smileyId: number, userIds: number[]): Promise<boolean> {
+  const client = await getClient();
+  
+  try {
+    await client.query('BEGIN');
+    
+    for (const userId of userIds) {
+      await client.query(
+        `INSERT INTO dagens_smiley_user_access (smiley_id, user_id) 
+         VALUES ($1, $2) 
+         ON CONFLICT (smiley_id, user_id) DO NOTHING`,
+        [smileyId, userId]
+      );
+    }
+    
+    await client.query('COMMIT');
+    return true;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error adding dagens smiley user access:', error);
+    return false;
+  } finally {
+    client.release();
+  }
+}
+
+// Remove access for specific users from a dagens smiley
+export async function removeDagensSmileyUserAccess(smileyId: number, userIds: number[]): Promise<boolean> {
+  try {
+    await query(
+      'DELETE FROM dagens_smiley_user_access WHERE smiley_id = $1 AND user_id = ANY($2)',
+      [smileyId, userIds]
+    );
+    return true;
+  } catch (error) {
+    console.error('Error removing dagens smiley user access:', error);
+    return false;
+  }
+}
+
+// Get users who have access to a dagens smiley
+export async function getDagensSmileyAccessUsers(smileyId: number): Promise<UserWithRelation[]> {
+  try {
+    const result = await query(
+      `SELECT 
+         u.id,
+         u.stack_auth_id,
+         u.email,
+         u.display_name,
+         u.profile_image_url,
+         ucr.relation,
+         ucr.custom_relation_name,
+         ucr.is_administrator,
+         dsua.created_at
+       FROM dagens_smiley_user_access dsua
+       JOIN users u ON dsua.user_id = u.id
+       JOIN dagens_smiley ds ON dsua.smiley_id = ds.id
+       JOIN user_child_relations ucr ON u.id = ucr.user_id AND ds.child_id = ucr.child_id
+       WHERE dsua.smiley_id = $1
+       ORDER BY ucr.is_administrator DESC, dsua.created_at ASC`,
+      [smileyId]
+    );
+
+    return result.rows.map(row => ({
+      id: row.id,
+      stackAuthId: row.stack_auth_id,
+      email: row.email,
+      displayName: row.display_name,
+      profileImageUrl: row.profile_image_url,
+      relation: row.relation,
+      customRelationName: row.custom_relation_name,
+      isAdministrator: row.is_administrator,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.created_at).toISOString() // Using created_at as updated_at
+    }));
+  } catch (error) {
+    console.error('Error getting dagens smiley access users:', error);
+    return [];
+  }
+}
+
+// Check if a user has access to a dagens smiley
+export async function checkUserDagensSmileyAccess(userId: number, smileyId: number): Promise<boolean> {
+  try {
+    // Get the smiley to check if it's public
+    const smiley = await getDagensSmileyById(smileyId);
+    if (!smiley) return false;
+    
+    // If public, check if user has access to the child
+    if (smiley.isPublic) {
+      const result = await query(
+        `SELECT 1 FROM user_child_relations ucr 
+         WHERE ucr.child_id = $1 AND ucr.user_id = $2`,
+        [smiley.childId, userId]
+      );
+      return result.rows.length > 0;
+    }
+    
+    // If private, check specific access
+    const result = await query(
+      'SELECT 1 FROM dagens_smiley_user_access WHERE smiley_id = $1 AND user_id = $2',
+      [smileyId, userId]
+    );
+    
+    return result.rows.length > 0;
+  } catch (error) {
+    console.error('Error checking user dagens smiley access:', error);
+    return false;
+  }
+}
+
+// Get dagens smiley access list
+export async function getDagensSmileyAccessList(smileyId: number): Promise<{ user_id: number; display_name: string; email: string }[]> {
+  try {
+    const result = await query(
+      `SELECT dsua.user_id, u.display_name, u.email 
+       FROM dagens_smiley_user_access dsua 
+       JOIN users u ON dsua.user_id = u.id 
+       WHERE dsua.smiley_id = $1`,
+      [smileyId]
+    );
+
+    return result.rows;
+  } catch (error) {
+    console.error('Error getting dagens smiley access list:', error);
+    return [];
+  }
+}
+
+// Get dagens smiley for a child that a specific user has access to
+export async function getAccessibleDagensSmileyForChild(childId: number, userId: number): Promise<DagensSmileyWithLatestEntry[]> {
+  try {
+    const result = await query(
+      `SELECT 
+         ds.*,
+         dse.id as latest_entry_id,
+         dse.recorded_by as latest_recorded_by,
+         dse.entry_date as latest_entry_date,
+         dse.selected_emoji as latest_selected_emoji,
+         dse.reasoning as latest_reasoning,
+         dse.created_at as latest_entry_created_at,
+         u.display_name as recorded_by_name
+       FROM dagens_smiley ds
+       LEFT JOIN dagens_smiley_entries dse ON ds.id = dse.smiley_id 
+         AND dse.id = (
+           SELECT id FROM dagens_smiley_entries dse2 
+           WHERE dse2.smiley_id = ds.id 
+           ORDER BY dse2.entry_date DESC 
+           LIMIT 1
+         )
+       LEFT JOIN users u ON dse.recorded_by = u.id
+       WHERE ds.child_id = $1
+       AND (
+         ds.is_public = true 
+         OR EXISTS (
+           SELECT 1 FROM dagens_smiley_user_access dsua 
+           WHERE dsua.smiley_id = ds.id AND dsua.user_id = $2
+         )
+       )
+       AND EXISTS (
+         SELECT 1 FROM user_child_relations ucr 
+         WHERE ucr.child_id = $1 AND ucr.user_id = $2
+       )
+       ORDER BY ds.created_at DESC`,
+      [childId, userId]
+    );
+
+    return result.rows.map(row => {
+      const smiley: DagensSmileyWithLatestEntry = {
+        id: row.id,
+        childId: row.child_id,
+        createdBy: row.created_by,
+        topic: row.topic,
+        description: row.description,
+        isPublic: row.is_public,
+        createdAt: new Date(row.created_at).toISOString(),
+        updatedAt: new Date(row.updated_at).toISOString()
+      };
+
+      if (row.latest_entry_id) {
+        smiley.latestEntry = {
+          id: row.latest_entry_id,
+          smileyId: row.id,
+          recordedBy: row.latest_recorded_by,
+          entryDate: row.latest_entry_date,
+          selectedEmoji: row.latest_selected_emoji,
+          reasoning: row.latest_reasoning,
+          createdAt: new Date(row.latest_entry_created_at).toISOString(),
+          updatedAt: new Date(row.latest_entry_created_at).toISOString()
+        };
+        smiley.recordedByName = row.recorded_by_name;
+      }
+
+      return smiley;
+    });
+  } catch (error) {
+    console.error('Error getting accessible dagens smiley for child:', error);
     return [];
   }
 }

@@ -15,7 +15,8 @@ import { useUser } from '@stackframe/stack';
 import { AddToolDialog } from './add-tool-dialog';
 import { BarometerCard } from '@/components/barometer/barometer-card';
 import { EditBarometerDialog } from '@/components/barometer/edit-barometer-dialog';
-import { useBarometers } from '@/lib/queries';
+import { DagensSmileyCard } from '@/components/dagens-smiley/dagens-smiley-card';
+import { useBarometers, useDagensSmiley } from '@/lib/queries';
 
 interface BarometerEntry {
   id: number;
@@ -44,6 +45,30 @@ interface Barometer {
   recordedByName?: string;
 }
 
+interface DagensSmileyEntry {
+  id: number;
+  smileyId: number;
+  recordedBy: number;
+  entryDate: string;
+  selectedEmoji: string;
+  reasoning?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface DagensSmiley { // eslint-disable-line @typescript-eslint/no-unused-vars
+  id: number;
+  childId: number;
+  createdBy: number;
+  topic: string;
+  description?: string;
+  isPublic?: boolean;
+  createdAt: string;
+  updatedAt: string;
+  latestEntry?: DagensSmileyEntry;
+  recordedByName?: string;
+}
+
 interface ToolsManagerProps {
   childId: number;
   isUserAdmin: boolean;
@@ -51,13 +76,16 @@ interface ToolsManagerProps {
 
 export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
   const { data: barometers = [], isLoading: loading, error: queryError } = useBarometers(childId.toString());
+  const { data: dagensSmiley = [], isLoading: smileyLoading, error: smileyError } = useDagensSmiley(childId.toString());
   const [editingBarometer, setEditingBarometer] = useState<Barometer | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const user = useUser();
 
   // Convert query error to string for display
-  const error = queryError ? (queryError instanceof Error ? queryError.message : 'Kunne ikke indlæse værktøjer') : null;
+  const error = queryError || smileyError ? 
+    ((queryError instanceof Error ? queryError.message : (smileyError instanceof Error ? smileyError.message : 'Kunne ikke indlæse værktøjer'))) : null;
+  const isLoading = loading || smileyLoading;
 
   // Get current user's database ID
   useEffect(() => {
@@ -101,7 +129,7 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
     setIsEditDialogOpen(false);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <VStack gap={4} align="stretch">
         {/* Tools Header Skeleton */}
@@ -153,7 +181,7 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
     );
   }
 
-  const totalTools = barometers.length;
+  const totalTools = barometers.length + dagensSmiley.length;
   const hasTools = totalTools > 0;
 
   return (
@@ -172,6 +200,24 @@ export function ToolsManager({ childId, isUserAdmin }: ToolsManagerProps) {
                     onEntryRecorded={handleEntryRecorded}
                     onBarometerDeleted={handleBarometerDeleted}
                     onBarometerEdit={isUserAdmin ? handleBarometerEdit : undefined}
+                    currentUserId={currentUserId || undefined}
+                    isUserAdmin={isUserAdmin}
+                  />
+                ))}
+              </VStack>
+            </Box>
+          )}
+
+          {/* Dagens Smiley Section */}
+          {dagensSmiley.length > 0 && (
+            <Box>
+              <VStack gap={4} align="stretch" width="100%">
+                {dagensSmiley.map((smiley) => (
+                  <DagensSmileyCard
+                    key={smiley.id}
+                    smiley={smiley}
+                    onEntryRecorded={handleEntryRecorded}
+                    onSmileyDeleted={handleEntryRecorded}
                     currentUserId={currentUserId || undefined}
                     isUserAdmin={isUserAdmin}
                   />

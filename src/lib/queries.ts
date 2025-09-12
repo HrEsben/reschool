@@ -38,12 +38,38 @@ interface Barometer {
   recordedByName?: string;
 }
 
+interface DagensSmileyEntry {
+  id: number;
+  smileyId: number;
+  recordedBy: number;
+  entryDate: string;
+  selectedEmoji: string;
+  reasoning?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface DagensSmiley {
+  id: number;
+  childId: number;
+  createdBy: number;
+  topic: string;
+  description?: string;
+  isPublic?: boolean;
+  createdAt: string;
+  updatedAt: string;
+  latestEntry?: DagensSmileyEntry;
+  recordedByName?: string;
+}
+
 // Query Keys - centralized for easy cache invalidation
 export const queryKeys = {
   children: ['children'] as const,
   child: (id: string) => ['children', id] as const,
   barometers: (childId: string) => ['children', childId, 'barometers'] as const,
   barometer: (id: number) => ['barometers', id] as const,
+  dagensSmiley: (childId: string) => ['children', childId, 'dagens-smiley'] as const,
+  smiley: (id: number) => ['dagens-smiley', id] as const,
   notifications: ['notifications'] as const,
   users: ['users'] as const,
   user: (id: string) => ['users', id] as const,
@@ -103,6 +129,15 @@ const api = {
     }
     const data = await response.json();
     return data.barometers || [];
+  },
+
+  async fetchDagensSmiley(childId: string): Promise<DagensSmiley[]> {
+    const response = await fetch(`/api/children/${childId}/dagens-smiley`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch dagens smiley');
+    }
+    const data = await response.json();
+    return data.smileys || [];
   },
 
   async createChild(data: { name: string; relation: string; customRelationName?: string }) {
@@ -410,6 +445,185 @@ export function useDeclineInvitation() {
     mutationFn: invitationApi.declineInvitation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.pendingInvitations });
+    },
+  });
+}
+
+// ================== DAGENS SMILEY API & HOOKS ==================
+
+const dagensSmileyApi = {
+  async fetchDagensSmiley(childId: string): Promise<DagensSmiley[]> {
+    const response = await fetch(`/api/children/${childId}/dagens-smiley`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch dagens smiley');
+    }
+    const data = await response.json();
+    return data.smileys || [];
+  },
+
+  async createDagensSmiley(childId: string, data: {
+    topic: string;
+    description?: string;
+    isPublic?: boolean;
+    accessibleUserIds?: number[];
+  }): Promise<DagensSmiley> {
+    const response = await fetch(`/api/children/${childId}/dagens-smiley`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to create dagens smiley');
+    }
+    return response.json();
+  },
+
+  async updateDagensSmiley(smileyId: number, data: {
+    topic: string;
+    description?: string;
+    isPublic?: boolean;
+    accessibleUserIds?: number[];
+  }): Promise<DagensSmiley> {
+    const response = await fetch(`/api/dagens-smiley/${smileyId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update dagens smiley');
+    }
+    return response.json();
+  },
+
+  async deleteDagensSmiley(smileyId: number): Promise<void> {
+    const response = await fetch(`/api/dagens-smiley/${smileyId}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete dagens smiley');
+    }
+  },
+
+  async recordEntry(smileyId: number, data: {
+    selectedEmoji: string;
+    reasoning?: string;
+  }): Promise<DagensSmileyEntry> {
+    const response = await fetch(`/api/dagens-smiley/${smileyId}/entries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to record smiley entry');
+    }
+    return response.json();
+  },
+
+  async fetchEntries(smileyId: number): Promise<DagensSmileyEntry[]> {
+    const response = await fetch(`/api/dagens-smiley/${smileyId}/entries`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch smiley entries');
+    }
+    const data = await response.json();
+    return data.entries || [];
+  },
+
+  async deleteEntry(smileyId: number, entryId: number): Promise<void> {
+    const response = await fetch(`/api/dagens-smiley/${smileyId}/entries/${entryId}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete smiley entry');
+    }
+  },
+};
+
+// Dagens Smiley hooks
+export function useDagensSmiley(childId: string) {
+  return useQuery({
+    queryKey: queryKeys.dagensSmiley(childId),
+    queryFn: () => dagensSmileyApi.fetchDagensSmiley(childId),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useCreateDagensSmiley() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ childId, data }: { childId: string; data: Parameters<typeof dagensSmileyApi.createDagensSmiley>[1] }) =>
+      dagensSmileyApi.createDagensSmiley(childId, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.dagensSmiley(data.childId.toString()) });
+    },
+  });
+}
+
+export function useUpdateDagensSmiley() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ smileyId, data }: { smileyId: number; data: Parameters<typeof dagensSmileyApi.updateDagensSmiley>[1] }) =>
+      dagensSmileyApi.updateDagensSmiley(smileyId, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.dagensSmiley(data.childId.toString()) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.smiley(data.id) });
+    },
+  });
+}
+
+export function useDeleteDagensSmiley() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ smileyId, childId }: { smileyId: number; childId: string }) => {
+      return dagensSmileyApi.deleteDagensSmiley(smileyId).then(() => ({ childId }));
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.dagensSmiley(data.childId) });
+    },
+  });
+}
+
+export function useRecordSmileyEntry() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ smileyId, data, childId }: { 
+      smileyId: number; 
+      data: Parameters<typeof dagensSmileyApi.recordEntry>[1];
+      childId: string;
+    }) => {
+      return dagensSmileyApi.recordEntry(smileyId, data).then(result => ({ result, childId }));
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.dagensSmiley(data.childId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.smiley(data.result.smileyId) });
+    },
+  });
+}
+
+export function useSmileyEntries(smileyId: number) {
+  return useQuery({
+    queryKey: ['smiley-entries', smileyId],
+    queryFn: () => dagensSmileyApi.fetchEntries(smileyId),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useDeleteSmileyEntry() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ smileyId, entryId, childId }: { smileyId: number; entryId: number; childId: string }) => {
+      return dagensSmileyApi.deleteEntry(smileyId, entryId).then(() => ({ smileyId, childId }));
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.dagensSmiley(data.childId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.smiley(data.smileyId) });
+      queryClient.invalidateQueries({ queryKey: ['smiley-entries', data.smileyId] });
     },
   });
 }

@@ -9,6 +9,7 @@ import {
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { CreateBarometerDialog } from '@/components/barometer/create-barometer-dialog';
+import { CreateDagensSmileyDialog } from '@/components/dagens-smiley/create-dagens-smiley-dialog';
 
 interface AddToolDialogProps {
   childId: number;
@@ -33,6 +34,13 @@ const availableTools: ToolOption[] = [
     icon: '🌡️',
     available: true,
   },
+  {
+    id: 'dagens-smiley',
+    name: 'Dagens smiley',
+    description: 'Vælg en smiley og forklar hvorfor du valgte den',
+    icon: '😊',
+    available: true,
+  },
   // Future tools can be added here
   // {
   //   id: 'habit-tracker',
@@ -46,6 +54,7 @@ const availableTools: ToolOption[] = [
 export function AddToolDialog({ childId, onToolAdded, trigger, isUserAdmin = false }: AddToolDialogProps) {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showCreateSmileyDialog, setShowCreateSmileyDialog] = useState(false);
   const [mainDialogOpen, setMainDialogOpen] = useState(false);
 
   const handleToolSelect = (toolId: string) => {
@@ -56,12 +65,16 @@ export function AddToolDialog({ childId, onToolAdded, trigger, isUserAdmin = fal
     if (selectedTool === 'barometer') {
       setMainDialogOpen(false); // Close main dialog first
       setTimeout(() => setShowCreateDialog(true), 100); // Then open create dialog
+    } else if (selectedTool === 'dagens-smiley') {
+      setMainDialogOpen(false); // Close main dialog first
+      setTimeout(() => setShowCreateSmileyDialog(true), 100); // Then open smiley create dialog
     }
     // Future tools will have their own handlers
   };
 
   const handleToolCreated = () => {
     setShowCreateDialog(false);
+    setShowCreateSmileyDialog(false);
     setSelectedTool(null);
     setMainDialogOpen(false);
     onToolAdded();
@@ -156,6 +169,16 @@ export function AddToolDialog({ childId, onToolAdded, trigger, isUserAdmin = fal
         trigger={<div />} // Empty trigger since we control it programmatically
         isOpen={showCreateDialog}
         onOpenChange={setShowCreateDialog}
+        isUserAdmin={isUserAdmin}
+      />
+
+      {/* Dagens Smiley Creation Dialog */}
+      <CreateDagensSmileyDialog
+        childId={childId}
+        onSmileyCreated={handleToolCreated}
+        trigger={<div />} // Empty trigger since we control it programmatically
+        isOpen={showCreateSmileyDialog}
+        onOpenChange={setShowCreateSmileyDialog}
         isUserAdmin={isUserAdmin}
       />
     </>
