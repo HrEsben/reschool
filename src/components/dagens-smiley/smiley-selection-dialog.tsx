@@ -2,14 +2,6 @@
 
 import React, { useState } from 'react';
 import {
-  DialogRoot,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogBody,
-  DialogFooter,
-  DialogCloseTrigger,
   Button,
   Text,
   VStack,
@@ -17,6 +9,7 @@ import {
   Textarea,
   useBreakpointValue
 } from '@chakra-ui/react';
+import { DialogManager } from '@/components/ui/dialog-manager';
 import { SMILEY_OPTIONS, getSmileyByUnicode } from '@/lib/openmoji';
 
 interface SmileySelectionDialogProps {
@@ -70,96 +63,78 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
   };
 
   return (
-    <DialogRoot open={isOpen} onOpenChange={({ open }) => setIsOpen(open)}>
-      <DialogTrigger asChild>
-        {trigger}
-      </DialogTrigger>
-      
-      <DialogContent maxWidth="600px">
-        <DialogHeader>
-          <DialogTitle>
-            Dagens smiley - {smileyTopic}
-          </DialogTitle>
-        </DialogHeader>
+    <DialogManager
+      trigger={trigger}
+      title={`Dagens smiley - ${smileyTopic}`}
+      type="default"
+      isOpen={isOpen}
+      onOpenChange={setIsOpen}
+      maxWidth="600px"
+      primaryAction={{
+        label: "Gem min smiley",
+        onClick: handleSubmit,
+        colorScheme: "blue",
+        isLoading: loading,
+        loadingText: "Gemmer...",
+        isDisabled: !selectedEmoji
+      }}
+      secondaryAction={{
+        label: "Annuller",
+        onClick: handleClose,
+        isDisabled: loading
+      }}
+    >
+      <VStack gap={6} align="stretch">
+        {/* Question */}
+        <Text fontSize="md" fontWeight="medium" color="gray.700" textAlign="center">
+          Hvordan føler du dig omkring {smileyTopic.toLowerCase()} i dag?
+        </Text>
         
-        <DialogBody>
-          <VStack gap={6} align="stretch">
-            {/* Question */}
-            <Text fontSize="md" fontWeight="medium" color="gray.700" textAlign="center">
-              Hvordan føler du dig omkring {smileyTopic.toLowerCase()} i dag?
-            </Text>
-            
-            {/* Smiley Selection Grid */}
-            <SimpleGrid columns={gridColumns} gap={3}>
-              {SMILEY_OPTIONS.map((option) => (
-                <Button
-                  key={option.unicode}
-                  variant="outline"
-                  size="lg"
-                  fontSize={smileySize}
-                  h={isMobile ? "64px" : "72px"}
-                  onClick={() => handleEmojiSelect(option.unicode)}
-                  bg={selectedEmoji === option.unicode ? "blue.50" : "white"}
-                  borderColor={selectedEmoji === option.unicode ? "blue.400" : "gray.200"}
-                  color={selectedEmoji === option.unicode ? "blue.600" : "gray.600"}
-                  _hover={{
-                    borderColor: "blue.300",
-                    bg: "blue.25",
-                    transform: "scale(1.05)"
-                  }}
-                  _active={{
-                    transform: "scale(0.95)"
-                  }}
-                  transition="all 0.2s"
-                  title={`${option.name} - ${option.description}`}
-                >
-                  {option.unicode}
-                </Button>
-              ))}
-            </SimpleGrid>
+        {/* Smiley Selection Grid */}
+        <SimpleGrid columns={gridColumns} gap={3}>
+          {SMILEY_OPTIONS.map((option) => (
+            <Button
+              key={option.unicode}
+              variant="outline"
+              size="lg"
+              fontSize={smileySize}
+              h={isMobile ? "64px" : "72px"}
+              onClick={() => handleEmojiSelect(option.unicode)}
+              bg={selectedEmoji === option.unicode ? "blue.50" : "white"}
+              borderColor={selectedEmoji === option.unicode ? "blue.400" : "gray.200"}
+              color={selectedEmoji === option.unicode ? "blue.600" : "gray.600"}
+              _hover={{
+                borderColor: "blue.300",
+                bg: "blue.25",
+                transform: "scale(1.05)"
+              }}
+              _active={{
+                transform: "scale(0.95)"
+              }}
+              transition="all 0.2s"
+              title={`${option.name} - ${option.description}`}
+            >
+              {option.unicode}
+            </Button>
+          ))}
+        </SimpleGrid>
 
-            {/* Reasoning Input */}
-            {selectedEmoji && (
-              <VStack gap={3} align="stretch">
-                <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                  Hvorfor valgte du denne smiley? {getSmileyByUnicode(selectedEmoji)?.unicode}
-                </Text>
-                <Textarea
-                  value={reasoning}
-                  onChange={(e) => setReasoning(e.target.value)}
-                  placeholder="Fortæl om dine følelser omkring dette emne..."
-                  rows={3}
-                  resize="vertical"
-                />
-              </VStack>
-            )}
+        {/* Reasoning Input */}
+        {selectedEmoji && (
+          <VStack gap={3} align="stretch">
+            <Text fontSize="sm" fontWeight="medium" color="gray.700">
+              Hvorfor valgte du denne smiley? {getSmileyByUnicode(selectedEmoji)?.unicode}
+            </Text>
+            <Textarea
+              value={reasoning}
+              onChange={(e) => setReasoning(e.target.value)}
+              placeholder="Fortæl om dine følelser omkring dette emne..."
+              rows={3}
+              resize="vertical"
+            />
           </VStack>
-        </DialogBody>
-        
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={loading}
-          >
-            Annuller
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!selectedEmoji || loading}
-            loading={loading}
-            loadingText="Gemmer..."
-            colorScheme="blue"
-          >
-            Gem min smiley
-          </Button>
-        </DialogFooter>
-        
-        <DialogCloseTrigger 
-          disabled={loading}
-          aria-label="Luk dialog"
-        />
-      </DialogContent>
-    </DialogRoot>
+        )}
+      </VStack>
+    </DialogManager>
   );
 };
