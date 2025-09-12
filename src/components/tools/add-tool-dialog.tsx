@@ -114,7 +114,7 @@ export function AddToolDialog({ childId, onToolAdded, trigger, isUserAdmin = fal
             Vælg hvilket værktøj du vil tilføje til barnets profil:
           </Text>
 
-          <VStack gap={3}>
+          <VStack gap={3} align="stretch">
             {availableTools.map((tool) => (
               <CheckboxCard.Root
                 key={tool.id}
@@ -131,6 +131,7 @@ export function AddToolDialog({ childId, onToolAdded, trigger, isUserAdmin = fal
                 _focus={{ outline: "none", boxShadow: "none" }}
                 _focusVisible={{ outline: "none", boxShadow: "none" }}
                 opacity={tool.available ? 1 : 0.6}
+                width="100%"
               >
                 <CheckboxCard.HiddenInput />
                 <CheckboxCard.Control>

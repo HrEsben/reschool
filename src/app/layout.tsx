@@ -44,7 +44,13 @@ export default function RootLayout({
         <Provider>
           <StackProvider app={stackServerApp}>
             <StackTheme>
-              <div style={{ position: 'relative', zIndex: 10, borderBottom: '1px solid #e5e5e5' }}>
+              <div style={{ 
+                position: 'relative', 
+                zIndex: 10, 
+                borderBottom: '1px solid #e5e5e5',
+                backgroundColor: '#fdfcf8', // Eggshell background for content
+                minHeight: '100vh'
+              }}>
                 {children}
               </div>
               <RisingFooter />

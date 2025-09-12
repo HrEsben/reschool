@@ -9,12 +9,12 @@ const config = defineConfig({
         mono: { value: "var(--font-geist-mono), 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace" },
       },
       colors: {
-        // Bright, airy background colors
+        // Background colors - white body, eggshell content
         bg: {
-          canvas: { value: "#fefefe" },
-          subtle: { value: "#fcfcfc" },
-          muted: { value: "#f9f9f9" },
-          emphasis: { value: "#ffffff" },
+          canvas: { value: "#ffffff" }, // White for body/canvas
+          subtle: { value: "#fdfcf8" }, // Eggshell for content areas
+          muted: { value: "#f9f6f0" }, // Slightly darker eggshell
+          emphasis: { value: "#ffffff" }, // White for emphasis
         },
         
         // Light gray palette for text and borders
