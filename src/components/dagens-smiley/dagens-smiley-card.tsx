@@ -383,24 +383,38 @@ export function DagensSmileyCard({
       overflow="hidden"
     >
       {/* Header */}
-      <Box bg="cream.50" px={6} py={4} borderBottomWidth="1px" borderBottomColor="gray.100">
-        <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
-          <VStack align="start" gap={1} flex={1} minW={0}>
+      <Box bg="cream.50" px={6} py={5} borderBottomWidth="1px" borderBottomColor="gray.100">
+        <Flex justify="space-between" align="flex-start" wrap="wrap" gap={3}>
+          <VStack align="start" gap={2} flex={1} minW={0}>
             <Heading 
-              size="md" 
+              size="lg" 
               color="navy.800"
               lineClamp={1}
               wordBreak="break-word"
+              mb={1}
             >
               {smiley.topic}
             </Heading>
             {smiley.description && (
-              <Text fontSize="sm" color="gray.600" lineClamp={2}>
+              <Text fontSize="sm" color="gray.600" lineClamp={2} mb={2}>
                 {smiley.description}
               </Text>
             )}
+            {/* Today's date prominently displayed in header */}
+            <Box
+              bg="sage.100"
+              px={3}
+              py={2}
+              borderRadius="md"
+              border="1px solid"
+              borderColor="sage.200"
+            >
+              <Text fontSize="sm" fontWeight="semibold" color="sage.700">
+                📅 {getFormattedTodayDate()}
+              </Text>
+            </Box>
           </VStack>
-          <HStack gap={2}>
+          <VStack gap={2} align="end">
             {/* Visibility Badge */}
             <ToggleTip 
               content={getToggleTipContent()}
@@ -425,7 +439,7 @@ export function DagensSmileyCard({
             </ToggleTip>
 
             {isUserAdmin && (
-              <>
+              <HStack gap={1}>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -450,9 +464,9 @@ export function DagensSmileyCard({
                 >
                   <TrashIcon size={16} />
                 </Button>
-              </>
+              </HStack>
             )}
-          </HStack>
+          </VStack>
         </Flex>
       </Box>
 
@@ -471,6 +485,9 @@ export function DagensSmileyCard({
               textAlign="center"
             >
               <VStack gap={4} align="center">
+                <Text fontSize="md" fontWeight="medium" color="sage.700">
+                  Dagens valg:
+                </Text>
                 <OpenMojiEmoji 
                   unicode={todaysEntry.selectedEmoji} 
                   size={96}
@@ -480,13 +497,10 @@ export function DagensSmileyCard({
                     {todaysEntry.reasoning}
                   </Text>
                 )}
-                <Text fontSize="sm" color="gray.500">
-                  {getFormattedTodayDate()}
-                </Text>
               </VStack>
             </Box>
           ) : (
-            // Show today's date when no smiley is selected
+            // Show prompt when no smiley is selected today
             <Box
               bg="cream.50"
               p={6}
@@ -495,8 +509,11 @@ export function DagensSmileyCard({
               borderColor="cream.200"
               textAlign="center"
             >
-              <Text fontSize="2xl" fontWeight="medium" color="navy.700">
-                {getFormattedTodayDate()}
+              <Text fontSize="lg" fontWeight="medium" color="navy.700" mb={2}>
+                Ingen smiley valgt endnu
+              </Text>
+              <Text fontSize="md" color="gray.600">
+                Vælg en smiley for at beskrive hvordan det går i dag
               </Text>
             </Box>
           )}
