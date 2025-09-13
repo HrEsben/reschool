@@ -371,6 +371,34 @@ export function useCreateBarometer() {
   });
 }
 
+export function useRecordBarometerEntry() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ barometerId, rating, comment, childId }: { 
+      barometerId: number; 
+      rating: number; 
+      comment?: string;
+      childId: string;
+    }) => {
+      const response = await fetch(`/api/barometers/${barometerId}/entries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating, comment }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to record barometer entry');
+      }
+      return response.json();
+    },
+    onSuccess: (_, { childId }) => {
+      // Invalidate barometers for this child and latest registrations
+      queryClient.invalidateQueries({ queryKey: queryKeys.barometers(childId) });
+      queryClient.invalidateQueries({ queryKey: ['latest-registrations'] });
+    },
+  });
+}
+
 // Hook for prefetching data (useful for hover states)
 export function usePrefetchBarometers() {
   const queryClient = useQueryClient();
@@ -600,6 +628,7 @@ export function useRecordSmileyEntry() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.dagensSmiley(data.childId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.smiley(data.result.smileyId) });
+      queryClient.invalidateQueries({ queryKey: ['latest-registrations'] });
     },
   });
 }
@@ -624,6 +653,41 @@ export function useDeleteSmileyEntry() {
       queryClient.invalidateQueries({ queryKey: queryKeys.dagensSmiley(data.childId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.smiley(data.smileyId) });
       queryClient.invalidateQueries({ queryKey: ['smiley-entries', data.smileyId] });
+      queryClient.invalidateQueries({ queryKey: ['latest-registrations'] });
     },
+  });
+}
+
+// Latest Registrations Types and Hooks
+export interface RegistrationEntry {
+  id: number;
+  type: 'barometer' | 'smiley';
+  childId: number;
+  childName: string;
+  toolName: string;
+  entryDate: string;
+  createdAt: string;
+  recordedByName?: string;
+  userRelation?: string;
+  customRelationName?: string;
+  // Type-specific data
+  rating?: number; // for barometer
+  comment?: string; // for barometer
+  selectedEmoji?: string; // for smiley
+  reasoning?: string; // for smiley
+}
+
+export function useLatestRegistrations(limit: number = 20) {
+  return useQuery({
+    queryKey: ['latest-registrations', limit],
+    queryFn: async () => {
+      const response = await fetch(`/api/registrations/latest?limit=${limit}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch latest registrations');
+      }
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    refetchOnWindowFocus: true,
   });
 }

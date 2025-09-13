@@ -2079,3 +2079,128 @@ export async function getAccessibleDagensSmileyForChild(childId: number, userId:
     return [];
   }
 }
+
+// Interface for unified registration entries
+export interface RegistrationEntry {
+  id: number;
+  type: 'barometer' | 'smiley';
+  childId: number;
+  childName: string;
+  toolName: string;
+  entryDate: string;
+  createdAt: string;
+  recordedByName?: string;
+  userRelation?: string;
+  customRelationName?: string;
+  // Type-specific data
+  rating?: number; // for barometer
+  comment?: string; // for barometer
+  selectedEmoji?: string; // for smiley
+  reasoning?: string; // for smiley
+}
+
+// Get latest registrations across all children for a user
+export async function getLatestRegistrationsForUser(
+  userId: number,
+  limit: number = 20
+): Promise<RegistrationEntry[]> {
+  try {
+    // First check what children this user has access to
+    const childrenCheck = await query(
+      `SELECT child_id FROM user_child_relations WHERE user_id = $1`,
+      [userId]
+    );
+    console.log('DB: User', userId, 'has access to children:', childrenCheck.rows);
+
+    const mainResult = await query(
+      `WITH user_children AS (
+        SELECT child_id FROM user_child_relations WHERE user_id = $1
+      ),
+      barometer_entries_with_info AS (
+        SELECT 
+          be.id,
+          'barometer' as type,
+          c.id as child_id,
+          c.name as child_name,
+          b.topic as tool_name,
+          be.entry_date,
+          be.created_at,
+          u.display_name as recorded_by_name,
+          ucr.relation as user_relation,
+          ucr.custom_relation_name,
+          be.rating::text as rating,
+          be.comment,
+          NULL as selected_emoji,
+          NULL as reasoning
+        FROM barometer_entries be
+        JOIN barometers b ON be.barometer_id = b.id
+        JOIN children c ON b.child_id = c.id
+        JOIN user_children uc ON c.id = uc.child_id
+        LEFT JOIN users u ON be.recorded_by = u.id
+        LEFT JOIN user_child_relations ucr ON u.id = ucr.user_id AND c.id = ucr.child_id
+        WHERE (b.is_public = true OR EXISTS (
+          SELECT 1 FROM barometer_user_access bua WHERE bua.barometer_id = b.id AND bua.user_id = $1
+        ))
+      ),
+      smiley_entries_with_info AS (
+        SELECT 
+          dse.id,
+          'smiley' as type,
+          c.id as child_id,
+          c.name as child_name,
+          ds.topic as tool_name,
+          dse.entry_date,
+          dse.created_at,
+          u.display_name as recorded_by_name,
+          ucr.relation as user_relation,
+          ucr.custom_relation_name,
+          NULL as rating,
+          NULL as comment,
+          dse.selected_emoji,
+          dse.reasoning
+        FROM dagens_smiley_entries dse
+        JOIN dagens_smiley ds ON dse.smiley_id = ds.id
+        JOIN children c ON ds.child_id = c.id
+        JOIN user_children uc ON c.id = uc.child_id
+        LEFT JOIN users u ON dse.recorded_by = u.id
+        LEFT JOIN user_child_relations ucr ON u.id = ucr.user_id AND c.id = ucr.child_id
+        WHERE (ds.is_public = true OR EXISTS (
+          SELECT 1 FROM dagens_smiley_user_access dsua WHERE dsua.smiley_id = ds.id AND dsua.user_id = $1
+        ))
+      )
+      SELECT * FROM (
+        SELECT * FROM barometer_entries_with_info
+        UNION ALL
+        SELECT * FROM smiley_entries_with_info
+      ) combined_entries
+      ORDER BY created_at DESC
+      LIMIT $2`,
+      [userId, limit]
+    );
+
+    console.log('DB: Query for userId:', userId, 'returned', mainResult.rows.length, 'rows');
+    if (mainResult.rows.length > 0) {
+      console.log('DB: Sample row:', mainResult.rows[0]);
+    }
+
+    return mainResult.rows.map(row => ({
+      id: row.id,
+      type: row.type,
+      childId: row.child_id,
+      childName: row.child_name,
+      toolName: row.tool_name,
+      entryDate: row.entry_date,
+      createdAt: new Date(row.created_at).toISOString(),
+      recordedByName: row.recorded_by_name,
+      userRelation: row.user_relation,
+      customRelationName: row.custom_relation_name,
+      rating: row.rating ? parseInt(row.rating) : undefined,
+      comment: row.comment,
+      selectedEmoji: row.selected_emoji,
+      reasoning: row.reasoning
+    }));
+  } catch (error) {
+    console.error('Error getting latest registrations for user:', error);
+    return [];
+  }
+}
