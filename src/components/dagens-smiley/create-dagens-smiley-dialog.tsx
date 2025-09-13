@@ -7,10 +7,7 @@ import {
   VStack,
   Text,
   HStack,
-  Button,
-  Flex,
   Badge,
-  Heading,
   Tabs,
   CheckboxCard,
   Textarea,
@@ -20,7 +17,6 @@ import { showToast } from '@/components/ui/simple-toast';
 import { useChildUsers } from '@/lib/queries';
 import { UserWithRelation } from '@/lib/database-service';
 import { useUser } from '@stackframe/stack';
-import { SMILEY_OPTIONS } from '@/lib/openmoji';
 
 interface CreateDagensSmileyDialogProps {
   childId: number;
@@ -131,72 +127,6 @@ export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, is
       checked 
         ? [...prev, userId]
         : prev.filter(id => id !== userId)
-    );
-  };
-
-  const generatePreview = () => {
-    return (
-      <VStack gap={3} align="stretch">
-        {/* Mini Smiley Tool Preview */}
-        <Box 
-          bg="white" 
-          borderRadius="md" 
-          border="1px solid" 
-          borderColor="gray.200" 
-          p={3}
-          shadow="sm"
-        >
-          <VStack gap={3} align="stretch">
-            {/* Header */}
-            <HStack justify="space-between">
-              <Heading 
-                size="sm" 
-                color={topic.trim() ? "black" : "gray.400"}
-              >
-                {topic.trim() || "Emne"}
-              </Heading>
-              <HStack gap={1}>
-                <Badge colorScheme="blue" fontSize="xs">
-                  Dagens smiley
-                </Badge>
-              </HStack>
-            </HStack>
-            
-            {/* Description */}
-            {description.trim() && (
-              <Text fontSize="xs" color="gray.600">
-                {description.trim()}
-              </Text>
-            )}
-
-            {/* Emoji Selection Preview */}
-            <Box>
-              <Text mb={2} fontWeight="medium" fontSize="xs" color="gray.600">
-                Vælg hvordan du har det i dag:
-              </Text>
-              <HStack gap={1} wrap="wrap">
-                {SMILEY_OPTIONS.slice(0, 8).map((smiley) => (
-                  <Button
-                    key={smiley.unicode}
-                    variant="outline"
-                    size="xs"
-                    minW="30px"
-                    h="30px"
-                    fontSize="sm"
-                    cursor="default"
-                    borderColor="gray.300"
-                    color="gray.800"
-                    _hover={{}}
-                  >
-                    {smiley.unicode}
-                  </Button>
-                ))}
-                <Text fontSize="xs" color="gray.500">...</Text>
-              </HStack>
-            </Box>
-          </VStack>
-        </Box>
-      </VStack>
     );
   };
 

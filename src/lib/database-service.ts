@@ -125,6 +125,41 @@ export interface DagensSmileyWithLatestEntry extends DagensSmiley {
   recordedByName?: string;
 }
 
+export interface Sengetider {
+  id: number;
+  childId: number;
+  createdBy: number;
+  topic: string;
+  description?: string;
+  targetBedtime?: string; // TIME format HH:MM:SS
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SengetiderUserAccess {
+  id: number;
+  sengetiderId: number;
+  userId: number;
+  createdAt: string;
+}
+
+export interface SengetiderEntry {
+  id: number;
+  sengetiderId: number;
+  recordedBy: number;
+  entryDate: string; // YYYY-MM-DD format
+  actualBedtime: string; // TIME format HH:MM:SS
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SengetiderWithLatestEntry extends Sengetider {
+  latestEntry?: SengetiderEntry;
+  recordedByName?: string;
+}
+
 interface StackAuthUser {
   id: string;
   primaryEmail: string | null;
@@ -2202,5 +2237,373 @@ export async function getLatestRegistrationsForUser(
   } catch (error) {
     console.error('Error getting latest registrations for user:', error);
     return [];
+  }
+}
+
+// Sengetider (Bedtime tracking) functions
+
+// Create a new sengetider
+export async function createSengetider(
+  childId: number,
+  createdBy: number,
+  topic: string,
+  description?: string,
+  targetBedtime?: string,
+  isPublic: boolean = true,
+  accessibleUserIds?: number[]
+): Promise<Sengetider | null> {
+  const client = await getClient();
+  
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `INSERT INTO sengetider (child_id, created_by, topic, description, target_bedtime, is_public)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [childId, createdBy, topic, description || null, targetBedtime || null, isPublic]
+    );
+
+    const row = result.rows[0];
+    const sengetider: Sengetider = {
+      id: row.id,
+      childId: row.child_id,
+      createdBy: row.created_by,
+      topic: row.topic,
+      description: row.description,
+      targetBedtime: row.target_bedtime,
+      isPublic: row.is_public,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+
+    // If not public, add access records
+    if (!isPublic) {
+      const userIds = new Set([createdBy]); // Creator always has access
+      if (accessibleUserIds && accessibleUserIds.length > 0) {
+        accessibleUserIds.forEach(id => userIds.add(id));
+      }
+
+      for (const userId of userIds) {
+        await client.query(
+          'INSERT INTO sengetider_user_access (sengetider_id, user_id) VALUES ($1, $2)',
+          [sengetider.id, userId]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    return sengetider;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error creating sengetider:', error);
+    return null;
+  } finally {
+    client.release();
+  }
+}
+
+// Get sengetider for a child
+export async function getSengetiderForChild(
+  childId: number,
+  userId: number
+): Promise<SengetiderWithLatestEntry[]> {
+  try {
+    const result = await query(
+      `SELECT 
+         s.*,
+         se.id as latest_entry_id,
+         se.entry_date as latest_entry_date,
+         se.actual_bedtime as latest_actual_bedtime,
+         se.notes as latest_notes,
+         u.display_name as recorded_by_name
+       FROM sengetider s
+       LEFT JOIN LATERAL (
+         SELECT * FROM sengetider_entries se
+         WHERE se.sengetider_id = s.id
+         ORDER BY se.entry_date DESC
+         LIMIT 1
+       ) se ON true
+       LEFT JOIN users u ON se.recorded_by = u.id
+       WHERE s.child_id = $1
+       AND (s.is_public = true OR EXISTS (
+         SELECT 1 FROM sengetider_user_access sua WHERE sua.sengetider_id = s.id AND sua.user_id = $2
+       ))
+       ORDER BY s.created_at DESC`,
+      [childId, userId]
+    );
+
+    return result.rows.map(row => ({
+      id: row.id,
+      childId: row.child_id,
+      createdBy: row.created_by,
+      topic: row.topic,
+      description: row.description,
+      targetBedtime: row.target_bedtime,
+      isPublic: row.is_public,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString(),
+      latestEntry: row.latest_entry_id ? {
+        id: row.latest_entry_id,
+        sengetiderId: row.id,
+        recordedBy: row.recorded_by || 0,
+        entryDate: row.latest_entry_date,
+        actualBedtime: row.latest_actual_bedtime,
+        notes: row.latest_notes,
+        createdAt: new Date(row.created_at).toISOString(),
+        updatedAt: new Date(row.updated_at).toISOString()
+      } : undefined,
+      recordedByName: row.recorded_by_name
+    }));
+  } catch (error) {
+    console.error('Error getting sengetider for child:', error);
+    return [];
+  }
+}
+
+// Create a new sengetider entry
+export async function createSengetiderEntry(
+  sengetiderId: number,
+  recordedBy: number,
+  entryDate: string, // YYYY-MM-DD format
+  actualBedtime: string, // HH:MM:SS format
+  notes?: string
+): Promise<SengetiderEntry | null> {
+  try {
+    const result = await query(
+      `INSERT INTO sengetider_entries (sengetider_id, recorded_by, entry_date, actual_bedtime, notes)
+       VALUES ($1, $2, $3, $4, $5) 
+       ON CONFLICT (sengetider_id, entry_date) 
+       DO UPDATE SET 
+         actual_bedtime = EXCLUDED.actual_bedtime,
+         notes = EXCLUDED.notes,
+         updated_at = NOW()
+       RETURNING *`,
+      [sengetiderId, recordedBy, entryDate, actualBedtime, notes || null]
+    );
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      sengetiderId: row.sengetider_id,
+      recordedBy: row.recorded_by,
+      entryDate: row.entry_date,
+      actualBedtime: row.actual_bedtime,
+      notes: row.notes,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error creating sengetider entry:', error);
+    return null;
+  }
+}
+
+// Get a single sengetider by ID
+export async function getSengetiderById(sengetiderId: number): Promise<Sengetider | null> {
+  try {
+    const result = await query(
+      'SELECT * FROM sengetider WHERE id = $1',
+      [sengetiderId]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      childId: row.child_id,
+      createdBy: row.created_by,
+      topic: row.topic,
+      description: row.description,
+      targetBedtime: row.target_bedtime,
+      isPublic: row.is_public,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error getting sengetider by ID:', error);
+    return null;
+  }
+}
+
+// Get sengetider entries for a specific sengetider
+export async function getSengetiderEntries(
+  sengetiderId: number,
+  limit: number = 30
+): Promise<(SengetiderEntry & { recordedByName?: string; userRelation?: string; customRelationName?: string })[]> {
+  try {
+    const result = await query(
+      `SELECT 
+         se.*,
+         u.display_name as recorded_by_name,
+         ucr.relation as user_relation,
+         ucr.custom_relation_name
+       FROM sengetider_entries se
+       LEFT JOIN users u ON se.recorded_by = u.id
+       LEFT JOIN sengetider s ON se.sengetider_id = s.id
+       LEFT JOIN user_child_relations ucr ON u.id = ucr.user_id AND s.child_id = ucr.child_id
+       WHERE se.sengetider_id = $1
+       ORDER BY se.entry_date DESC
+       LIMIT $2`,
+      [sengetiderId, limit]
+    );
+
+    return result.rows.map(row => ({
+      id: row.id,
+      sengetiderId: row.sengetider_id,
+      recordedBy: row.recorded_by,
+      entryDate: row.entry_date,
+      actualBedtime: row.actual_bedtime,
+      notes: row.notes,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString(),
+      recordedByName: row.recorded_by_name,
+      userRelation: row.user_relation,
+      customRelationName: row.custom_relation_name
+    }));
+  } catch (error) {
+    console.error('Error getting sengetider entries:', error);
+    return [];
+  }
+}
+
+// Update a sengetider
+export async function updateSengetider(
+  id: number,
+  updates: Partial<Omit<Sengetider, 'id' | 'childId' | 'createdBy' | 'createdAt' | 'updatedAt'>>
+): Promise<Sengetider | null> {
+  try {
+    const fields = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (updates.topic !== undefined) {
+      fields.push(`topic = $${paramIndex++}`);
+      values.push(updates.topic);
+    }
+    if (updates.description !== undefined) {
+      fields.push(`description = $${paramIndex++}`);
+      values.push(updates.description);
+    }
+    if (updates.targetBedtime !== undefined) {
+      fields.push(`target_bedtime = $${paramIndex++}`);
+      values.push(updates.targetBedtime);
+    }
+    if (updates.isPublic !== undefined) {
+      fields.push(`is_public = $${paramIndex++}`);
+      values.push(updates.isPublic);
+    }
+
+    if (fields.length === 0) {
+      throw new Error('No fields to update');
+    }
+
+    fields.push(`updated_at = NOW()`);
+    values.push(id);
+
+    const result = await query(
+      `UPDATE sengetider SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      childId: row.child_id,
+      createdBy: row.created_by,
+      topic: row.topic,
+      description: row.description,
+      targetBedtime: row.target_bedtime,
+      isPublic: row.is_public,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error updating sengetider:', error);
+    return null;
+  }
+}
+
+// Delete a sengetider
+export async function deleteSengetider(id: number): Promise<boolean> {
+  try {
+    const result = await query('DELETE FROM sengetider WHERE id = $1', [id]);
+    return result.rowCount !== null && result.rowCount > 0;
+  } catch (error) {
+    console.error('Error deleting sengetider:', error);
+    return false;
+  }
+}
+
+// Delete a sengetider entry
+export async function deleteSengetiderEntry(id: number): Promise<boolean> {
+  try {
+    const result = await query('DELETE FROM sengetider_entries WHERE id = $1', [id]);
+    return result.rowCount !== null && result.rowCount > 0;
+  } catch (error) {
+    console.error('Error deleting sengetider entry:', error);
+    return false;
+  }
+}
+
+// Update a sengetider entry
+export async function updateSengetiderEntry(
+  id: number,
+  updates: Partial<Omit<SengetiderEntry, 'id' | 'sengetiderId' | 'recordedBy' | 'createdAt' | 'updatedAt'>>
+): Promise<SengetiderEntry | null> {
+  try {
+    const fields = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (updates.entryDate !== undefined) {
+      fields.push(`entry_date = $${paramIndex++}`);
+      values.push(updates.entryDate);
+    }
+    if (updates.actualBedtime !== undefined) {
+      fields.push(`actual_bedtime = $${paramIndex++}`);
+      values.push(updates.actualBedtime);
+    }
+    if (updates.notes !== undefined) {
+      fields.push(`notes = $${paramIndex++}`);
+      values.push(updates.notes);
+    }
+
+    if (fields.length === 0) {
+      throw new Error('No fields to update');
+    }
+
+    fields.push(`updated_at = NOW()`);
+    values.push(id);
+
+    const result = await query(
+      `UPDATE sengetider_entries SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      sengetiderId: row.sengetider_id,
+      recordedBy: row.recorded_by,
+      entryDate: row.entry_date,
+      actualBedtime: row.actual_bedtime,
+      notes: row.notes,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error updating sengetider entry:', error);
+    return null;
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Input,
@@ -60,6 +60,21 @@ export function EditDagensSmileyDialog({
   // Fetch child users for access control selection
   const { data: childUsers = [] } = useChildUsers(smiley.childId.toString());
 
+  const fetchCurrentAccessUsers = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/dagens-smiley/${smiley.id}/access`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.accessUsers && data.accessUsers.length > 0) {
+          setVisibilityOption('custom');
+          setSelectedUserIds(data.accessUsers.map((user: { id: number }) => user.id));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching access users:', error);
+    }
+  }, [smiley.id]);
+
   // Load current access settings when dialog opens
   useEffect(() => {
     if (isOpen) {
@@ -72,22 +87,7 @@ export function EditDagensSmileyDialog({
         fetchCurrentAccessUsers();
       }
     }
-  }, [isOpen, smiley]);
-
-  const fetchCurrentAccessUsers = async () => {
-    try {
-      const response = await fetch(`/api/dagens-smiley/${smiley.id}/access`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.accessUsers && data.accessUsers.length > 0) {
-          setVisibilityOption('custom');
-          setSelectedUserIds(data.accessUsers.map((user: any) => user.id));
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching access users:', error);
-    }
-  };
+  }, [isOpen, smiley, fetchCurrentAccessUsers]);
 
   const handleSubmit = async () => {
     if (!stackUser || !topic.trim()) {

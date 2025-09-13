@@ -62,6 +62,31 @@ interface DagensSmiley {
   recordedByName?: string;
 }
 
+interface SengetiderEntry {
+  id: number;
+  sengetiderId: number;
+  recordedBy: number;
+  entryDate: string;
+  actualBedtime: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Sengetider {
+  id: number;
+  childId: number;
+  createdBy: number;
+  topic: string;
+  description?: string;
+  targetBedtime?: string;
+  isPublic?: boolean;
+  createdAt: string;
+  updatedAt: string;
+  latestEntry?: SengetiderEntry;
+  recordedByName?: string;
+}
+
 // Query Keys - centralized for easy cache invalidation
 export const queryKeys = {
   children: ['children'] as const,
@@ -70,6 +95,8 @@ export const queryKeys = {
   barometer: (id: number) => ['barometers', id] as const,
   dagensSmiley: (childId: string) => ['children', childId, 'dagens-smiley'] as const,
   smiley: (id: number) => ['dagens-smiley', id] as const,
+  sengetider: (childId: string) => ['children', childId, 'sengetider'] as const,
+  sengetiderTool: (id: number) => ['sengetider', id] as const,
   notifications: ['notifications'] as const,
   users: ['users'] as const,
   user: (id: string) => ['users', id] as const,
@@ -129,6 +156,15 @@ const api = {
     }
     const data = await response.json();
     return data.barometers || [];
+  },
+
+  async fetchSengetider(childId: string): Promise<Sengetider[]> {
+    const response = await fetch(`/api/children/${childId}/sengetider`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch sengetider');
+    }
+    const data = await response.json();
+    return data.sengetider || [];
   },
 
   async fetchDagensSmiley(childId: string): Promise<DagensSmiley[]> {
@@ -375,7 +411,7 @@ export function useRecordBarometerEntry() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ barometerId, rating, comment, childId }: { 
+    mutationFn: async ({ barometerId, rating, comment, childId }: { // eslint-disable-line @typescript-eslint/no-unused-vars
       barometerId: number; 
       rating: number; 
       comment?: string;
@@ -689,5 +725,230 @@ export function useLatestRegistrations(limit: number = 20) {
     },
     staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
     refetchOnWindowFocus: true,
+  });
+}
+
+// Sengetider (Bedtime tracking) hooks
+
+export function useSengetider(childId: string) {
+  return useQuery({
+    queryKey: queryKeys.sengetider(childId),
+    queryFn: () => api.fetchSengetider(childId),
+    enabled: !!childId,
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+  });
+}
+
+export function useCreateSengetider() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      childId: number;
+      topic: string;
+      description?: string;
+      targetBedtime?: string;
+      isPublic?: boolean;
+      accessibleUserIds?: number[];
+    }) => {
+      const response = await fetch(`/api/children/${data.childId}/sengetider`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create sengetider');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Invalidate and refetch sengetider data for this child
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.sengetider(data.sengetider.childId.toString()) 
+      });
+    },
+  });
+}
+
+export function useUpdateSengetider() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      id: number;
+      topic?: string;
+      description?: string;
+      targetBedtime?: string;
+      isPublic?: boolean;
+    }) => {
+      const { id, ...updates } = data;
+      const response = await fetch(`/api/sengetider/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update sengetider');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Invalidate sengetider data for this child
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.sengetider(data.sengetider.childId.toString()) 
+      });
+    },
+  });
+}
+
+export function useDeleteSengetider() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { id: number; childId: string }) => {
+      const response = await fetch(`/api/sengetider/${data.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete sengetider');
+      }
+
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      // Invalidate sengetider data for this child
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.sengetider(variables.childId) 
+      });
+    },
+  });
+}
+
+export function useCreateSengetiderEntry() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      sengetiderId: number;
+      entryDate: string;
+      actualBedtime: string;
+      notes?: string;
+    }) => {
+      const response = await fetch('/api/sengetider/entries', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create sengetider entry');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Invalidate sengetider data to show the new entry
+      queryClient.invalidateQueries({ queryKey: ['sengetider'] });
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.sengetiderTool(data.entry.sengetiderId) 
+      });
+    },
+  });
+}
+
+export function useSengetiderEntries(sengetiderId: number) {
+  return useQuery({
+    queryKey: queryKeys.sengetiderTool(sengetiderId),
+    queryFn: async () => {
+      const response = await fetch(`/api/sengetider/${sengetiderId}/entries`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch sengetider entries');
+      }
+      const data = await response.json();
+      return data.entries as (SengetiderEntry & { 
+        recordedByName?: string; 
+        userRelation?: string; 
+        customRelationName?: string; 
+      })[];
+    },
+    enabled: !!sengetiderId,
+    staleTime: 1000 * 60 * 2, // Consider data fresh for 2 minutes
+  });
+}
+
+export function useUpdateSengetiderEntry() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      id: number;
+      entryDate?: string;
+      actualBedtime?: string;
+      notes?: string;
+    }) => {
+      const { id, ...updates } = data;
+      const response = await fetch(`/api/sengetider/entries/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update sengetider entry');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Invalidate sengetider data to show the updated entry
+      queryClient.invalidateQueries({ queryKey: ['sengetider'] });
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.sengetiderTool(data.entry.sengetiderId) 
+      });
+    },
+  });
+}
+
+export function useDeleteSengetiderEntry() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { id: number; sengetiderId: number }) => {
+      const response = await fetch(`/api/sengetider/entries/${data.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete sengetider entry');
+      }
+
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      // Invalidate sengetider data to remove the deleted entry
+      queryClient.invalidateQueries({ queryKey: ['sengetider'] });
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.sengetiderTool(variables.sengetiderId) 
+      });
+    },
   });
 }

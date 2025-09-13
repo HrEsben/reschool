@@ -10,6 +10,7 @@ import {
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { CreateBarometerDialog } from '@/components/barometer/create-barometer-dialog';
 import { CreateDagensSmileyDialog } from '@/components/dagens-smiley/create-dagens-smiley-dialog';
+import { CreateSengetiderDialog } from '@/components/sengetider/create-sengetider-dialog';
 
 interface AddToolDialogProps {
   childId: number;
@@ -41,6 +42,13 @@ const availableTools: ToolOption[] = [
     icon: '😊',
     available: true,
   },
+  {
+    id: 'sengetider',
+    name: 'Sengetider',
+    description: 'Spor barnets sengetider og rutiner',
+    icon: '🛏️',
+    available: true,
+  },
   // Future tools can be added here
   // {
   //   id: 'habit-tracker',
@@ -55,6 +63,7 @@ export function AddToolDialog({ childId, onToolAdded, trigger, isUserAdmin = fal
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showCreateSmileyDialog, setShowCreateSmileyDialog] = useState(false);
+  const [showCreateSengetiderDialog, setShowCreateSengetiderDialog] = useState(false);
   const [mainDialogOpen, setMainDialogOpen] = useState(false);
 
   const handleToolSelect = (toolId: string) => {
@@ -68,6 +77,9 @@ export function AddToolDialog({ childId, onToolAdded, trigger, isUserAdmin = fal
     } else if (selectedTool === 'dagens-smiley') {
       setMainDialogOpen(false); // Close main dialog first
       setTimeout(() => setShowCreateSmileyDialog(true), 100); // Then open smiley create dialog
+    } else if (selectedTool === 'sengetider') {
+      setMainDialogOpen(false); // Close main dialog first
+      setTimeout(() => setShowCreateSengetiderDialog(true), 100); // Then open sengetider create dialog
     }
     // Future tools will have their own handlers
   };
@@ -75,6 +87,7 @@ export function AddToolDialog({ childId, onToolAdded, trigger, isUserAdmin = fal
   const handleToolCreated = () => {
     setShowCreateDialog(false);
     setShowCreateSmileyDialog(false);
+    setShowCreateSengetiderDialog(false);
     setSelectedTool(null);
     setMainDialogOpen(false);
     onToolAdded();
@@ -180,6 +193,16 @@ export function AddToolDialog({ childId, onToolAdded, trigger, isUserAdmin = fal
         trigger={<div />} // Empty trigger since we control it programmatically
         isOpen={showCreateSmileyDialog}
         onOpenChange={setShowCreateSmileyDialog}
+        isUserAdmin={isUserAdmin}
+      />
+
+      {/* Sengetider Creation Dialog */}
+      <CreateSengetiderDialog
+        childId={childId}
+        onSengetiderCreated={handleToolCreated}
+        trigger={<div />} // Empty trigger since we control it programmatically
+        isOpen={showCreateSengetiderDialog}
+        onOpenChange={setShowCreateSengetiderDialog}
         isUserAdmin={isUserAdmin}
       />
     </>

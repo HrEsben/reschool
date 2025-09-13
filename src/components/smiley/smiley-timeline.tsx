@@ -5,7 +5,6 @@ import {
   Box,
   Text,
   VStack,
-  HStack,
   Flex,
   Badge,
   Button,
@@ -15,7 +14,6 @@ import {
 import { TrashIcon } from '@/components/ui/icons';
 import { ErrorDialog } from '@/components/ui/dialog-manager';
 import { OpenMojiEmoji } from '@/components/ui/openmoji-emoji';
-import { getSmileyByUnicode } from '@/lib/openmoji';
 
 interface DagensSmileyEntry {
   id: number;

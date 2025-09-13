@@ -13,7 +13,7 @@ import {
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { OpenMojiEmoji } from '@/components/ui/openmoji-emoji';
-import { SMILEY_OPTIONS, getSmileyByUnicode } from '@/lib/openmoji';
+import { SMILEY_OPTIONS } from '@/lib/openmoji';
 
 interface SmileySelectionDialogProps {
   trigger: React.ReactNode;
@@ -32,7 +32,6 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
   const [reasoning, setReasoning] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   // Responsive settings - 4 columns on large screens for bigger emojis
   const isMobile = useBreakpointValue({ base: true, md: false });
@@ -54,7 +53,6 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
 
   const handleNextStep = () => {
     if (currentStep === 0 && selectedEmoji) {
-      setCompletedSteps(prev => new Set(prev).add(0));
       setCurrentStep(1);
     }
   };
@@ -69,13 +67,11 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
     if (!selectedEmoji || !reasoning.trim()) return;
     
     try {
-      setCompletedSteps(prev => new Set(prev).add(1));
       await onSubmit(selectedEmoji, reasoning);
       // Reset form and close dialog
       setSelectedEmoji(null);
       setReasoning('');
       setCurrentStep(0);
-      setCompletedSteps(new Set());
       setIsOpen(false);
     } catch (error) {
       // Error handling is done in parent component
