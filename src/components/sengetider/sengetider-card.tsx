@@ -49,6 +49,7 @@ export function SengetiderCard({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, -1 = last week, etc.
   const [selectedDate, setSelectedDate] = useState<Date>(new Date()); // Default to today
+  const [hasUserInput, setHasUserInput] = useState(false); // Track if user has started typing
 
   // Get current week dates (Monday to Sunday) with offset support
   const getCurrentWeekDates = (offset: number = 0) => {
@@ -100,21 +101,23 @@ export function SengetiderCard({
     return currentWeekEntries.find(entry => entry.entryDate === dateString);
   }, [currentWeekEntries]);
 
-  // Pre-fill form when selected date changes
+  // Pre-fill form when selected date changes, but only if user hasn't started typing
   useEffect(() => {
-    const existingEntry = getEntryForDate(selectedDate);
-    if (existingEntry) {
-      setPuttetid(existingEntry.puttetid || '');
-      setSovKl(existingEntry.sovKl || '');
-      setVaagnede(existingEntry.vaagnede || '');
-      setNotes(existingEntry.notes || '');
-    } else {
-      setPuttetid('');
-      setSovKl('');
-      setVaagnede('');
-      setNotes('');
+    if (!hasUserInput) {
+      const existingEntry = getEntryForDate(selectedDate);
+      if (existingEntry) {
+        setPuttetid(existingEntry.puttetid || '');
+        setSovKl(existingEntry.sovKl || '');
+        setVaagnede(existingEntry.vaagnede || '');
+        setNotes(existingEntry.notes || '');
+      } else {
+        setPuttetid('');
+        setSovKl('');
+        setVaagnede('');
+        setNotes('');
+      }
     }
-  }, [selectedDate, getEntryForDate]);
+  }, [selectedDate, getEntryForDate, hasUserInput]);
 
   // Format time for display
   const formatTime = (timeString: string | null) => {
@@ -165,11 +168,12 @@ export function SengetiderCard({
         duration: 3000,
       });
       
-      // Reset form
+      // Reset form and user input flag
       setPuttetid('');
       setSovKl('');
       setVaagnede('');
       setNotes('');
+      setHasUserInput(false);
       onEntryRecorded();
       
     } catch (error) {
@@ -214,6 +218,7 @@ export function SengetiderCard({
     }
 
     setSelectedDate(date);
+    setHasUserInput(false); // Reset user input flag when selecting a new date
   };
 
   const handleDeleteSengetider = async () => {
@@ -490,7 +495,10 @@ export function SengetiderCard({
                 <Input
                   type="time"
                   value={puttetid}
-                  onChange={(e) => setPuttetid(e.target.value)}
+                  onChange={(e) => {
+                    setPuttetid(e.target.value);
+                    setHasUserInput(true);
+                  }}
                   size="md"
                   borderColor="cream.300"
                   borderRadius="lg"
@@ -510,7 +518,10 @@ export function SengetiderCard({
                 <Input
                   type="time"
                   value={sovKl}
-                  onChange={(e) => setSovKl(e.target.value)}
+                  onChange={(e) => {
+                    setSovKl(e.target.value);
+                    setHasUserInput(true);
+                  }}
                   size="md"
                   borderColor="cream.300"
                   borderRadius="lg"
@@ -530,7 +541,10 @@ export function SengetiderCard({
                 <Input
                   type="time"
                   value={vaagnede}
-                  onChange={(e) => setVaagnede(e.target.value)}
+                  onChange={(e) => {
+                    setVaagnede(e.target.value);
+                    setHasUserInput(true);
+                  }}
                   size="md"
                   borderColor="cream.300"
                   borderRadius="lg"
@@ -550,7 +564,10 @@ export function SengetiderCard({
               <Text fontSize="sm" fontWeight="medium" color="gray.700">Noter (valgfrit)</Text>
               <Textarea
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={(e) => {
+                  setNotes(e.target.value);
+                  setHasUserInput(true);
+                }}
                 placeholder="Skriv eventuelle noter om søvnen..."
                 size="md"
                 borderColor="cream.300"
