@@ -14,7 +14,7 @@ import {
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { showToast } from '@/components/ui/simple-toast';
-import { useChildUsers } from '@/lib/queries';
+import { useChildUsers, useCreateSengetider } from '@/lib/queries';
 import { UserWithRelation } from '@/lib/database-service';
 import { useUser } from '@stackframe/stack';
 
@@ -48,6 +48,9 @@ export function CreateSengetiderDialog({
   // Fetch child users for access control selection
   const { data: childUsers = [] } = useChildUsers(childId.toString());
 
+  // React Query mutation for creating sengetider
+  const createSengetiderMutation = useCreateSengetider();
+
   const handleVisibilityChange = (option: 'alle' | 'kun_mig' | 'custom') => {
     setVisibilityOption(option);
     if (option !== 'custom') {
@@ -73,22 +76,12 @@ export function CreateSengetiderDialog({
       const isPublic = visibilityOption === 'alle';
       const accessibleUserIds = visibilityOption === 'custom' ? selectedUserIds : undefined;
 
-      const response = await fetch(`/api/children/${childId}/sengetider`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          description: description.trim() || undefined,
-          isPublic,
-          accessibleUserIds
-        }),
+      await createSengetiderMutation.mutateAsync({
+        childId,
+        description: description.trim() || undefined,
+        isPublic,
+        accessibleUserIds
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
 
       showToast({
         title: 'Succes',

@@ -78,7 +78,6 @@ interface ToolsManagerProps {
   isUserAdmin: boolean;
   childName: string;
   hideAddButton?: boolean; // New prop to hide internal add buttons
-  onAddToolClick?: () => void; // Callback when add tool should be triggered externally
 }
 
 export interface ToolsManagerRef {
@@ -86,7 +85,7 @@ export interface ToolsManagerRef {
 }
 
 export const ToolsManager = forwardRef<ToolsManagerRef, ToolsManagerProps>(
-  function ToolsManager({ childId, isUserAdmin, childName, hideAddButton = false, onAddToolClick }, ref) {
+  function ToolsManager({ childId, isUserAdmin, childName, hideAddButton = false }, ref) {
   const { data: barometers = [], isLoading: loading, error: queryError } = useBarometers(childId.toString());
   const { data: dagensSmiley = [], isLoading: smileyLoading, error: smileyError } = useDagensSmiley(childId.toString());
   const { data: sengetider = [], isLoading: sengetiderLoading, error: sengetiderError } = useSengetider(childId.toString());

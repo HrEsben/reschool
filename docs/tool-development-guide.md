@@ -589,20 +589,62 @@ export function useSengetiderEntries(sengetiderId: number) {
 }
 ```
 
-**Key React Query Patterns:**
-- Use consistent queryKey naming: `[entity]`, `[entity]Tool`, `[entity]Entries`
-- Separate API functions into main `api` object and tool-specific objects
-- Always invalidate relevant queries in mutation `onSuccess` callbacks
-- Use `enabled` option to prevent unnecessary requests
-- Set appropriate `staleTime` based on data volatility
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['[tool-name]'] });
+// 8. Add deletion hooks
+export function useDeleteSengetider() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (sengetiderId: number) => sengetiderApi.deleteSengetider(sengetiderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sengetider'] });
+    },
+  });
+}
+
+export function useDeleteSengetiderEntry() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ sengetiderId, entryId }: { sengetiderId: number; entryId: number }) =>
+      sengetiderApi.deleteEntry(sengetiderId, entryId),
+    onSuccess: (_, { sengetiderId }) => {
+      queryClient.invalidateQueries({ queryKey: ['sengetider'] });
       queryClient.invalidateQueries({ 
-        queryKey: queryKeys.[toolName]Tool(data.entry.[toolName]Id) 
+        queryKey: queryKeys.sengetiderEntries(sengetiderId) 
       });
     },
   });
 }
+```
+
+**CRITICAL: Cache Invalidation Best Practices**
+
+To ensure immediate UI updates when tools are created, updated, or deleted, **ALWAYS use React Query hooks instead of direct fetch calls**:
+
+```typescript
+// ❌ WRONG: Direct fetch calls bypass React Query cache
+const handleDelete = async () => {
+  const response = await fetch(`/api/sengetider/${id}`, { method: 'DELETE' });
+  // UI won't update automatically!
+};
+
+// ✅ CORRECT: Use React Query mutation hooks
+const deleteToolMutation = useDeleteSengetider();
+
+const handleDelete = async () => {
+  await deleteToolMutation.mutateAsync(id);
+  // UI updates automatically via cache invalidation!
+};
+```
+
+**Key React Query Patterns:**
+- Use consistent queryKey naming: `[entity]`, `[entity]Tool`, `[entity]Entries`
+- Separate API functions into main `api` object and tool-specific objects
+- **Always use React Query hooks for ALL API calls** (create, read, update, delete)
+- Always invalidate relevant queries in mutation `onSuccess` callbacks
+- Use `enabled` option to prevent unnecessary requests
+- Set appropriate `staleTime` based on data volatility
+- **Never mix direct fetch calls with React Query** - this breaks cache synchronization
 ```
 
 ## UI/UX Guidelines
@@ -1010,14 +1052,98 @@ These serve as reference implementations following all the guidelines above.
 - [ ] Verify TypeScript compilation passes
 - [ ] Test responsive design on mobile and desktop
 
-### Phase 6: Validation
-- [ ] Test all user permissions and access controls
+### Phase 6: Validation & Cache Verification
+- [ ] **CRITICAL**: Verify ALL components use React Query hooks, no direct fetch calls
+- [ ] Test tool creation immediately updates child profile display
+- [ ] Test tool deletion immediately removes tool from child profile
+- [ ] Test entry creation/deletion immediately updates tool timeline
 - [ ] Verify timeline displays correctly with forwardRef pattern
 - [ ] Test DialogManager with correct prop types (`isLoading`, `type: 'error'`)
 - [ ] Ensure proper error handling and user feedback
 - [ ] Test with multiple users and complex data scenarios
+- [ ] **Search codebase for `fetch(` calls** and replace with React Query mutations
 
 ## Common Gotchas & Solutions
+
+### React Query Cache Invalidation (CRITICAL)
+**Problem**: Tools not refreshing after creation/deletion due to bypassing React Query cache
+**Root Cause**: Using direct `fetch()` calls instead of React Query mutations
+
+This is a **systematic issue** across the codebase where components use direct fetch calls, preventing automatic UI updates.
+
+**❌ WRONG: Direct fetch calls bypass React Query cache**
+```typescript
+// This pattern is found in many existing components and must be avoided
+const handleCreate = async () => {
+  const response = await fetch('/api/children/123/sengetider', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+  // UI won't refresh! Cache is not invalidated!
+};
+
+const handleDelete = async () => {
+  const response = await fetch('/api/sengetider/456', { method: 'DELETE' });
+  // UI still shows deleted item! Cache is stale!
+};
+```
+
+**✅ CORRECT: Use React Query mutations for ALL API operations**
+```typescript
+// Creation
+const createSengetiderMutation = useCreateSengetider();
+
+const handleCreate = async () => {
+  await createSengetiderMutation.mutateAsync({
+    childId,
+    topic,
+    description,
+    targetBedtime,
+    isPublic,
+    accessibleUserIds
+  });
+  // UI automatically refreshes via cache invalidation!
+};
+
+// Deletion
+const deleteSengetiderMutation = useDeleteSengetider();
+
+const handleDelete = async () => {
+  await deleteSengetiderMutation.mutateAsync(sengetiderId);
+  // UI automatically updates and removes deleted item!
+};
+```
+
+**Solution Steps for Existing Components:**
+1. **Identify components using direct fetch**: Search for `fetch(` in component files
+2. **Create React Query hooks**: Add appropriate mutation hooks in `queries.ts`
+3. **Update components**: Replace fetch calls with mutation hooks
+4. **Verify cache invalidation**: Ensure `onSuccess` callbacks invalidate relevant queries
+
+**Example Conversion (Sengetider pattern):**
+```typescript
+// Before: Direct fetch in component
+const confirmDeleteSengetider = async () => {
+  const response = await fetch(`/api/sengetider/${sengetider.id}`, {
+    method: 'DELETE'
+  });
+  // No automatic UI update
+};
+
+// After: React Query mutation
+const deleteSengetiderMutation = useDeleteSengetider();
+
+const confirmDeleteSengetider = async () => {
+  await deleteSengetiderMutation.mutateAsync(sengetider.id);
+  // Automatic UI update via cache invalidation
+};
+```
+
+**Cache Invalidation Best Practices:**
+- **Universal Rule**: NEVER use direct fetch calls in components - always use React Query hooks
+- Invalidate parent queries: `queryClient.invalidateQueries({ queryKey: ['sengetider'] })`
+- Invalidate specific tool queries: `queryClient.invalidateQueries({ queryKey: queryKeys.sengetiderTool(id) })`
+- Invalidate related data: entries, access permissions, etc.
 
 ### UserWithRelation Interface
 **Problem**: Using wrong property names for user data
@@ -1223,4 +1349,86 @@ function isValidTime(time: string): boolean {
 }
 ```
 
-This comprehensive guide now includes all the crucial patterns and gotchas discovered during the Sengetider implementation, ensuring future tool development follows established best practices.
+## Systematic Cache Issues in Existing Codebase
+
+### Current State Analysis
+During the implementation of proper cache invalidation for Sengetider tools, we discovered a **systematic issue** across the ReSchool codebase:
+
+**Problem**: Many existing tool components use direct `fetch()` calls instead of React Query hooks, causing:
+- Tools don't immediately appear in child profile after creation
+- Deleted tools remain visible until page refresh
+- Entry creation/deletion doesn't update timelines in real-time
+- Inconsistent user experience across different tools
+
+### Affected Components (Known Issues)
+Based on investigation, these components likely have cache invalidation issues:
+
+1. **Barometer Tools**:
+   - `src/components/barometer/barometer-card.tsx` - Uses direct fetch in `confirmDeleteBarometer`
+   - Missing `useDeleteBarometer` hook
+
+2. **Dagens Smiley Tools**:
+   - Likely similar patterns to investigate
+   - Need verification of creation/deletion patterns
+
+3. **Other Tool Types**:
+   - Any components with `fetch(` calls instead of React Query hooks
+
+### Fixing Cache Invalidation Issues
+
+**Step 1: Identify Components**
+```bash
+# Search for direct fetch calls in components
+grep -r "fetch(" src/components/ --include="*.tsx"
+```
+
+**Step 2: Add Missing Hooks**
+For each tool type missing deletion hooks, add to `queries.ts`:
+```typescript
+export function useDeleteBarometer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (barometerId: number) => barometersApi.deleteBarometer(barometerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['barometers'] });
+    },
+  });
+}
+```
+
+**Step 3: Update Components**
+Replace direct fetch calls with React Query mutations:
+```typescript
+// Replace this pattern:
+const handleDelete = async () => {
+  const response = await fetch(`/api/barometers/${id}`, { method: 'DELETE' });
+};
+
+// With this pattern:
+const deleteBarometerMutation = useDeleteBarometer();
+const handleDelete = async () => {
+  await deleteBarometerMutation.mutateAsync(id);
+};
+```
+
+**Step 4: Verify Cache Invalidation**
+Ensure all mutations properly invalidate related queries:
+- Parent tool lists (e.g., `['barometers']`)
+- Specific tool data (e.g., `queryKeys.barometerTool(id)`)
+- Related entries and access data
+
+### Migration Priority
+1. **High Priority**: Tools with creation/deletion operations (affects core workflow)
+2. **Medium Priority**: Entry management operations (affects timeline updates)
+3. **Low Priority**: Update/edit operations (less frequent, but still important)
+
+### Testing Cache Invalidation
+After fixing components, verify:
+1. Create tool → immediately appears in child profile
+2. Delete tool → immediately disappears from child profile
+3. Create entry → immediately appears in timeline
+4. Delete entry → immediately disappears from timeline
+5. No page refresh required for any operation
+
+This comprehensive guide now includes all the crucial patterns and gotchas discovered during the Sengetider implementation, ensuring future tool development follows established best practices and avoids cache invalidation issues.

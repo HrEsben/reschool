@@ -21,6 +21,7 @@ import { DialogManager } from '@/components/ui/dialog-manager';
 import { SettingsIcon, TrashIcon } from '@/components/ui/icons';
 import { ToggleTip } from '@/components/ui/toggle-tip';
 import { SengetiderEntry, SengetiderWithLatestEntry } from '@/lib/database-service';
+import { useDeleteSengetider } from '@/lib/queries';
 
 interface SengetiderCardProps {
   sengetider: SengetiderWithLatestEntry;
@@ -48,6 +49,9 @@ export function SengetiderCard({
   const [currentWeekEntries, setCurrentWeekEntries] = useState<SengetiderEntry[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, -1 = last week, etc.
+
+  // React Query mutation for deleting sengetider
+  const deleteSengetiderMutation = useDeleteSengetider();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date()); // Default to today
   const [hasUserInput, setHasUserInput] = useState(false); // Track if user has started typing
 
@@ -224,14 +228,10 @@ export function SengetiderCard({
   const handleDeleteSengetider = async () => {
     setDeletingSengetider(true);
     try {
-      const response = await fetch(`/api/sengetider/${sengetider.id}`, {
-        method: 'DELETE',
+      await deleteSengetiderMutation.mutateAsync({
+        id: sengetider.id,
+        childId: sengetider.childId.toString()
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete sengetider');
-      }
 
       showToast({
         title: 'Slettet',
