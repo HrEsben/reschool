@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
 import {
   Box,
   Button,
@@ -77,9 +77,16 @@ interface ToolsManagerProps {
   childId: number;
   isUserAdmin: boolean;
   childName: string;
+  hideAddButton?: boolean; // New prop to hide internal add buttons
+  onAddToolClick?: () => void; // Callback when add tool should be triggered externally
 }
 
-export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerProps) {
+export interface ToolsManagerRef {
+  openAddDialog: () => void;
+}
+
+export const ToolsManager = forwardRef<ToolsManagerRef, ToolsManagerProps>(
+  function ToolsManager({ childId, isUserAdmin, childName, hideAddButton = false, onAddToolClick }, ref) {
   const { data: barometers = [], isLoading: loading, error: queryError } = useBarometers(childId.toString());
   const { data: dagensSmiley = [], isLoading: smileyLoading, error: smileyError } = useDagensSmiley(childId.toString());
   const { data: sengetider = [], isLoading: sengetiderLoading, error: sengetiderError } = useSengetider(childId.toString());
@@ -88,6 +95,7 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
   const [editingSmiley, setEditingSmiley] = useState<DagensSmiley | null>(null);
   const [isSmileyEditDialogOpen, setIsSmileyEditDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const addDialogTriggerRef = useRef<HTMLButtonElement>(null);
   const user = useUser();
 
   // Tools navigation hook
@@ -101,6 +109,16 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
     dagensSmiley: dagensSmiley.map(s => ({ id: s.id, topic: s.topic })),
     sengetider: sengetider.map(s => ({ id: s.id })),
   });
+
+  // Expose openAddDialog method to parent via ref
+  useImperativeHandle(ref, () => ({
+    openAddDialog: () => {
+      // Programmatically trigger the add dialog
+      if (addDialogTriggerRef.current) {
+        addDialogTriggerRef.current.click();
+      }
+    }
+  }), []);
 
   // Convert query error to string for display
   const error = queryError || smileyError || sengetiderError ? 
@@ -358,7 +376,7 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
           })}
 
           {/* Add Tool Button - moved below tools */}
-          {isUserAdmin && (
+          {isUserAdmin && !hideAddButton && (
             <Box pt={4}>
               <Separator mb={4} />
               <Box display="flex" justifyContent="flex-end">
@@ -405,7 +423,7 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
           </Box>
           
           {/* Add Tool Button - shown even when no tools exist */}
-          {isUserAdmin && (
+          {isUserAdmin && !hideAddButton && (
             <Box display="flex" justifyContent="flex-end">
               <AddToolDialog
                 childId={childId}
@@ -457,7 +475,27 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
           isUserAdmin={isUserAdmin}
         />
       )}
+
+      {/* External Add Tool Dialog - controlled from parent */}
+      {hideAddButton && isUserAdmin && (
+        <AddToolDialog
+          childId={childId}
+          childName={childName}
+          onToolAdded={handleToolAdded}
+          isUserAdmin={isUserAdmin}
+          trigger={
+            <button 
+              ref={addDialogTriggerRef}
+              style={{ display: 'none' }}
+            >
+              Hidden Trigger
+            </button>
+          }
+        />
+      )}
     </VStack>
     </>
   );
-}
+});
+
+ToolsManager.displayName = 'ToolsManager';

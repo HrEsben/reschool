@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@stackframe/stack';
 import {
@@ -23,7 +23,7 @@ import { InviteUserDialog } from '@/components/ui/invite-user-dialog';
 import { DeleteInvitationDialog } from '@/components/ui/delete-invitation-dialog';
 import { PromoteUserDialog } from '@/components/ui/promote-user-dialog';
 import { DemoteUserDialog } from '@/components/ui/demote-user-dialog';
-import { ToolsManager } from '@/components/tools/tools-manager';
+import { ToolsManager, ToolsManagerRef } from '@/components/tools/tools-manager';
 import { AdminStarIcon, DemoteStarIcon } from '@/components/ui/icons';
 import { useChildBySlug, useRemoveUserFromChild, useDeleteInvitation, useDeleteChild, usePromoteUserToAdmin, useDemoteUserFromAdmin } from '@/lib/queries';
 
@@ -32,6 +32,7 @@ export default function ChildSlugPage() {
   const router = useRouter();
   const user = useUser();
   const [deletingInvitation, setDeletingInvitation] = useState(false);
+  const toolsManagerRef = useRef<ToolsManagerRef>(null);
   
   const slug = params.slug as string;
 
@@ -403,34 +404,47 @@ export default function ChildSlugPage() {
         <VStack gap={6} align="stretch" maxW="4xl" mx="auto">
           {/* Child Header with breadcrumb-style tools section */}
           <VStack align="start" gap={2}>
-            <HStack align="baseline" gap={3} wrap="wrap">
-              <Heading size="xl" color="navy.800" fontWeight="700">
-                {childData.child.name}
-              </Heading>
-              <Text color="gray.400" fontSize="xl" fontWeight="300">
-                /
-              </Text>
-              <Heading size="lg" color="delft-blue.600" fontWeight="600">
-                Værktøjer
-              </Heading>
+            <HStack align="baseline" gap={3} wrap="wrap" justify="space-between" w="100%">
+              <HStack align="baseline" gap={3} wrap="wrap">
+                <Heading size="xl" color="navy.800" fontWeight="700">
+                  {childData.child.name}
+                </Heading>
+                <Text color="gray.400" fontSize="xl" fontWeight="300">
+                  /
+                </Text>
+                <Heading size="lg" color="delft-blue.600" fontWeight="600">
+                  Værktøjer
+                </Heading>
+              </HStack>
+              
+              {/* Add Tool Button in header */}
+              {isCurrentUserAdmin && (
+                <Button
+                  bg="#81b29a"
+                  color="white"
+                  size="md"
+                  _hover={{
+                    bg: "#6a9b82"
+                  }}
+                  onClick={() => {
+                    toolsManagerRef.current?.openAddDialog();
+                  }}
+                >
+                  Tilføj +
+                </Button>
+              )}
             </HStack>
             <Box className="w-20 h-1 bg-sunset-500 rounded-full"></Box>
           </VStack>
 
-          {/* Tools Section */}
-          <Box 
-            bg="bg.surface" 
-            borderRadius="xl" 
-            border="1px solid" 
-            borderColor="border.muted" 
-            p={{ base: 4, md: 6 }}
-          >
-            <ToolsManager 
-              childId={childData.child.id} 
-              isUserAdmin={isCurrentUserAdmin}
-              childName={childData.child.name}
-            />
-          </Box>
+          {/* Tools Section - No card wrapper */}
+          <ToolsManager 
+            ref={toolsManagerRef}
+            childId={childData.child.id} 
+            isUserAdmin={isCurrentUserAdmin}
+            childName={childData.child.name}
+            hideAddButton={true}
+          />
 
           {/* Connected Users Section */}
           <Box 
