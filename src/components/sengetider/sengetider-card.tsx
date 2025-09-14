@@ -11,7 +11,6 @@ import {
   Heading,
   Input,
   Textarea,
-  Badge,
   Grid,
   GridItem,
   useBreakpointValue,
@@ -254,323 +253,377 @@ export function SengetiderCard({
 
   return (
     <Box
-      bg="bg.surface"
+      borderWidth="1px"
+      borderColor="gray.200"
       borderRadius="xl"
-      border="1px solid"
-      borderColor="border.muted"
-      p={{ base: 4, md: 6 }}
-      position="relative"
+      bg="white"
+      shadow="sm"
+      _hover={{ shadow: "md" }}
+      transition="all 0.2s"
+      overflow="hidden"
     >
-      <VStack gap={6} align="stretch">
-        {/* Header */}
+      {/* Header */}
+      <Box bg="cream.50" px={6} py={4} borderBottomWidth="1px" borderBottomColor="gray.100">
         <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
-          <VStack align="start" gap={1}>
-            <Heading size="lg" color="sage.600">Sengetider for {childName}</Heading>
+          <VStack align="start" gap={1} flex={1} minW={0}>
+            <Heading size="md" color="navy.800">Sengetider for {childName}</Heading>
             {sengetider.description && (
               <Text fontSize="sm" color="gray.600">
                 {sengetider.description}
               </Text>
             )}
-            <HStack gap={1}>
-              <Badge colorScheme="blue" fontSize="xs">
-                Sengetider
-              </Badge>
-              {!sengetider.isPublic && (
-                <Badge colorScheme="orange" fontSize="xs" variant="outline">
-                  Privat
-                </Badge>
-              )}
+            <HStack gap={2}>
+              <ToggleTip 
+                content={sengetider.isPublic ? (
+                  <VStack gap={1} align="start">
+                    <Text fontSize="sm" fontWeight="medium" color="gray.700">Alle voksne</Text>
+                    <Text fontSize="xs" color="gray.500">Alle voksne tilknyttet barnet kan se dette værktøj</Text>
+                  </VStack>
+                ) : (
+                  <VStack gap={1} align="start">
+                    <Text fontSize="sm" fontWeight="medium" color="gray.700">Kun dig</Text>
+                    <Text fontSize="xs" color="gray.500">Kun du kan se dette værktøj</Text>
+                  </VStack>
+                )}
+              >
+                <Box
+                  as="button"
+                  px={2}
+                  py={1}
+                  borderRadius="md"
+                  bg={sengetider.isPublic ? "green.100" : "blue.100"}
+                  color={sengetider.isPublic ? "green.700" : "blue.700"}
+                  border="1px solid"
+                  borderColor={sengetider.isPublic ? "green.200" : "blue.200"}
+                  fontSize="xs"
+                  fontWeight="medium"
+                  cursor="help"
+                  _hover={{ opacity: 0.8 }}
+                >
+                  {sengetider.isPublic ? "Alle voksne" : "Kun dig"}
+                </Box>
+              </ToggleTip>
             </HStack>
           </VStack>
           
           {isUserAdmin && (
-            <HStack gap={2}>
+            <HStack gap={1}>
               {onSengetiderEdit && (
-                <ToggleTip
-                  content="Rediger værktøj"
-                  showArrow={true}
-                  positioning={{ placement: "bottom" }}
-                >
-                  <Button
-                    aria-label="Rediger værktøj"
-                    size="sm"
-                    variant="ghost"
-                    colorScheme="sage"
-                    onClick={() => onSengetiderEdit(sengetider)}
-                  >
-                    <SettingsIcon />
-                  </Button>
-                </ToggleTip>
-              )}
-              <ToggleTip
-                content="Slet værktøj"
-                showArrow={true}
-                positioning={{ placement: "bottom" }}
-              >
                 <Button
-                  aria-label="Slet værktøj"
-                  size="sm"
                   variant="ghost"
-                  colorScheme="red"
-                  onClick={() => setShowDeleteDialog(true)}
+                  size="sm"
+                  onClick={() => onSengetiderEdit(sengetider)}
+                  title="Rediger sengetider-værktøj"
+                  p={1}
+                  minW="auto"
+                  color="navy.600"
+                  _hover={{ bg: "navy.50", color: "navy.700" }}
                 >
-                  <TrashIcon />
+                  <SettingsIcon size={16} />
                 </Button>
-              </ToggleTip>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDeleteDialog(true)}
+                title="Slet sengetider-værktøj"
+                p={1}
+                minW="auto"
+                color="red.600"
+                _hover={{ bg: "red.50", color: "red.700" }}
+              >
+                <TrashIcon size={16} />
+              </Button>
             </HStack>
           )}
         </Flex>
+      </Box>
 
-        {/* Current Week View */}
-        <VStack gap={4} align="stretch">
-          <Flex justify="space-between" align="center">
-            <Heading size="md" color="gray.700">
-              {weekOffset === 0 ? 'Denne uge' : 
-               weekOffset === -1 ? 'Forrige uge' : 
-               weekOffset < -1 ? `${Math.abs(weekOffset)} uger siden` :
-               weekOffset === 1 ? 'Næste uge' :
-               `${weekOffset} uger frem`}
-            </Heading>
-            
-            <HStack gap={2}>
-              <IconButton
-                aria-label="Forrige uge"
-                size="sm"
-                variant="outline"
-                colorScheme="sage"
-                onClick={goToPreviousWeek}
-              >
-                ←
-              </IconButton>
+      {/* Content */}
+      <Box p={6}>
+        <VStack gap={6} align="stretch">
+
+          {/* Current Week View */}
+          <VStack gap={4} align="stretch">
+            <Flex justify="space-between" align="center">
+              <Heading size="md" color="navy.700">
+                {weekOffset === 0 ? 'Denne uge' : 
+                 weekOffset === -1 ? 'Forrige uge' : 
+                 weekOffset < -1 ? `${Math.abs(weekOffset)} uger siden` :
+                 weekOffset === 1 ? 'Næste uge' :
+                 `${weekOffset} uger frem`}
+              </Heading>
               
-              {weekOffset !== 0 && (
-                <Button
+              <HStack gap={2}>
+                <IconButton
+                  aria-label="Forrige uge"
                   size="sm"
                   variant="outline"
                   colorScheme="sage"
-                  onClick={goToCurrentWeek}
+                  onClick={goToPreviousWeek}
                 >
-                  I dag
-                </Button>
-              )}
-              
-              <IconButton
-                aria-label="Næste uge"
-                size="sm"
-                variant="outline"
-                colorScheme="sage"
-                onClick={goToNextWeek}
-                disabled={weekOffset >= 0} // Don't allow going into future
-              >
-                →
-              </IconButton>
-            </HStack>
-          </Flex>
-          
-          {/* Week Date Range */}
-          <Text fontSize="sm" color="gray.600" textAlign="center">
-            {weekDates[0].toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })} - {weekDates[6].toLocaleDateString('da-DK', { day: 'numeric', month: 'short', year: 'numeric' })}
-          </Text>
-          
-          {/* Week Grid */}
-          <Grid templateColumns={isMobile ? "repeat(1, 1fr)" : "repeat(7, 1fr)"} gap={2}>
-            {weekDates.map((date, index) => {
-              const entry = getEntryForDate(date);
-              const isToday = date.toDateString() === new Date().toDateString();
-              const isSelected = date.toDateString() === selectedDate.toDateString();
-              const isPast = date <= new Date();
-              const isClickable = isPast;
-              
-              return (
-                <GridItem key={date.toISOString()}>
-                  <Box
-                    p={3}
-                    border="2px solid"
-                    borderColor={
-                      isSelected ? "sage.500" : 
-                      isToday ? "sage.300" : 
-                      "gray.200"
-                    }
-                    borderRadius="md"
-                    bg={
-                      isSelected ? "sage.100" :
-                      isToday ? "sage.50" : 
-                      "white"
-                    }
-                    minH="120px"
-                    cursor={isClickable ? "pointer" : "default"}
-                    _hover={isClickable ? { 
-                      borderColor: isSelected ? "sage.600" : "sage.400", 
-                      bg: isSelected ? "sage.150" : (isToday ? "sage.100" : "sage.25"),
-                      transform: "translateY(-1px)",
-                      boxShadow: "sm"
-                    } : {}}
-                    transition="all 0.2s"
-                    onClick={isClickable ? () => handleDayClick(date) : undefined}
-                    opacity={isPast ? 1 : 0.6}
+                  ←
+                </IconButton>
+                
+                {weekOffset !== 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    colorScheme="sage"
+                    onClick={goToCurrentWeek}
                   >
-                    <VStack gap={2} align="start">
-                      <Text 
-                        fontWeight="bold" 
-                        fontSize="sm" 
-                        color={
-                          isSelected ? "sage.700" :
-                          isToday ? "sage.600" : 
-                          "gray.600"
-                        }
-                      >
-                        {dayNames[index]}
-                        {isSelected && ' ✓'}
-                      </Text>
-                      <Text fontSize="xs" color="gray.500">
-                        {date.getDate()}.{date.getMonth() + 1}
-                      </Text>
-                      
-                      {entry ? (
-                        <VStack gap={1} align="start" fontSize="xs">
-                          <Text><strong>Puttetid:</strong> {formatTime(entry.puttetid)}</Text>
-                          {entry.sovKl && <Text><strong>Sov kl:</strong> {formatTime(entry.sovKl)}</Text>}
-                          {entry.vaagnede && <Text><strong>Vågnede:</strong> {formatTime(entry.vaagnede)}</Text>}
-                          {entry.notes && (
-                            <Text color="gray.600" fontSize="sm">
-                              {entry.notes}
-                            </Text>
+                    I dag
+                  </Button>
+                )}
+                
+                <IconButton
+                  aria-label="Næste uge"
+                  size="sm"
+                  variant="outline"
+                  colorScheme="sage"
+                  onClick={goToNextWeek}
+                  disabled={weekOffset >= 0} // Don't allow going into future
+                >
+                  →
+                </IconButton>
+              </HStack>
+            </Flex>
+            
+            {/* Week Date Range */}
+            <Text fontSize="sm" color="gray.600" textAlign="center">
+              {weekDates[0].toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })} - {weekDates[6].toLocaleDateString('da-DK', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </Text>
+            
+            {/* Week Grid */}
+            <Grid templateColumns={isMobile ? "repeat(1, 1fr)" : "repeat(7, 1fr)"} gap={3}>
+              {weekDates.map((date, index) => {
+                const entry = getEntryForDate(date);
+                const isToday = date.toDateString() === new Date().toDateString();
+                const isSelected = date.toDateString() === selectedDate.toDateString();
+                const isPast = date <= new Date();
+                const isClickable = isPast;
+                
+                return (
+                  <GridItem key={date.toISOString()}>
+                    <Box
+                      p={4}
+                      border="2px solid"
+                      borderColor={
+                        isSelected ? "sage.500" : 
+                        isToday ? "sage.300" : 
+                        "gray.200"
+                      }
+                      borderRadius="lg"
+                      bg={
+                        isSelected ? "sage.50" :
+                        isToday ? "cream.50" : 
+                        "white"
+                      }
+                      minH="140px"
+                      cursor={isClickable ? "pointer" : "default"}
+                      _hover={isClickable ? { 
+                        borderColor: isSelected ? "sage.600" : "sage.400", 
+                        bg: isSelected ? "sage.100" : (isToday ? "cream.100" : "cream.25"),
+                        transform: "translateY(-1px)",
+                        boxShadow: "sm"
+                      } : {}}
+                      transition="all 0.2s"
+                      onClick={isClickable ? () => handleDayClick(date) : undefined}
+                      opacity={isPast ? 1 : 0.6}
+                    >
+                      <VStack gap={2} align="start">
+                        <HStack justify="space-between" w="100%">
+                          <Text 
+                            fontWeight="semibold" 
+                            fontSize="sm" 
+                            color={
+                              isSelected ? "sage.700" :
+                              isToday ? "sage.600" : 
+                              "navy.700"
+                            }
+                          >
+                            {dayNames[index]}
+                          </Text>
+                          {isSelected && (
+                            <Text fontSize="sm" color="sage.600">✓</Text>
                           )}
-                        </VStack>
-                      ) : (
-                        <Text fontSize="xs" color="gray.400">
-                          Ingen registrering
+                        </HStack>
+                        <Text fontSize="xs" color="gray.500" fontWeight="medium">
+                          {date.getDate()}.{date.getMonth() + 1}
                         </Text>
-                      )}
-                    </VStack>
-                  </Box>
-                </GridItem>
-              );
-            })}
-          </Grid>
-        </VStack>
-
-        {/* Record Today's Entry */}
-        <VStack gap={4} align="stretch">
-          <Heading size="md" color="gray.700">
-            {selectedDate.toDateString() === new Date().toDateString() 
-              ? 'Registrer i dag' 
-              : `Registrer for ${selectedDate.toLocaleDateString('da-DK')}`}
-          </Heading>
-          
-          <Grid templateColumns={isMobile ? "1fr" : "repeat(3, 1fr)"} gap={4}>
-            <VStack align="start" gap={2}>
-              <Text fontSize="sm" fontWeight="medium">Puttetid *</Text>
-              <Input
-                type="time"
-                value={puttetid}
-                onChange={(e) => setPuttetid(e.target.value)}
-                size="sm"
-                borderColor="cream.300"
-                borderRadius="lg"
-                bg="cream.25"
-                _focus={{ 
-                  borderColor: "sage.400", 
-                  boxShadow: "0 0 0 3px rgba(129, 178, 154, 0.1)",
-                  bg: "white"
-                }}
-              />
-            </VStack>
-            
-            <VStack align="start" gap={2}>
-              <Text fontSize="sm" fontWeight="medium">Sov kl.</Text>
-              <Input
-                type="time"
-                value={sovKl}
-                onChange={(e) => setSovKl(e.target.value)}
-                size="sm"
-                borderColor="cream.300"
-                borderRadius="lg"
-                bg="cream.25"
-                _focus={{ 
-                  borderColor: "sage.400", 
-                  boxShadow: "0 0 0 3px rgba(129, 178, 154, 0.1)",
-                  bg: "white"
-                }}
-              />
-            </VStack>
-            
-            <VStack align="start" gap={2}>
-              <Text fontSize="sm" fontWeight="medium">Vågnede</Text>
-              <Input
-                type="time"
-                value={vaagnede}
-                onChange={(e) => setVaagnede(e.target.value)}
-                size="sm"
-                borderColor="cream.300"
-                borderRadius="lg"
-                bg="cream.25"
-                _focus={{ 
-                  borderColor: "sage.400", 
-                  boxShadow: "0 0 0 3px rgba(129, 178, 154, 0.1)",
-                  bg: "white"
-                }}
-              />
-            </VStack>
-          </Grid>
-          
-          <VStack align="start" gap={2}>
-            <Text fontSize="sm" fontWeight="medium">Noter (valgfrit)</Text>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Skriv eventuelle noter om søvnen..."
-              size="sm"
-              borderColor="cream.300"
-              borderRadius="lg"
-              bg="cream.25"
-              _focus={{ 
-                borderColor: "sage.400", 
-                boxShadow: "0 0 0 3px rgba(129, 178, 154, 0.1)",
-                bg: "white"
-              }}
-              rows={3}
-            />
+                        
+                        {entry ? (
+                          <VStack gap={1} align="start" fontSize="xs" w="100%">
+                            <Text><strong>Puttetid:</strong> {formatTime(entry.puttetid)}</Text>
+                            {entry.sovKl && <Text><strong>Sov:</strong> {formatTime(entry.sovKl)}</Text>}
+                            {entry.vaagnede && <Text><strong>Vågnede:</strong> {formatTime(entry.vaagnede)}</Text>}
+                            {entry.notes && (
+                              <Text color="gray.600" fontSize="xs" lineClamp={2}>
+                                <strong>Note:</strong> {entry.notes}
+                              </Text>
+                            )}
+                          </VStack>
+                        ) : (
+                          <Text fontSize="xs" color="gray.400" fontStyle="italic">
+                            Ingen registrering
+                          </Text>
+                        )}
+                      </VStack>
+                    </Box>
+                  </GridItem>
+                );
+              })}
+            </Grid>
           </VStack>
 
-          <Button
-            colorScheme="sage"
-            onClick={handleRecordEntry}
-            loading={loading}
-            disabled={!puttetid.trim()}
-          >
-            Registrer sengetid
-          </Button>
-        </VStack>
+          {/* Record Entry Form */}
+          <VStack gap={4} align="stretch">
+            <Heading size="md" color="navy.700">
+              {selectedDate.toDateString() === new Date().toDateString() 
+                ? 'Registrer i dag' 
+                : `Registrer for ${selectedDate.toLocaleDateString('da-DK')}`}
+            </Heading>
+            
+            <Grid templateColumns={isMobile ? "1fr" : "repeat(3, 1fr)"} gap={4}>
+              <VStack align="start" gap={2}>
+                <Text fontSize="sm" fontWeight="medium" color="gray.700">Puttetid *</Text>
+                <Input
+                  type="time"
+                  value={puttetid}
+                  onChange={(e) => setPuttetid(e.target.value)}
+                  size="md"
+                  borderColor="cream.300"
+                  borderRadius="lg"
+                  bg="cream.25"
+                  _hover={{ borderColor: "cream.400" }}
+                  _focus={{ 
+                    borderColor: "sage.400", 
+                    boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
+                    bg: "white",
+                    outline: "none"
+                  }}
+                />
+              </VStack>
+              
+              <VStack align="start" gap={2}>
+                <Text fontSize="sm" fontWeight="medium" color="gray.700">Sov kl.</Text>
+                <Input
+                  type="time"
+                  value={sovKl}
+                  onChange={(e) => setSovKl(e.target.value)}
+                  size="md"
+                  borderColor="cream.300"
+                  borderRadius="lg"
+                  bg="cream.25"
+                  _hover={{ borderColor: "cream.400" }}
+                  _focus={{ 
+                    borderColor: "sage.400", 
+                    boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
+                    bg: "white",
+                    outline: "none"
+                  }}
+                />
+              </VStack>
+              
+              <VStack align="start" gap={2}>
+                <Text fontSize="sm" fontWeight="medium" color="gray.700">Vågnede</Text>
+                <Input
+                  type="time"
+                  value={vaagnede}
+                  onChange={(e) => setVaagnede(e.target.value)}
+                  size="md"
+                  borderColor="cream.300"
+                  borderRadius="lg"
+                  bg="cream.25"
+                  _hover={{ borderColor: "cream.400" }}
+                  _focus={{ 
+                    borderColor: "sage.400", 
+                    boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
+                    bg: "white",
+                    outline: "none"
+                  }}
+                />
+              </VStack>
+            </Grid>
+            
+            <VStack align="start" gap={2}>
+              <Text fontSize="sm" fontWeight="medium" color="gray.700">Noter (valgfrit)</Text>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Skriv eventuelle noter om søvnen..."
+                size="md"
+                borderColor="cream.300"
+                borderRadius="lg"
+                bg="cream.25"
+                _hover={{ borderColor: "cream.400" }}
+                _focus={{ 
+                  borderColor: "sage.400", 
+                  boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
+                  bg: "white",
+                  outline: "none"
+                }}
+                rows={3}
+                maxLength={500}
+              />
+            </VStack>
 
-        {/* Delete Confirmation Dialog */}
-        <DialogManager
-          trigger={<div style={{ display: 'none' }} />}
-          title="Slet sengetider-værktøj"
-          type="error"
-          isOpen={showDeleteDialog}
-          onOpenChange={setShowDeleteDialog}
-          primaryAction={{
-            label: deletingSengetider ? "Sletter..." : "Slet",
-            onClick: handleDeleteSengetider,
-            isLoading: deletingSengetider,
-            colorScheme: "red"
-          }}
-          secondaryAction={{
-            label: "Annuller",
-            onClick: () => setShowDeleteDialog(false),
-            colorScheme: "gray"
-          }}
-        >
+            <Button
+              bg="sage.500"
+              color="white"
+              _hover={{ bg: "sage.600" }}
+              _active={{ bg: "sage.700" }}
+              _focus={{ 
+                boxShadow: "0 0 0 2px var(--chakra-colors-sage-200)",
+                outline: "none"
+              }}
+              size="lg"
+              borderRadius="lg"
+              fontWeight="medium"
+              onClick={handleRecordEntry}
+              loading={loading}
+              disabled={!puttetid.trim()}
+              _disabled={{
+                opacity: 0.6,
+                cursor: "not-allowed"
+              }}
+            >
+              {selectedDate.toDateString() === new Date().toDateString() 
+                ? 'Registrer sengetid' 
+                : 'Registrer for valgt dato'}
+            </Button>
+          </VStack>
+        </VStack>
+      </Box>
+
+      {/* Delete Confirmation Dialog */}
+      <DialogManager
+        trigger={<div style={{ display: 'none' }} />}
+        title="Slet sengetider-værktøj"
+        type="error"
+        isOpen={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        primaryAction={{
+          label: deletingSengetider ? "Sletter..." : "Slet",
+          onClick: handleDeleteSengetider,
+          isLoading: deletingSengetider,
+          colorScheme: "coral"
+        }}
+        secondaryAction={{
+          label: "Annuller",
+          onClick: () => setShowDeleteDialog(false),
+          colorScheme: "gray"
+        }}
+      >
+        <VStack gap={2} align="stretch">
           <Text>
-            Er du sikker på, at du vil slette sengetider-værktøjet? 
-            Alle registrerede sengetider vil også blive slettet.
+            Er du sikker på, at du vil slette sengetider-værktøjet?
           </Text>
-          <Text mt={2} fontSize="sm" color="gray.600">
-            Denne handling kan ikke fortrydes.
+          <Text fontSize="sm" color="coral.600">
+            ⚠️ Denne handling kan ikke fortrydes. Alle registrerede sengetider vil blive permanent slettet.
           </Text>
-        </DialogManager>
-      </VStack>
+        </VStack>
+      </DialogManager>
     </Box>
   );
 }
