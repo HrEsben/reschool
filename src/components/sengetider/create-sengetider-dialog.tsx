@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import {
   Box,
-  Input,
   VStack,
   Text,
   HStack,

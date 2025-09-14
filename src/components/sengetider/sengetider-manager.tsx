@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from 'react';
 import {
   Box,
   Button,
@@ -13,7 +12,6 @@ import {
 import { CreateSengetiderDialog } from './create-sengetider-dialog';
 import { SengetiderCard } from './sengetider-card';
 import { useSengetider } from '@/lib/queries';
-import { SengetiderWithLatestEntry } from '@/lib/database-service';
 
 interface SengetiderManagerProps {
   childId: number;
@@ -66,6 +64,7 @@ export function SengetiderManager({ childId, isUserAdmin, childName }: Sengetide
         <Box>
           <CreateSengetiderDialog
             childId={childId}
+            childName={childName}
             onSengetiderCreated={handleSengetiderCreated}
             isUserAdmin={isUserAdmin}
             trigger={
@@ -101,6 +100,7 @@ export function SengetiderManager({ childId, isUserAdmin, childName }: Sengetide
           {isUserAdmin && (
             <CreateSengetiderDialog
               childId={childId}
+              childName={childName}
               onSengetiderCreated={handleSengetiderCreated}
               isUserAdmin={isUserAdmin}
               trigger={

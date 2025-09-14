@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -21,7 +21,8 @@ import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { SettingsIcon, TrashIcon } from '@/components/ui/icons';
 import { ToggleTip } from '@/components/ui/toggle-tip';
-import { SengetiderEntry, SengetiderWithLatestEntry } from '@/lib/database-service';
+import { useCreateSengetiderEntry } from '@/lib/queries';
+import { Sengetider, SengetiderEntry, SengetiderWithLatestEntry } from '@/lib/database-service';
 
 interface SengetiderCardProps {
   sengetider: SengetiderWithLatestEntry;
@@ -49,7 +50,13 @@ export function SengetiderCard({
   const [currentWeekEntries, setCurrentWeekEntries] = useState<SengetiderEntry[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, -1 = last week, etc.
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date()); // Default to today
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showDateEntryDialog, setShowDateEntryDialog] = useState(false);
+  const [datePuttetid, setDatePuttetid] = useState('');
+  const [dateSovKl, setDateSovKl] = useState('');
+  const [dateVaagnede, setDateVaagnede] = useState('');
+  const [dateNotes, setDateNotes] = useState('');
+  const [dateEntryLoading, setDateEntryLoading] = useState(false);
 
   // Get current week dates (Monday to Sunday) with offset support
   const getCurrentWeekDates = (offset: number = 0) => {
@@ -95,32 +102,16 @@ export function SengetiderCard({
     loadCurrentWeekEntries();
   }, [sengetider.id, weekDates, weekOffset]);
 
-  // Get entry for specific date
-  const getEntryForDate = useCallback((date: Date) => {
-    const dateString = date.toISOString().split('T')[0];
-    return currentWeekEntries.find(entry => entry.entryDate === dateString);
-  }, [currentWeekEntries]);
-
-  // Pre-fill form when selected date changes
-  useEffect(() => {
-    const existingEntry = getEntryForDate(selectedDate);
-    if (existingEntry) {
-      setPuttetid(existingEntry.puttetid || '');
-      setSovKl(existingEntry.sovKl || '');
-      setVaagnede(existingEntry.vaagnede || '');
-      setNotes(existingEntry.notes || '');
-    } else {
-      setPuttetid('');
-      setSovKl('');
-      setVaagnede('');
-      setNotes('');
-    }
-  }, [selectedDate, getEntryForDate]);
-
   // Format time for display
   const formatTime = (timeString: string | null) => {
     if (!timeString) return '-';
     return timeString.substring(0, 5); // HH:MM
+  };
+
+  // Get entry for specific date
+  const getEntryForDate = (date: Date) => {
+    const dateString = date.toISOString().split('T')[0];
+    return currentWeekEntries.find(entry => entry.entryDate === dateString);
   };
 
   // Handle recording new entry
@@ -137,7 +128,7 @@ export function SengetiderCard({
 
     setLoading(true);
     try {
-      const selectedDateString = selectedDate.toISOString().split('T')[0];
+      const today = new Date().toISOString().split('T')[0];
       
       const response = await fetch(`/api/sengetider/${sengetider.id}/entries`, {
         method: 'POST',
@@ -145,7 +136,7 @@ export function SengetiderCard({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          entryDate: selectedDateString,
+          entryDate: today,
           puttetid: puttetid || null,
           sovKl: sovKl || null,
           vaagnede: vaagnede || null,
@@ -158,10 +149,9 @@ export function SengetiderCard({
         throw new Error(errorData.error || 'Failed to record entry');
       }
 
-      const isToday = selectedDate.toDateString() === new Date().toDateString();
       showToast({
         title: 'Succes',
-        description: isToday ? 'Sengetid registreret' : `Sengetid registreret for ${selectedDate.toLocaleDateString('da-DK')}`,
+        description: 'Sengetid registreret',
         type: 'success',
         duration: 3000,
       });
@@ -198,7 +188,7 @@ export function SengetiderCard({
     setWeekOffset(0);
   };
 
-  // Handle clicking on a day to select it for registration
+  // Handle clicking on a day to register entry
   const handleDayClick = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -215,6 +205,84 @@ export function SengetiderCard({
     }
 
     setSelectedDate(date);
+    
+    // Pre-fill form if entry exists for this date
+    const existingEntry = getEntryForDate(date);
+    if (existingEntry) {
+      setDatePuttetid(existingEntry.puttetid || '');
+      setDateSovKl(existingEntry.sovKl || '');
+      setDateVaagnede(existingEntry.vaagnede || '');
+      setDateNotes(existingEntry.notes || '');
+    } else {
+      setDatePuttetid('');
+      setDateSovKl('');
+      setDateVaagnede('');
+      setDateNotes('');
+    }
+    
+    setShowDateEntryDialog(true);
+  };
+
+  // Handle recording entry for specific date
+  const handleRecordDateEntry = async () => {
+    if (!selectedDate || !datePuttetid.trim()) {
+      showToast({
+        title: 'Fejl',
+        description: 'Puttetid er påkrævet',
+        type: 'error',
+        duration: 3000,
+      });
+      return;
+    }
+
+    setDateEntryLoading(true);
+    try {
+      const dateString = selectedDate.toISOString().split('T')[0];
+      
+      const response = await fetch(`/api/sengetider/${sengetider.id}/entries`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          entryDate: dateString,
+          puttetid: datePuttetid || null,
+          sovKl: dateSovKl || null,
+          vaagnede: dateVaagnede || null,
+          notes: dateNotes || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to record entry');
+      }
+
+      showToast({
+        title: 'Succes',
+        description: `Sengetid registreret for ${selectedDate.toLocaleDateString('da-DK')}`,
+        type: 'success',
+        duration: 3000,
+      });
+      
+      // Reset form
+      setDatePuttetid('');
+      setDateSovKl('');
+      setDateVaagnede('');
+      setDateNotes('');
+      setShowDateEntryDialog(false);
+      onEntryRecorded();
+      
+    } catch (error) {
+      showToast({
+        title: 'Fejl',
+        description: error instanceof Error ? error.message : 'Der opstod en fejl',
+        type: 'error',
+        duration: 3000,
+      });
+    } finally {
+      setDateEntryLoading(false);
+    }
   };
 
   const handleDeleteSengetider = async () => {
@@ -287,35 +355,25 @@ export function SengetiderCard({
             <HStack gap={2}>
               {onSengetiderEdit && (
                 <ToggleTip
-                  content="Rediger værktøj"
-                  showArrow={true}
-                  positioning={{ placement: "bottom" }}
+                  label="Rediger værktøj"
+                  aria-label="Rediger værktøj"
+                  size="sm"
+                  variant="ghost"
+                  colorScheme="sage"
+                  onClick={() => onSengetiderEdit(sengetider)}
                 >
-                  <Button
-                    aria-label="Rediger værktøj"
-                    size="sm"
-                    variant="ghost"
-                    colorScheme="sage"
-                    onClick={() => onSengetiderEdit(sengetider)}
-                  >
-                    <SettingsIcon />
-                  </Button>
+                  <SettingsIcon />
                 </ToggleTip>
               )}
               <ToggleTip
-                content="Slet værktøj"
-                showArrow={true}
-                positioning={{ placement: "bottom" }}
+                label="Slet værktøj"
+                aria-label="Slet værktøj"
+                size="sm"
+                variant="ghost"
+                colorScheme="red"
+                onClick={() => setShowDeleteDialog(true)}
               >
-                <Button
-                  aria-label="Slet værktøj"
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="red"
-                  onClick={() => setShowDeleteDialog(true)}
-                >
-                  <TrashIcon />
-                </Button>
+                <TrashIcon />
               </ToggleTip>
             </HStack>
           )}
@@ -377,7 +435,6 @@ export function SengetiderCard({
             {weekDates.map((date, index) => {
               const entry = getEntryForDate(date);
               const isToday = date.toDateString() === new Date().toDateString();
-              const isSelected = date.toDateString() === selectedDate.toDateString();
               const isPast = date <= new Date();
               const isClickable = isPast;
               
@@ -385,23 +442,15 @@ export function SengetiderCard({
                 <GridItem key={date.toISOString()}>
                   <Box
                     p={3}
-                    border="2px solid"
-                    borderColor={
-                      isSelected ? "sage.500" : 
-                      isToday ? "sage.300" : 
-                      "gray.200"
-                    }
+                    border="1px solid"
+                    borderColor={isToday ? "sage.300" : "gray.200"}
                     borderRadius="md"
-                    bg={
-                      isSelected ? "sage.100" :
-                      isToday ? "sage.50" : 
-                      "white"
-                    }
+                    bg={isToday ? "sage.50" : "white"}
                     minH="120px"
                     cursor={isClickable ? "pointer" : "default"}
                     _hover={isClickable ? { 
-                      borderColor: isSelected ? "sage.600" : "sage.400", 
-                      bg: isSelected ? "sage.150" : (isToday ? "sage.100" : "sage.25"),
+                      borderColor: "sage.400", 
+                      bg: isToday ? "sage.100" : "sage.25",
                       transform: "translateY(-1px)",
                       boxShadow: "sm"
                     } : {}}
@@ -410,17 +459,8 @@ export function SengetiderCard({
                     opacity={isPast ? 1 : 0.6}
                   >
                     <VStack gap={2} align="start">
-                      <Text 
-                        fontWeight="bold" 
-                        fontSize="sm" 
-                        color={
-                          isSelected ? "sage.700" :
-                          isToday ? "sage.600" : 
-                          "gray.600"
-                        }
-                      >
+                      <Text fontWeight="bold" fontSize="sm" color={isToday ? "sage.600" : "gray.600"}>
                         {dayNames[index]}
-                        {isSelected && ' ✓'}
                       </Text>
                       <Text fontSize="xs" color="gray.500">
                         {date.getDate()}.{date.getMonth() + 1}
@@ -452,11 +492,7 @@ export function SengetiderCard({
 
         {/* Record Today's Entry */}
         <VStack gap={4} align="stretch">
-          <Heading size="md" color="gray.700">
-            {selectedDate.toDateString() === new Date().toDateString() 
-              ? 'Registrer i dag' 
-              : `Registrer for ${selectedDate.toLocaleDateString('da-DK')}`}
-          </Heading>
+          <Heading size="md" color="gray.700">Registrer i dag</Heading>
           
           <Grid templateColumns={isMobile ? "1fr" : "repeat(3, 1fr)"} gap={4}>
             <VStack align="start" gap={2}>
@@ -569,6 +605,110 @@ export function SengetiderCard({
           <Text mt={2} fontSize="sm" color="gray.600">
             Denne handling kan ikke fortrydes.
           </Text>
+        </DialogManager>
+
+        {/* Date Entry Dialog */}
+        <DialogManager
+          trigger={<div style={{ display: 'none' }} />}
+          title={`Registrer sengetid${selectedDate ? ` - ${selectedDate.toLocaleDateString('da-DK')}` : ''}`}
+          type="default"
+          isOpen={showDateEntryDialog}
+          onOpenChange={setShowDateEntryDialog}
+          primaryAction={{
+            label: dateEntryLoading ? "Registrerer..." : "Registrer",
+            onClick: handleRecordDateEntry,
+            isLoading: dateEntryLoading,
+            colorScheme: "sage",
+            isDisabled: !datePuttetid.trim()
+          }}
+          secondaryAction={{
+            label: "Annuller",
+            onClick: () => {
+              setShowDateEntryDialog(false);
+              setDatePuttetid('');
+              setDateSovKl('');
+              setDateVaagnede('');
+              setDateNotes('');
+            },
+            colorScheme: "gray"
+          }}
+        >
+          <VStack gap={4} align="stretch">
+            <Grid templateColumns="repeat(1, 1fr)" gap={4}>
+              <VStack align="start" gap={2}>
+                <Text fontSize="sm" fontWeight="medium">Puttetid *</Text>
+                <Input
+                  type="time"
+                  value={datePuttetid}
+                  onChange={(e) => setDatePuttetid(e.target.value)}
+                  size="sm"
+                  borderColor="cream.300"
+                  borderRadius="lg"
+                  bg="cream.25"
+                  _focus={{ 
+                    borderColor: "sage.400", 
+                    boxShadow: "0 0 0 3px rgba(129, 178, 154, 0.1)",
+                    bg: "white"
+                  }}
+                />
+              </VStack>
+              
+              <VStack align="start" gap={2}>
+                <Text fontSize="sm" fontWeight="medium">Sov kl.</Text>
+                <Input
+                  type="time"
+                  value={dateSovKl}
+                  onChange={(e) => setDateSovKl(e.target.value)}
+                  size="sm"
+                  borderColor="cream.300"
+                  borderRadius="lg"
+                  bg="cream.25"
+                  _focus={{ 
+                    borderColor: "sage.400", 
+                    boxShadow: "0 0 0 3px rgba(129, 178, 154, 0.1)",
+                    bg: "white"
+                  }}
+                />
+              </VStack>
+              
+              <VStack align="start" gap={2}>
+                <Text fontSize="sm" fontWeight="medium">Vågnede</Text>
+                <Input
+                  type="time"
+                  value={dateVaagnede}
+                  onChange={(e) => setDateVaagnede(e.target.value)}
+                  size="sm"
+                  borderColor="cream.300"
+                  borderRadius="lg"
+                  bg="cream.25"
+                  _focus={{ 
+                    borderColor: "sage.400", 
+                    boxShadow: "0 0 0 3px rgba(129, 178, 154, 0.1)",
+                    bg: "white"
+                  }}
+                />
+              </VStack>
+            </Grid>
+            
+            <VStack align="start" gap={2}>
+              <Text fontSize="sm" fontWeight="medium">Noter (valgfrit)</Text>
+              <Textarea
+                value={dateNotes}
+                onChange={(e) => setDateNotes(e.target.value)}
+                placeholder="Skriv eventuelle noter om søvnen..."
+                size="sm"
+                borderColor="cream.300"
+                borderRadius="lg"
+                bg="cream.25"
+                _focus={{ 
+                  borderColor: "sage.400", 
+                  boxShadow: "0 0 0 3px rgba(129, 178, 154, 0.1)",
+                  bg: "white"
+                }}
+                rows={3}
+              />
+            </VStack>
+          </VStack>
         </DialogManager>
       </VStack>
     </Box>

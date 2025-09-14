@@ -19,7 +19,6 @@ import { DagensSmileyCard } from '@/components/dagens-smiley/dagens-smiley-card'
 import { EditDagensSmileyDialog } from '@/components/dagens-smiley/edit-dagens-smiley-dialog';
 import { SengetiderCard } from '@/components/sengetider/sengetider-card';
 import { useBarometers, useDagensSmiley, useSengetider } from '@/lib/queries';
-import { SengetiderWithLatestEntry } from '@/lib/database-service';
 
 interface BarometerEntry {
   id: number;
