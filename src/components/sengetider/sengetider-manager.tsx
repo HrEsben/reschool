@@ -11,44 +11,17 @@ import {
   Alert
 } from '@chakra-ui/react';
 import { CreateSengetiderDialog } from './create-sengetider-dialog';
-import { EditSengetiderDialog } from './edit-sengetider-dialog';
 import { SengetiderCard } from './sengetider-card';
 import { useSengetider } from '@/lib/queries';
-
-interface SengetiderEntry {
-  id: number;
-  sengetiderId: number;
-  recordedBy: number;
-  entryDate: string;
-  actualBedtime: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Sengetider {
-  id: number;
-  childId: number;
-  createdBy: number;
-  topic: string;
-  description?: string;
-  targetBedtime?: string;
-  isPublic?: boolean;
-  createdAt: string;
-  updatedAt: string;
-  latestEntry?: SengetiderEntry;
-  recordedByName?: string;
-}
+import { SengetiderWithLatestEntry } from '@/lib/database-service';
 
 interface SengetiderManagerProps {
   childId: number;
   isUserAdmin: boolean;
+  childName: string;
 }
 
-export function SengetiderManager({ childId, isUserAdmin }: SengetiderManagerProps) {
-  const [editingSengetider, setEditingSengetider] = useState<Sengetider | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-
+export function SengetiderManager({ childId, isUserAdmin, childName }: SengetiderManagerProps) {
   // Use React Query hook
   const { data: sengetider = [], isLoading, error, refetch } = useSengetider(childId.toString());
 
@@ -63,17 +36,6 @@ export function SengetiderManager({ childId, isUserAdmin }: SengetiderManagerPro
 
   const handleSengetiderDeleted = () => {
     refetch();
-  };
-
-  const handleSengetiderEdit = (sengetider: Sengetider) => {
-    setEditingSengetider(sengetider);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleSengetiderUpdated = () => {
-    refetch();
-    setEditingSengetider(null);
-    setIsEditDialogOpen(false);
   };
 
   if (isLoading) {
@@ -124,8 +86,8 @@ export function SengetiderManager({ childId, isUserAdmin }: SengetiderManagerPro
               sengetider={sengetiderItem}
               onEntryRecorded={handleEntryRecorded}
               onSengetiderDeleted={handleSengetiderDeleted}
-              onSengetiderEdit={isUserAdmin ? handleSengetiderEdit : undefined}
               isUserAdmin={isUserAdmin}
+              childName={childName}
             />
           ))}
         </VStack>
@@ -149,17 +111,6 @@ export function SengetiderManager({ childId, isUserAdmin }: SengetiderManagerPro
             />
           )}
         </Box>
-      )}
-
-      {/* Edit Sengetider Dialog */}
-      {isUserAdmin && editingSengetider && (
-        <EditSengetiderDialog
-          sengetider={editingSengetider}
-          onSengetiderUpdated={handleSengetiderUpdated}
-          trigger={<Button style={{ display: 'none' }}>Hidden Trigger</Button>}
-          isOpen={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-        />
       )}
     </VStack>
   );

@@ -38,33 +38,44 @@ export async function PUT(
     // Additional access check would go here
 
     const body = await request.json();
-    const { entryDate, actualBedtime, notes } = body;
+    const { entryDate, puttetid, sovKl, vaagnede, notes } = body;
 
     // Validate date format if provided
     if (entryDate && !/^\d{4}-\d{2}-\d{2}$/.test(entryDate)) {
       return NextResponse.json({ error: 'Invalid date format. Use YYYY-MM-DD' }, { status: 400 });
     }
 
-    // Validate time format if provided
-    if (actualBedtime && !/^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/.test(actualBedtime)) {
-      return NextResponse.json({ error: 'Invalid time format. Use HH:MM or HH:MM:SS' }, { status: 400 });
+    // Helper function to validate and format time
+    const validateAndFormatTime = (time: string | undefined, fieldName: string) => {
+      if (!time) return null;
+      if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/.test(time)) {
+        throw new Error(`Invalid ${fieldName} format. Use HH:MM or HH:MM:SS`);
+      }
+      // Convert HH:MM to HH:MM:SS if needed
+      return time.includes(':') && time.split(':').length === 2 ? `${time}:00` : time;
+    };
+
+    try {
+      const formattedPuttetid = validateAndFormatTime(puttetid, 'puttetid');
+      const formattedSovKl = validateAndFormatTime(sovKl, 'sovKl');
+      const formattedVaagnede = validateAndFormatTime(vaagnede, 'vaagnede');
+
+      const updatedEntry = await updateSengetiderEntry(entryId, {
+        entryDate,
+        puttetid: formattedPuttetid,
+        sovKl: formattedSovKl,
+        vaagnede: formattedVaagnede,
+        notes
+      });
+
+      if (!updatedEntry) {
+        return NextResponse.json({ error: 'Failed to update sengetider entry' }, { status: 500 });
+      }
+
+      return NextResponse.json({ entry: updatedEntry }, { status: 200 });
+    } catch (timeError) {
+      return NextResponse.json({ error: (timeError as Error).message }, { status: 400 });
     }
-
-    // Convert HH:MM to HH:MM:SS if needed
-    const formattedBedtime = actualBedtime && actualBedtime.includes(':') && actualBedtime.split(':').length === 2 ? 
-      `${actualBedtime}:00` : actualBedtime;
-
-    const updatedEntry = await updateSengetiderEntry(entryId, {
-      entryDate,
-      actualBedtime: formattedBedtime,
-      notes
-    });
-
-    if (!updatedEntry) {
-      return NextResponse.json({ error: 'Failed to update sengetider entry' }, { status: 500 });
-    }
-
-    return NextResponse.json({ entry: updatedEntry }, { status: 200 });
 
   } catch (error) {
     console.error('Error updating sengetider entry:', error);

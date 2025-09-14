@@ -142,7 +142,7 @@ export const SengetiderTimeline = forwardRef<SengetiderTimelineHandle, Sengetide
         
         <VStack gap={3} align="stretch" maxH="400px" overflowY="auto">
           {entries.map((entry) => {
-            const timeDiff = getTimeDifference(entry.actualBedtime, targetBedtime);
+            const timeDiff = entry.puttetid && targetBedtime ? getTimeDifference(entry.puttetid, targetBedtime) : null;
             const entryDate = parseISO(entry.entryDate);
             
             return (
@@ -159,7 +159,7 @@ export const SengetiderTimeline = forwardRef<SengetiderTimelineHandle, Sengetide
                 <Flex justify="space-between" align="start" gap={4}>
                   <VStack align="start" gap={1} flex={1}>
                     <HStack gap={2}>
-                      <Text fontSize="lg">{getTimeIcon(timeDiff.type)}</Text>
+                      <Text fontSize="lg">{timeDiff ? getTimeIcon(timeDiff.type) : '⏰'}</Text>
                       <Text fontWeight="semibold" color="navy.700">
                         {format(entryDate, 'EEEE d. MMMM', { locale: da })}
                       </Text>
@@ -167,7 +167,7 @@ export const SengetiderTimeline = forwardRef<SengetiderTimelineHandle, Sengetide
                     
                     <HStack gap={4} fontSize="sm" color="gray.600">
                       <Text>
-                        <strong>Måltid:</strong> {entry.actualBedtime}
+                        <strong>Puttetid:</strong> {entry.puttetid || 'Ikke angivet'}
                       </Text>
                       <Text>
                         <strong>Mål:</strong> {targetBedtime}
@@ -182,15 +182,17 @@ export const SengetiderTimeline = forwardRef<SengetiderTimelineHandle, Sengetide
                   </VStack>
                   
                   <VStack align="end" gap={1}>
-                    <Text 
-                      fontSize="sm" 
-                      fontWeight="semibold"
-                      color={getTimeColor(timeDiff.type)}
-                    >
-                      {timeDiff.type === 'ontime' && 'Præcis tid!'}
-                      {timeDiff.type === 'early' && `${timeDiff.minutes} min. tidligt`}
-                      {timeDiff.type === 'late' && `${timeDiff.minutes} min. sent`}
-                    </Text>
+                    {timeDiff && (
+                      <Text 
+                        fontSize="sm" 
+                        fontWeight="semibold"
+                        color={getTimeColor(timeDiff.type)}
+                      >
+                        {timeDiff.type === 'ontime' && 'Præcis tid!'}
+                        {timeDiff.type === 'early' && `${timeDiff.minutes} min. tidligt`}
+                        {timeDiff.type === 'late' && `${timeDiff.minutes} min. sent`}
+                      </Text>
+                    )}
                     
                     <Text fontSize="xs" color="gray.500">
                       {formatDistanceToNow(entryDate, { 

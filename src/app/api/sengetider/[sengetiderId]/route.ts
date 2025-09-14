@@ -78,16 +78,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { topic, description, targetBedtime, isPublic } = body;
-
-    // Validate time format if provided
-    if (targetBedtime && !/^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/.test(targetBedtime)) {
-      return NextResponse.json({ error: 'Invalid time format. Use HH:MM or HH:MM:SS' }, { status: 400 });
-    }
-
-    // Convert HH:MM to HH:MM:SS if needed
-    const formattedTargetBedtime = targetBedtime && !targetBedtime.includes(':') ? 
-      `${targetBedtime}:00` : targetBedtime;
+    const { description, isPublic } = body;
 
     // For security, get the sengetider first to check permissions
     const sengetiderTool = await getSengetiderById(sengetiderId);
@@ -103,9 +94,7 @@ export async function PUT(
     }
 
     const updatedSengetider = await updateSengetider(sengetiderId, {
-      topic,
       description,
-      targetBedtime: formattedTargetBedtime,
       isPublic
     });
 

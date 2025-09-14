@@ -129,9 +129,7 @@ export interface Sengetider {
   id: number;
   childId: number;
   createdBy: number;
-  topic: string;
   description?: string;
-  targetBedtime?: string; // TIME format HH:MM:SS
   isPublic: boolean;
   createdAt: string;
   updatedAt: string;
@@ -149,7 +147,9 @@ export interface SengetiderEntry {
   sengetiderId: number;
   recordedBy: number;
   entryDate: string; // YYYY-MM-DD format
-  actualBedtime: string; // TIME format HH:MM:SS
+  puttetid: string | null; // TIME format HH:MM:SS - time put to bed
+  sovKl: string | null; // TIME format HH:MM:SS - time fell asleep
+  vaagnede: string | null; // TIME format HH:MM:SS - time woke up
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -2246,9 +2246,7 @@ export async function getLatestRegistrationsForUser(
 export async function createSengetider(
   childId: number,
   createdBy: number,
-  topic: string,
   description?: string,
-  targetBedtime?: string,
   isPublic: boolean = true,
   accessibleUserIds?: number[]
 ): Promise<Sengetider | null> {
@@ -2258,9 +2256,9 @@ export async function createSengetider(
     await client.query('BEGIN');
 
     const result = await client.query(
-      `INSERT INTO sengetider (child_id, created_by, topic, description, target_bedtime, is_public)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [childId, createdBy, topic, description || null, targetBedtime || null, isPublic]
+      `INSERT INTO sengetider (child_id, created_by, description, is_public)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [childId, createdBy, description || null, isPublic]
     );
 
     const row = result.rows[0];
@@ -2268,9 +2266,7 @@ export async function createSengetider(
       id: row.id,
       childId: row.child_id,
       createdBy: row.created_by,
-      topic: row.topic,
       description: row.description,
-      targetBedtime: row.target_bedtime,
       isPublic: row.is_public,
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString()
@@ -2313,8 +2309,13 @@ export async function getSengetiderForChild(
          s.*,
          se.id as latest_entry_id,
          se.entry_date as latest_entry_date,
-         se.actual_bedtime as latest_actual_bedtime,
+         se.puttetid as latest_puttetid,
+         se.sov_kl as latest_sov_kl,
+         se.vaagnede as latest_vaagnede,
          se.notes as latest_notes,
+         se.recorded_by as latest_recorded_by,
+         se.created_at as latest_entry_created_at,
+         se.updated_at as latest_entry_updated_at,
          u.display_name as recorded_by_name
        FROM sengetider s
        LEFT JOIN LATERAL (
@@ -2336,21 +2337,21 @@ export async function getSengetiderForChild(
       id: row.id,
       childId: row.child_id,
       createdBy: row.created_by,
-      topic: row.topic,
       description: row.description,
-      targetBedtime: row.target_bedtime,
       isPublic: row.is_public,
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString(),
       latestEntry: row.latest_entry_id ? {
         id: row.latest_entry_id,
         sengetiderId: row.id,
-        recordedBy: row.recorded_by || 0,
+        recordedBy: row.latest_recorded_by || 0,
         entryDate: row.latest_entry_date,
-        actualBedtime: row.latest_actual_bedtime,
+        puttetid: row.latest_puttetid,
+        sovKl: row.latest_sov_kl,
+        vaagnede: row.latest_vaagnede,
         notes: row.latest_notes,
-        createdAt: new Date(row.created_at).toISOString(),
-        updatedAt: new Date(row.updated_at).toISOString()
+        createdAt: new Date(row.latest_entry_created_at).toISOString(),
+        updatedAt: new Date(row.latest_entry_updated_at).toISOString()
       } : undefined,
       recordedByName: row.recorded_by_name
     }));
@@ -2365,20 +2366,17 @@ export async function createSengetiderEntry(
   sengetiderId: number,
   recordedBy: number,
   entryDate: string, // YYYY-MM-DD format
-  actualBedtime: string, // HH:MM:SS format
+  puttetid: string | null, // HH:MM:SS format - time put to bed
+  sovKl: string | null, // HH:MM:SS format - time fell asleep
+  vaagnede: string | null, // HH:MM:SS format - time woke up
   notes?: string
 ): Promise<SengetiderEntry | null> {
   try {
     const result = await query(
-      `INSERT INTO sengetider_entries (sengetider_id, recorded_by, entry_date, actual_bedtime, notes)
-       VALUES ($1, $2, $3, $4, $5) 
-       ON CONFLICT (sengetider_id, entry_date) 
-       DO UPDATE SET 
-         actual_bedtime = EXCLUDED.actual_bedtime,
-         notes = EXCLUDED.notes,
-         updated_at = NOW()
+      `INSERT INTO sengetider_entries (sengetider_id, recorded_by, entry_date, puttetid, sov_kl, vaagnede, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
        RETURNING *`,
-      [sengetiderId, recordedBy, entryDate, actualBedtime, notes || null]
+      [sengetiderId, recordedBy, entryDate, puttetid, sovKl, vaagnede, notes || null]
     );
 
     const row = result.rows[0];
@@ -2387,7 +2385,9 @@ export async function createSengetiderEntry(
       sengetiderId: row.sengetider_id,
       recordedBy: row.recorded_by,
       entryDate: row.entry_date,
-      actualBedtime: row.actual_bedtime,
+      puttetid: row.puttetid,
+      sovKl: row.sov_kl,
+      vaagnede: row.vaagnede,
       notes: row.notes,
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString()
@@ -2415,9 +2415,7 @@ export async function getSengetiderById(sengetiderId: number): Promise<Sengetide
       id: row.id,
       childId: row.child_id,
       createdBy: row.created_by,
-      topic: row.topic,
       description: row.description,
-      targetBedtime: row.target_bedtime,
       isPublic: row.is_public,
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString()
@@ -2455,7 +2453,9 @@ export async function getSengetiderEntries(
       sengetiderId: row.sengetider_id,
       recordedBy: row.recorded_by,
       entryDate: row.entry_date,
-      actualBedtime: row.actual_bedtime,
+      puttetid: row.puttetid,
+      sovKl: row.sov_kl,
+      vaagnede: row.vaagnede,
       notes: row.notes,
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString(),
@@ -2479,17 +2479,9 @@ export async function updateSengetider(
     const values = [];
     let paramIndex = 1;
 
-    if (updates.topic !== undefined) {
-      fields.push(`topic = $${paramIndex++}`);
-      values.push(updates.topic);
-    }
     if (updates.description !== undefined) {
       fields.push(`description = $${paramIndex++}`);
       values.push(updates.description);
-    }
-    if (updates.targetBedtime !== undefined) {
-      fields.push(`target_bedtime = $${paramIndex++}`);
-      values.push(updates.targetBedtime);
     }
     if (updates.isPublic !== undefined) {
       fields.push(`is_public = $${paramIndex++}`);
@@ -2517,9 +2509,7 @@ export async function updateSengetider(
       id: row.id,
       childId: row.child_id,
       createdBy: row.created_by,
-      topic: row.topic,
       description: row.description,
-      targetBedtime: row.target_bedtime,
       isPublic: row.is_public,
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString()
@@ -2566,9 +2556,17 @@ export async function updateSengetiderEntry(
       fields.push(`entry_date = $${paramIndex++}`);
       values.push(updates.entryDate);
     }
-    if (updates.actualBedtime !== undefined) {
-      fields.push(`actual_bedtime = $${paramIndex++}`);
-      values.push(updates.actualBedtime);
+    if (updates.puttetid !== undefined) {
+      fields.push(`puttetid = $${paramIndex++}`);
+      values.push(updates.puttetid);
+    }
+    if (updates.sovKl !== undefined) {
+      fields.push(`sov_kl = $${paramIndex++}`);
+      values.push(updates.sovKl);
+    }
+    if (updates.vaagnede !== undefined) {
+      fields.push(`vaagnede = $${paramIndex++}`);
+      values.push(updates.vaagnede);
     }
     if (updates.notes !== undefined) {
       fields.push(`notes = $${paramIndex++}`);
@@ -2597,7 +2595,9 @@ export async function updateSengetiderEntry(
       sengetiderId: row.sengetider_id,
       recordedBy: row.recorded_by,
       entryDate: row.entry_date,
-      actualBedtime: row.actual_bedtime,
+      puttetid: row.puttetid,
+      sovKl: row.sov_kl,
+      vaagnede: row.vaagnede,
       notes: row.notes,
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString()

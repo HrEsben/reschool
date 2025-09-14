@@ -11,6 +11,7 @@ import {
   Heading,
   Tabs,
   CheckboxCard,
+  Textarea,
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { showToast } from '@/components/ui/simple-toast';
@@ -25,6 +26,7 @@ interface CreateSengetiderDialogProps {
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   isUserAdmin?: boolean;
+  childName: string;
 }
 
 export function CreateSengetiderDialog({ 
@@ -33,12 +35,11 @@ export function CreateSengetiderDialog({
   trigger, 
   isOpen, 
   onOpenChange, 
-  isUserAdmin = false 
+  isUserAdmin = false,
+  childName
 }: CreateSengetiderDialogProps) {
   const stackUser = useUser();
-  const [topic, setTopic] = useState('');
   const [description, setDescription] = useState('');
-  const [targetBedtime, setTargetBedtime] = useState('20:00');
   const [loading, setLoading] = useState(false);
   
   // Visibility control state
@@ -55,32 +56,7 @@ export function CreateSengetiderDialog({
     }
   };
 
-  const isTimeValid = (time: string): boolean => {
-    const timePattern = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    return timePattern.test(time);
-  };
-
   const handleSubmit = async () => {
-    if (!topic.trim()) {
-      showToast({
-        title: 'Fejl',
-        description: 'Emne er påkrævet',
-        type: 'error',
-        duration: 3000,
-      });
-      return;
-    }
-
-    if (!isTimeValid(targetBedtime)) {
-      showToast({
-        title: 'Fejl',
-        description: 'Ugyldig sengetid. Brug format TT:MM (f.eks. 20:30)',
-        type: 'error',
-        duration: 3000,
-      });
-      return;
-    }
-
     if (visibilityOption === 'custom' && selectedUserIds.length === 0) {
       showToast({
         title: 'Fejl',
@@ -95,19 +71,8 @@ export function CreateSengetiderDialog({
 
     try {
       // Determine visibility based on option
-      const visibilityPayload: {
-        visibility?: 'all' | 'creator' | 'custom';
-        accessibleUserIds?: number[];
-      } = {};
-      
-      if (visibilityOption === 'alle') {
-        visibilityPayload.visibility = 'all';
-      } else if (visibilityOption === 'kun_mig') {
-        visibilityPayload.visibility = 'creator';
-      } else if (visibilityOption === 'custom') {
-        visibilityPayload.visibility = 'custom';
-        visibilityPayload.accessibleUserIds = selectedUserIds;
-      }
+      const isPublic = visibilityOption === 'alle';
+      const accessibleUserIds = visibilityOption === 'custom' ? selectedUserIds : undefined;
 
       const response = await fetch(`/api/children/${childId}/sengetider`, {
         method: 'POST',
@@ -115,10 +80,9 @@ export function CreateSengetiderDialog({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          topic: topic.trim(),
           description: description.trim() || undefined,
-          targetBedtime: targetBedtime,
-          ...visibilityPayload
+          isPublic,
+          accessibleUserIds
         }),
       });
 
@@ -129,15 +93,13 @@ export function CreateSengetiderDialog({
 
       showToast({
         title: 'Succes',
-        description: 'Sengetider-værktøj oprettet',
+        description: `Sengetider-værktøj oprettet for ${childName}`,
         type: 'success',
         duration: 3000,
       });
 
       // Reset form
-      setTopic('');
       setDescription('');
-      setTargetBedtime('20:00');
       setVisibilityOption('alle');
       setSelectedUserIds([]);
       
@@ -178,9 +140,7 @@ export function CreateSengetiderDialog({
 
   const handleCancel = () => {
     // Reset form
-    setTopic('');
     setDescription('');
-    setTargetBedtime('20:00');
     setVisibilityOption('alle');
     setSelectedUserIds([]);
     
@@ -192,11 +152,10 @@ export function CreateSengetiderDialog({
   return (
     <DialogManager
       trigger={trigger}
-      title="Opret nyt sengetider-værktøj" 
+      title={`Opret sengetider-værktøj for ${childName}`} 
       primaryAction={{
         label: "Opret værktøj",
         onClick: handleSubmit,
-        isDisabled: !topic.trim() || !isTimeValid(targetBedtime),
         isLoading: loading,
         colorScheme: "sage"
       }}
@@ -231,37 +190,33 @@ export function CreateSengetiderDialog({
               pr={{ base: 0, lg: 6 }}
               minW={0}
             >
-              <Box>
-                <Text mb={2} fontWeight="medium">Emne</Text>
-                <Input
-                  placeholder="Hvad skal sengetider-værktøjet spore? (f.eks. 'Sengetid weekdag', 'Weekend sengetid')"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  maxLength={255}
-                  borderColor="cream.300"
-                  borderRadius="lg"
-                  bg="cream.25"
-                  _hover={{ borderColor: "cream.400" }}
-                  _focus={{ 
-                    borderColor: "sage.400", 
-                    boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
-                    outline: "none"
-                  }}
-                  _focusVisible={{
-                    borderColor: "sage.400", 
-                    boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
-                    outline: "none"
-                  }}
-                />
+              {/* Information section */}
+              <Box bg="sage.50" p={4} borderRadius="lg" border="1px solid" borderColor="sage.200">
+                <VStack gap={3} align="start">
+                  <Heading size="sm" color="sage.700">🛏️ Sengetider for {childName}</Heading>
+                  <Text fontSize="sm" color="sage.600">
+                    Dette værktøj hjælper med at spore {childName}s sengetider på en struktureret måde. 
+                    Du kan registrere tre tidspunkter for hver dag:
+                  </Text>
+                  <VStack gap={1} align="start" pl={2}>
+                    <Text fontSize="sm" color="sage.600">• <strong>Puttetid:</strong> Hvornår kom barnet i seng</Text>
+                    <Text fontSize="sm" color="sage.600">• <strong>Sov kl.:</strong> Hvornår faldt barnet i søvn</Text>
+                    <Text fontSize="sm" color="sage.600">• <strong>Vågnede:</strong> Hvornår vågnede barnet</Text>
+                  </VStack>
+                  <Text fontSize="sm" color="sage.600">
+                    Værktøjet viser den aktuelle uge, så du nemt kan se mønstre og rutiner.
+                  </Text>
+                </VStack>
               </Box>
 
               <Box>
                 <Text mb={2} fontWeight="medium">Beskrivelse (valgfri)</Text>
-                <Input
-                  placeholder="Beskriv formålet med sengetids-sporingen (f.eks. 'Spor barnets sengetid på hverdage for at følge rutiner')"
+                <Textarea
+                  placeholder="Tilføj en note om formålet med sengetids-sporingen..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   maxLength={500}
+                  rows={3}
                   borderColor="cream.300"
                   borderRadius="lg"
                   bg="cream.25"
@@ -269,49 +224,12 @@ export function CreateSengetiderDialog({
                   _focus={{ 
                     borderColor: "sage.400", 
                     boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
-                    outline: "none"
-                  }}
-                  _focusVisible={{
-                    borderColor: "sage.400", 
-                    boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
-                    outline: "none"
+                    bg: "white"
                   }}
                 />
-              </Box>
-              
-              <Box>
-                <Text mb={2} fontWeight="medium">Mål sengetid</Text>
-                <HStack gap={2}>
-                  <Input
-                    placeholder="20:00"
-                    value={targetBedtime}
-                    onChange={(e) => setTargetBedtime(e.target.value)}
-                    maxLength={5}
-                    borderColor="cream.300"
-                    borderRadius="lg"
-                    bg="cream.25"
-                    width="120px"
-                    _hover={{ borderColor: "cream.400" }}
-                    _focus={{ 
-                      borderColor: "sage.400", 
-                      boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
-                      outline: "none"
-                    }}
-                    _focusVisible={{
-                      borderColor: "sage.400", 
-                      boxShadow: "0 0 0 1px var(--chakra-colors-sage-400)",
-                      outline: "none"
-                    }}
-                  />
-                  <Text fontSize="sm" color="gray.600">
-                    Format: TT:MM (f.eks. 20:30)
-                  </Text>
-                </HStack>
-                {!isTimeValid(targetBedtime) && targetBedtime && (
-                  <Text fontSize="sm" color="coral.500" mt={1}>
-                    Ugyldig tid. Brug format TT:MM (f.eks. 20:30)
-                  </Text>
-                )}
+                <Text fontSize="xs" color="gray.500" mt={1}>
+                  {description.length}/500 tegn
+                </Text>
               </Box>
             </VStack>
 
@@ -349,60 +267,82 @@ export function CreateSengetiderDialog({
                   <VStack gap={3} align="stretch">
                     {/* Header */}
                     <HStack justify="space-between">
-                      <Heading 
-                        size="sm" 
-                        color={topic.trim() ? "black" : "gray.400"}
-                      >
-                        {topic.trim() || "Emne"}
+                      <Heading size="sm" color="sage.600">
+                        Sengetider for {childName}
                       </Heading>
-                      <Text fontSize="sm" color="sage.600">
-                        🛏️ {targetBedtime}
+                      <Text fontSize="xs" color="gray.500">
+                        Denne uge
                       </Text>
                     </HStack>
 
-                    {/* Sample Time Input */}
+                    {/* Sample Week Grid Preview */}
                     <Box>
-                      <Text mb={1} fontWeight="medium" fontSize="xs" color="gray.600">
-                        Hvornår gik du i seng i dag?
+                      <Text mb={2} fontWeight="medium" fontSize="xs" color="gray.600">
+                        Dagens tider:
                       </Text>
-                      <HStack gap={2}>
-                        <Box 
-                          h="8" 
-                          bg="gray.50" 
-                          borderRadius="sm" 
-                          border="1px solid" 
-                          borderColor="gray.200"
-                          display="flex"
-                          alignItems="center"
-                          px={2}
-                          width="100px"
-                        >
-                          <Text fontSize="xs" color="gray.400">20:15</Text>
-                        </Box>
-                        <Box 
-                          h="8" 
-                          bg="sage.500" 
-                          borderRadius="sm" 
-                          display="flex"
-                          alignItems="center"
-                          px={3}
-                        >
-                          <Text fontSize="xs" color="white" fontWeight="medium">Gem</Text>
-                        </Box>
+                      <HStack gap={2} justify="space-between">
+                        <VStack gap={1}>
+                          <Text fontSize="xs" color="gray.500">Puttetid</Text>
+                          <Box 
+                            h="6" 
+                            bg="cream.25" 
+                            borderRadius="sm" 
+                            border="1px solid" 
+                            borderColor="cream.300"
+                            display="flex"
+                            alignItems="center"
+                            px={2}
+                            width="60px"
+                          >
+                            <Text fontSize="xs" color="gray.400">20:00</Text>
+                          </Box>
+                        </VStack>
+                        <VStack gap={1}>
+                          <Text fontSize="xs" color="gray.500">Sov kl.</Text>
+                          <Box 
+                            h="6" 
+                            bg="cream.25" 
+                            borderRadius="sm" 
+                            border="1px solid" 
+                            borderColor="cream.300"
+                            display="flex"
+                            alignItems="center"
+                            px={2}
+                            width="60px"
+                          >
+                            <Text fontSize="xs" color="gray.400">20:15</Text>
+                          </Box>
+                        </VStack>
+                        <VStack gap={1}>
+                          <Text fontSize="xs" color="gray.500">Vågnede</Text>
+                          <Box 
+                            h="6" 
+                            bg="cream.25" 
+                            borderRadius="sm" 
+                            border="1px solid" 
+                            borderColor="cream.300"
+                            display="flex"
+                            alignItems="center"
+                            px={2}
+                            width="60px"
+                          >
+                            <Text fontSize="xs" color="gray.400">06:30</Text>
+                          </Box>
+                        </VStack>
                       </HStack>
                     </Box>
-                    
-                    {/* Example comment area */}
+
+                    {/* Example note area */}
                     <Box>
                       <Text mb={1} fontWeight="medium" fontSize="xs" color="gray.600">
                         Noter (valgfri)
                       </Text>
                       <Box 
                         h="6" 
-                        bg="gray.50" 
+                        bg="cream.25" 
                         borderRadius="sm" 
                         border="1px solid" 
-                        borderColor="gray.200"
+                        borderColor="cream.300"
                         display="flex"
                         alignItems="center"
                         px={2}

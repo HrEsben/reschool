@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -8,54 +8,31 @@ import {
   VStack,
   HStack,
   Flex,
-  Textarea,
   Heading,
   Input,
+  Textarea,
   Badge,
+  Grid,
+  GridItem,
   useBreakpointValue,
 } from '@chakra-ui/react';
 import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
-import { ToggleTip } from '@/components/ui/toggle-tip';
-import { SengetiderTimeline, SengetiderTimelineHandle } from './sengetider-timeline';
 import { SettingsIcon, TrashIcon } from '@/components/ui/icons';
-
-interface SengetiderEntry {
-  id: number;
-  sengetiderId: number;
-  recordedBy: number;
-  entryDate: string;
-  actualBedtime: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Sengetider {
-  id: number;
-  childId: number;
-  createdBy: number;
-  topic: string;
-  description?: string;
-  targetBedtime?: string;
-  isPublic?: boolean;
-  createdAt: string;
-  updatedAt: string;
-  latestEntry?: SengetiderEntry;
-  recordedByName?: string;
-}
+import { ToggleTip } from '@/components/ui/toggle-tip';
+import { useCreateSengetiderEntry } from '@/lib/queries';
+import { Sengetider, SengetiderEntry, SengetiderWithLatestEntry } from '@/lib/database-service';
 
 interface SengetiderCardProps {
-  sengetider: Sengetider;
+  sengetider: SengetiderWithLatestEntry;
   onEntryRecorded: () => void;
-  onSengetiderDeleted?: () => void;
-  onSengetiderEdit?: (sengetider: Sengetider) => void;
-  currentUserId?: number;
-  isUserAdmin?: boolean;
-  childName?: string;
+  onSengetiderDeleted: () => void;
+  onSengetiderEdit?: (sengetider: SengetiderWithLatestEntry) => void;
+  isUserAdmin: boolean;
+  childName: string;
 }
 
-export function SengetiderCard({ 
+export function SengetiderCard({
   sengetider, 
   onEntryRecorded, 
   onSengetiderDeleted, 
@@ -63,53 +40,77 @@ export function SengetiderCard({
   isUserAdmin,
   childName
 }: SengetiderCardProps) {
-  const [actualBedtime, setActualBedtime] = useState('');
+  const [puttetid, setPuttetid] = useState('');
+  const [sovKl, setSovKl] = useState('');
+  const [vaagnede, setVaagnede] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [deletingSengetider, setDeletingSengetider] = useState(false);
+  const [currentWeekEntries, setCurrentWeekEntries] = useState<SengetiderEntry[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const timelineRef = useRef<SengetiderTimelineHandle>(null);
 
-  // Responsive sizing  
-  const cardPadding = useBreakpointValue({ base: 4, md: 6 });
-  const buttonSize = useBreakpointValue({ base: 'sm', md: 'md' }) as 'sm' | 'md';
-
-  // Check if there's an entry for today
-  const isToday = (dateString: string): boolean => {
-    const today = new Date().toISOString().split('T')[0];
-    return dateString === today;
+  // Get current week dates (Monday to Sunday)
+  const getCurrentWeekDates = () => {
+    const today = new Date();
+    const currentDay = today.getDay();
+    const firstDayOfWeek = new Date(today);
+    firstDayOfWeek.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
+    
+    const weekDates = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(firstDayOfWeek);
+      date.setDate(firstDayOfWeek.getDate() + i);
+      weekDates.push(date);
+    }
+    return weekDates;
   };
 
-  const hasEntryToday = sengetider.latestEntry && isToday(sengetider.latestEntry.entryDate);
+  const weekDates = getCurrentWeekDates();
+  const isMobile = useBreakpointValue({ base: true, md: false });
 
-  // Pre-populate form if there's an entry today
+  // Load current week entries
   useEffect(() => {
-    if (hasEntryToday && sengetider.latestEntry) {
-      // Convert from HH:MM:SS to HH:MM for the input
-      const time = sengetider.latestEntry.actualBedtime;
-      const formattedTime = time.substring(0, 5); // Get HH:MM part
-      setActualBedtime(formattedTime);
-      setNotes(sengetider.latestEntry.notes || '');
-    }
-  }, [hasEntryToday, sengetider.latestEntry]);
+    const loadCurrentWeekEntries = async () => {
+      try {
+        const response = await fetch(`/api/sengetider/${sengetider.id}/entries`);
+        if (response.ok) {
+          const data = await response.json();
+          // Filter for current week
+          const weekStart = weekDates[0].toISOString().split('T')[0];
+          const weekEnd = weekDates[6].toISOString().split('T')[0];
+          
+          const filteredEntries = data.entries.filter((entry: SengetiderEntry) => {
+            return entry.entryDate >= weekStart && entry.entryDate <= weekEnd;
+          });
+          
+          setCurrentWeekEntries(filteredEntries);
+        }
+      } catch (error) {
+        console.error('Error loading week entries:', error);
+      }
+    };
 
-  const handleSubmit = async () => {
-    if (!actualBedtime.trim()) {
+    loadCurrentWeekEntries();
+  }, [sengetider.id, weekDates]);
+
+  // Format time for display
+  const formatTime = (timeString: string | null) => {
+    if (!timeString) return '-';
+    return timeString.substring(0, 5); // HH:MM
+  };
+
+  // Get entry for specific date
+  const getEntryForDate = (date: Date) => {
+    const dateString = date.toISOString().split('T')[0];
+    return currentWeekEntries.find(entry => entry.entryDate === dateString);
+  };
+
+  // Handle recording new entry
+  const handleRecordEntry = async () => {
+    if (!puttetid.trim()) {
       showToast({
         title: 'Fejl',
-        description: 'Indtast venligst sengetid',
-        type: 'error',
-        duration: 3000,
-      });
-      return;
-    }
-
-    // Validate time format
-    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(actualBedtime)) {
-      showToast({
-        title: 'Fejl',
-        description: 'Indtast tid i format HH:MM (f.eks. 19:30)',
+        description: 'Puttetid er påkrævet',
         type: 'error',
         duration: 3000,
       });
@@ -117,40 +118,61 @@ export function SengetiderCard({
     }
 
     setLoading(true);
-
     try {
+      const today = new Date().toISOString().split('T')[0];
+      
       const response = await fetch(`/api/sengetider/${sengetider.id}/entries`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          entryDate: new Date().toISOString().split('T')[0], // Today's date
-          actualBedtime: `${actualBedtime}:00`, // Convert to HH:MM:SS
-          notes: notes.trim() || undefined,
+          entryDate: today,
+          puttetid: puttetid || null,
+          sovKl: sovKl || null,
+          vaagnede: vaagnede || null,
+          notes: notes || null,
         }),
       });
 
-      if (response.ok) {
-        showToast({
-          title: 'Succes!',
-          description: hasEntryToday ? 'Sengetid opdateret' : 'Sengetid registreret',
-          type: 'success',
-          duration: 3000,
-        });
-
-        // Refresh timeline to show new entry
-        timelineRef.current?.refresh();
-        onEntryRecorded(); // Update parent component
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to record bedtime');
+        throw new Error(errorData.error || 'Failed to record entry');
       }
-    } catch (error) {
-      console.error('Error recording bedtime:', error);
+
       showToast({
-        title: 'Fejl!',
-        description: error instanceof Error ? error.message : 'Der opstod en fejl ved registrering af sengetid',
+        title: 'Succes',
+        description: 'Sengetid registreret',
+        type: 'success',
+        duration: 3000,
+      });
+      
+      // Reset form
+      setPuttetid('');
+      setSovKl('');
+      setVaagnede('');
+      setNotes('');
+      
+      onEntryRecorded();
+      
+      // Reload current week entries
+      const updatedResponse = await fetch(`/api/sengetider/${sengetider.id}/entries`);
+      if (updatedResponse.ok) {
+        const data = await updatedResponse.json();
+        const weekStart = weekDates[0].toISOString().split('T')[0];
+        const weekEnd = weekDates[6].toISOString().split('T')[0];
+        
+        const filteredEntries = data.entries.filter((entry: SengetiderEntry) => {
+          return entry.entryDate >= weekStart && entry.entryDate <= weekEnd;
+        });
+        
+        setCurrentWeekEntries(filteredEntries);
+      }
+      
+    } catch (error) {
+      showToast({
+        title: 'Fejl',
+        description: error instanceof Error ? error.message : 'Der opstod en fejl',
         type: 'error',
         duration: 3000,
       });
@@ -161,29 +183,27 @@ export function SengetiderCard({
 
   const handleDeleteSengetider = async () => {
     setDeletingSengetider(true);
-
     try {
       const response = await fetch(`/api/sengetider/${sengetider.id}`, {
         method: 'DELETE',
       });
 
-      if (response.ok) {
-        showToast({
-          title: 'Succes!',
-          description: 'Sengetider-værktøj slettet',
-          type: 'success',
-          duration: 3000,
-        });
-        onSengetiderDeleted?.();
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to delete sengetider');
       }
-    } catch (error) {
-      console.error('Error deleting sengetider:', error);
+
       showToast({
-        title: 'Fejl!',
-        description: error instanceof Error ? error.message : 'Der opstod en fejl ved sletning',
+        title: 'Succes',
+        description: 'Sengetider-værktøjet blev slettet',
+        type: 'success',
+        duration: 3000,
+      });
+      onSengetiderDeleted();
+    } catch (error) {
+      showToast({
+        title: 'Fejl',
+        description: error instanceof Error ? error.message : 'Der opstod en fejl',
         type: 'error',
         duration: 3000,
       });
@@ -193,208 +213,226 @@ export function SengetiderCard({
     }
   };
 
-  // Calculate if bedtime was late compared to target
-  const getBedtimeStatus = () => {
-    if (!sengetider.targetBedtime || !sengetider.latestEntry) return null;
-    
-    const target = sengetider.targetBedtime.substring(0, 5); // HH:MM
-    const actual = sengetider.latestEntry.actualBedtime.substring(0, 5); // HH:MM
-    
-    const targetMinutes = timeToMinutes(target);
-    const actualMinutes = timeToMinutes(actual);
-    
-    const diffMinutes = actualMinutes - targetMinutes;
-    
-    if (diffMinutes <= 0) return { status: 'on-time', text: 'I tide', color: 'success' };
-    if (diffMinutes <= 15) return { status: 'slightly-late', text: `${diffMinutes} min. sent`, color: 'warning' };
-    return { status: 'late', text: `${diffMinutes} min. sent`, color: 'coral' };
-  };
-
-  const timeToMinutes = (time: string): number => {
-    const [hours, minutes] = time.split(':').map(Number);
-    return hours * 60 + minutes;
-  };
-
-  const bedtimeStatus = getBedtimeStatus();
+  // Week day names in Danish
+  const dayNames = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
 
   return (
-    <Box 
-      bg="bg.surface" 
-      borderRadius="xl" 
-      border="1px solid" 
-      borderColor="border.muted" 
-      p={cardPadding}
+    <Box
+      bg="bg.surface"
+      borderRadius="xl"
+      border="1px solid"
+      borderColor="border.muted"
+      p={{ base: 4, md: 6 }}
+      position="relative"
     >
-      <VStack gap={4} align="stretch">
+      <VStack gap={6} align="stretch">
         {/* Header */}
-        <Flex justify="space-between" align="center">
-          <VStack gap={1} align="start">
-            <Heading size="lg" color="sage.600">{sengetider.topic}</Heading>
+        <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
+          <VStack align="start" gap={1}>
+            <Heading size="lg" color="sage.600">Sengetider for {childName}</Heading>
             {sengetider.description && (
               <Text fontSize="sm" color="gray.600">
                 {sengetider.description}
               </Text>
             )}
-            {sengetider.targetBedtime && (
-              <HStack gap={2}>
-                <Text fontSize="sm" color="gray.600">
-                  Mål sengetid:
-                </Text>
-                <Badge colorPalette="navy" variant="subtle" size="sm">
-                  {sengetider.targetBedtime.substring(0, 5)}
+            <HStack gap={1}>
+              <Badge colorScheme="blue" fontSize="xs">
+                Sengetider
+              </Badge>
+              {!sengetider.isPublic && (
+                <Badge colorScheme="orange" fontSize="xs" variant="outline">
+                  Privat
                 </Badge>
-              </HStack>
-            )}
+              )}
+            </HStack>
           </VStack>
           
           {isUserAdmin && (
             <HStack gap={2}>
-              <ToggleTip content="Rediger sengetider-værktøj">
-                <Button
-                  size={buttonSize}
-                  variant="ghost"
-                  colorPalette="sage"
-                  onClick={() => onSengetiderEdit?.(sengetider)}
-                  p={2}
-                >
-                  <SettingsIcon size={18} />
-                </Button>
-              </ToggleTip>
-              <ToggleTip content="Slet sengetider-værktøj">
-                <Button
-                  size={buttonSize}
-                  variant="ghost"
-                  colorPalette="red"
-                  onClick={() => setShowDeleteDialog(true)}
-                  p={2}
-                >
-                  <TrashIcon size={18} />
-                </Button>
-              </ToggleTip>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onSengetiderEdit?.(sengetider)}
+              >
+                <SettingsIcon />
+                Indstillinger
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                colorScheme="red"
+                loading={deletingSengetider}
+                onClick={() => setShowDeleteDialog(true)}
+              >
+                <TrashIcon />
+                Slet
+              </Button>
             </HStack>
           )}
         </Flex>
 
-        {/* Latest Entry Display */}
-        {sengetider.latestEntry && (
-          <Box 
-            bg="sage.25" 
-            borderRadius="md" 
-            p={3}
-            border="1px solid"
-            borderColor="sage.100"
-          >
-            <HStack justify="space-between" align="center">
-              <VStack gap={1} align="start">
-                <Text fontSize="sm" fontWeight="medium" color="sage.700">
-                  Seneste sengetid
-                </Text>
-                <HStack gap={2}>
-                  <Text fontSize="lg" fontWeight="bold" color="sage.800">
-                    {sengetider.latestEntry.actualBedtime.substring(0, 5)}
-                  </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    ({new Date(sengetider.latestEntry.entryDate).toLocaleDateString('da-DK')})
-                  </Text>
-                  {bedtimeStatus && (
-                    <Badge 
-                      colorPalette={bedtimeStatus.color} 
-                      variant="subtle" 
-                      size="sm"
-                    >
-                      {bedtimeStatus.text}
-                    </Badge>
-                  )}
-                </HStack>
-                {sengetider.recordedByName && (
-                  <Text fontSize="xs" color="sage.600">
-                    Registreret af {sengetider.recordedByName}
-                  </Text>
-                )}
-              </VStack>
-            </HStack>
-          </Box>
-        )}
-
-        {/* Entry Form */}
-        <VStack gap={3} align="stretch">
-          <Text fontWeight="medium" color="gray.800">
-            {hasEntryToday ? 'Opdater sengetid for i dag' : 'Registrer sengetid for i dag'}
-          </Text>
+        {/* Current Week View */}
+        <VStack gap={4} align="stretch">
+          <Heading size="md" color="gray.700">Denne uge</Heading>
           
-          <HStack gap={3} align="end">
-            <VStack gap={1} align="start" flex={1}>
-              <Text fontSize="sm" color="gray.600">Sengetid</Text>
+          {/* Week Grid */}
+          <Grid templateColumns={isMobile ? "repeat(1, 1fr)" : "repeat(7, 1fr)"} gap={2}>
+            {weekDates.map((date, index) => {
+              const entry = getEntryForDate(date);
+              const isToday = date.toDateString() === new Date().toDateString();
+              
+              return (
+                <GridItem key={date.toISOString()}>
+                  <Box
+                    p={3}
+                    border="1px solid"
+                    borderColor={isToday ? "sage.300" : "gray.200"}
+                    borderRadius="md"
+                    bg={isToday ? "sage.50" : "white"}
+                    minH="120px"
+                  >
+                    <VStack gap={2} align="start">
+                      <Text fontWeight="bold" fontSize="sm" color={isToday ? "sage.600" : "gray.600"}>
+                        {dayNames[index]}
+                      </Text>
+                      <Text fontSize="xs" color="gray.500">
+                        {date.getDate()}.{date.getMonth() + 1}
+                      </Text>
+                      
+                      {entry ? (
+                        <VStack gap={1} align="start" fontSize="xs">
+                          <Text><strong>Puttetid:</strong> {formatTime(entry.puttetid)}</Text>
+                          {entry.sovKl && <Text><strong>Sov kl:</strong> {formatTime(entry.sovKl)}</Text>}
+                          {entry.vaagnede && <Text><strong>Vågnede:</strong> {formatTime(entry.vaagnede)}</Text>}
+                          {entry.notes && (
+                            <Text color="gray.600" fontSize="sm">
+                              {entry.notes}
+                            </Text>
+                          )}
+                        </VStack>
+                      ) : (
+                        <Text fontSize="xs" color="gray.400">
+                          Ingen registrering
+                        </Text>
+                      )}
+                    </VStack>
+                  </Box>
+                </GridItem>
+              );
+            })}
+          </Grid>
+        </VStack>
+
+        {/* Record Today's Entry */}
+        <VStack gap={4} align="stretch">
+          <Heading size="md" color="gray.700">Registrer i dag</Heading>
+          
+          <Grid templateColumns={isMobile ? "1fr" : "repeat(3, 1fr)"} gap={4}>
+            <VStack align="start" gap={2}>
+              <Text fontSize="sm" fontWeight="medium">Puttetid *</Text>
               <Input
                 type="time"
-                value={actualBedtime}
-                onChange={(e) => setActualBedtime(e.target.value)}
-                size="md"
-                bg="white"
-                borderColor="gray.300"
-                _hover={{ borderColor: 'sage.300' }}
-                _focus={{ borderColor: 'sage.500', boxShadow: '0 0 0 1px var(--colors-sage-500)' }}
+                value={puttetid}
+                onChange={(e) => setPuttetid(e.target.value)}
+                size="sm"
+                borderColor="cream.300"
+                borderRadius="lg"
+                bg="cream.25"
+                _focus={{ 
+                  borderColor: "sage.400", 
+                  boxShadow: "0 0 0 3px rgba(129, 178, 154, 0.1)",
+                  bg: "white"
+                }}
               />
             </VStack>
             
-            <Button
-              colorPalette="sage"
-              onClick={handleSubmit}
-              loading={loading}
-              loadingText={hasEntryToday ? "Opdaterer..." : "Registrerer..."}
-              size="md"
-              px={6}
-            >
-              {hasEntryToday ? 'Opdater' : 'Registrer'}
-            </Button>
-          </HStack>
-
-          {/* Notes Field */}
-          <VStack gap={1} align="start">
-            <Text fontSize="sm" color="gray.600">Noter (valgfrit)</Text>
+            <VStack align="start" gap={2}>
+              <Text fontSize="sm" fontWeight="medium">Sov kl.</Text>
+              <Input
+                type="time"
+                value={sovKl}
+                onChange={(e) => setSovKl(e.target.value)}
+                size="sm"
+                borderColor="cream.300"
+                borderRadius="lg"
+                bg="cream.25"
+                _focus={{ 
+                  borderColor: "sage.400", 
+                  boxShadow: "0 0 0 3px rgba(129, 178, 154, 0.1)",
+                  bg: "white"
+                }}
+              />
+            </VStack>
+            
+            <VStack align="start" gap={2}>
+              <Text fontSize="sm" fontWeight="medium">Vågnede</Text>
+              <Input
+                type="time"
+                value={vaagnede}
+                onChange={(e) => setVaagnede(e.target.value)}
+                size="sm"
+                borderColor="cream.300"
+                borderRadius="lg"
+                bg="cream.25"
+                _focus={{ 
+                  borderColor: "sage.400", 
+                  boxShadow: "0 0 0 3px rgba(129, 178, 154, 0.1)",
+                  bg: "white"
+                }}
+              />
+            </VStack>
+          </Grid>
+          
+          <VStack align="start" gap={2}>
+            <Text fontSize="sm" fontWeight="medium">Noter (valgfrit)</Text>
             <Textarea
+              placeholder="Notater om sengetiden..."
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder={`Fx "Læste en ekstra historie" eller "Havde svært ved at falde i søvn"`}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
               size="sm"
-              resize="vertical"
-              minH="60px"
-              bg="white"
-              borderColor="gray.300"
-              _hover={{ borderColor: 'sage.300' }}
-              _focus={{ borderColor: 'sage.500', boxShadow: '0 0 0 1px var(--colors-sage-500)' }}
+              rows={2}
+              borderColor="cream.300"
+              borderRadius="lg"
+              bg="cream.25"
+              _focus={{ 
+                borderColor: "sage.400", 
+                boxShadow: "0 0 0 3px rgba(129, 178, 154, 0.1)",
+                bg: "white"
+              }}
             />
           </VStack>
-        </VStack>
 
-        {/* Timeline */}
-        <SengetiderTimeline
-          ref={timelineRef}
-          sengetiderId={sengetider.id}
-          targetBedtime={sengetider.targetBedtime}
-          childName={childName}
-        />
+          <Button
+            colorScheme="sage"
+            onClick={handleRecordEntry}
+            loading={loading}
+            disabled={!puttetid.trim()}
+          >
+            Registrer sengetid
+          </Button>
+        </VStack>
 
         {/* Delete Confirmation Dialog */}
         <DialogManager
-          trigger={null}
+          trigger={<div style={{ display: 'none' }} />}
           title="Slet sengetider-værktøj"
           type="error"
           isOpen={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
           primaryAction={{
-            label: "Slet",
+            label: deletingSengetider ? "Sletter..." : "Slet",
             onClick: handleDeleteSengetider,
-            colorScheme: "red",
-            isLoading: deletingSengetider
+            isLoading: deletingSengetider,
+            colorScheme: "red"
           }}
           secondaryAction={{
             label: "Annuller",
-            onClick: () => setShowDeleteDialog(false)
+            onClick: () => setShowDeleteDialog(false),
+            colorScheme: "gray"
           }}
         >
           <Text>
-            Er du sikker på, at du vil slette sengetider-værktøjet &quot;{sengetider.topic}&quot;? 
+            Er du sikker på, at du vil slette sengetider-værktøjet? 
             Alle registrerede sengetider vil også blive slettet.
           </Text>
           <Text mt={2} fontSize="sm" color="gray.600">

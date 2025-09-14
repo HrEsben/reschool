@@ -64,29 +64,20 @@ export async function POST(
       return NextResponse.json({ error: 'Only administrators can create sengetider' }, { status: 403 });
     }
 
+    // Check if sengetider already exists for this child
+    const existingSengetider = await getSengetiderForChild(childId, dbUser.id);
+    if (existingSengetider && existingSengetider.length > 0) {
+      return NextResponse.json({ error: 'Sengetider already exists for this child. Only one sengetider tool is allowed per child.' }, { status: 400 });
+    }
+
     const body = await request.json();
-    const { topic, description, targetBedtime, isPublic = true, accessibleUserIds } = body;
+    const { description, isPublic = true, accessibleUserIds } = body;
 
-    // Validate required fields
-    if (!topic) {
-      return NextResponse.json({ error: 'Topic is required' }, { status: 400 });
-    }
-
-    // Validate time format if provided
-    if (targetBedtime && !/^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/.test(targetBedtime)) {
-      return NextResponse.json({ error: 'Invalid time format. Use HH:MM or HH:MM:SS' }, { status: 400 });
-    }
-
-    // Convert HH:MM to HH:MM:SS if needed
-    const formattedTargetBedtime = targetBedtime && !targetBedtime.includes(':') ? 
-      `${targetBedtime}:00` : targetBedtime;
-
+    // Create sengetider tool - no topic needed as it's fixed per child
     const sengetiderTool = await createSengetider(
       childId,
       dbUser.id,
-      topic,
       description,
-      formattedTargetBedtime,
       isPublic,
       accessibleUserIds
     );
@@ -99,6 +90,9 @@ export async function POST(
 
   } catch (error) {
     console.error('Error creating sengetider:', error);
+    if (error instanceof Error && error.message.includes('unique constraint')) {
+      return NextResponse.json({ error: 'Sengetider already exists for this child' }, { status: 400 });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

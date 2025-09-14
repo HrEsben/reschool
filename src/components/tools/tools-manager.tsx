@@ -18,8 +18,8 @@ import { EditBarometerDialog } from '@/components/barometer/edit-barometer-dialo
 import { DagensSmileyCard } from '@/components/dagens-smiley/dagens-smiley-card';
 import { EditDagensSmileyDialog } from '@/components/dagens-smiley/edit-dagens-smiley-dialog';
 import { SengetiderCard } from '@/components/sengetider/sengetider-card';
-import { EditSengetiderDialog } from '@/components/sengetider/edit-sengetider-dialog';
 import { useBarometers, useDagensSmiley, useSengetider } from '@/lib/queries';
+import { SengetiderWithLatestEntry } from '@/lib/database-service';
 
 interface BarometerEntry {
   id: number;
@@ -72,31 +72,6 @@ interface DagensSmiley {
   recordedByName?: string;
 }
 
-interface SengetiderEntry {
-  id: number;
-  sengetiderId: number;
-  recordedBy: number;
-  entryDate: string;
-  actualBedtime: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Sengetider {
-  id: number;
-  childId: number;
-  createdBy: number;
-  topic: string;
-  description?: string;
-  targetBedtime?: string;
-  isPublic?: boolean;
-  createdAt: string;
-  updatedAt: string;
-  latestEntry?: SengetiderEntry;
-  recordedByName?: string;
-}
-
 interface ToolsManagerProps {
   childId: number;
   isUserAdmin: boolean;
@@ -111,8 +86,6 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingSmiley, setEditingSmiley] = useState<DagensSmiley | null>(null);
   const [isSmileyEditDialogOpen, setIsSmileyEditDialogOpen] = useState(false);
-  const [editingSengetider, setEditingSengetider] = useState<Sengetider | null>(null);
-  const [isSengetiderEditDialogOpen, setIsSengetiderEditDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const user = useUser();
 
@@ -174,15 +147,8 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
     setIsSmileyEditDialogOpen(false);
   };
 
-  const handleSengetiderEdit = (sengetider: Sengetider) => {
-    setEditingSengetider(sengetider);
-    setIsSengetiderEditDialogOpen(true);
-  };
-
   const handleSengetiderUpdated = () => {
     // TanStack Query will automatically refresh due to cache invalidation
-    setEditingSengetider(null);
-    setIsSengetiderEditDialogOpen(false);
   };
 
   if (isLoading) {
@@ -352,10 +318,8 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
                   <SengetiderCard
                     key={sengetiderItem.id}
                     sengetider={sengetiderItem}
-                    onEntryRecorded={handleEntryRecorded}
-                    onSengetiderDeleted={handleEntryRecorded}
-                    onSengetiderEdit={isUserAdmin ? handleSengetiderEdit : undefined}
-                    currentUserId={currentUserId || undefined}
+                    onEntryRecorded={() => {}} // Placeholder - entries are recorded within the card
+                    onSengetiderDeleted={handleSengetiderUpdated}
                     isUserAdmin={isUserAdmin}
                     childName={childName}
                   />
@@ -373,6 +337,7 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
               <Box display="flex" justifyContent="flex-end">
                 <AddToolDialog
                   childId={childId}
+                  childName={childName}
                   onToolAdded={handleToolAdded}
                   isUserAdmin={isUserAdmin}
                   trigger={
@@ -417,6 +382,7 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
             <Box display="flex" justifyContent="flex-end">
               <AddToolDialog
                 childId={childId}
+                childName={childName}
                 onToolAdded={handleToolAdded}
                 isUserAdmin={isUserAdmin}
                 trigger={
@@ -462,17 +428,6 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
           isOpen={isSmileyEditDialogOpen}
           onOpenChange={setIsSmileyEditDialogOpen}
           isUserAdmin={isUserAdmin}
-        />
-      )}
-
-      {/* Edit Sengetider Dialog */}
-      {isUserAdmin && editingSengetider && (
-        <EditSengetiderDialog
-          sengetider={editingSengetider}
-          onSengetiderUpdated={handleSengetiderUpdated}
-          trigger={<Button style={{ display: 'none' }}>Hidden Trigger</Button>}
-          isOpen={isSengetiderEditDialogOpen}
-          onOpenChange={setIsSengetiderEditDialogOpen}
         />
       )}
     </VStack>

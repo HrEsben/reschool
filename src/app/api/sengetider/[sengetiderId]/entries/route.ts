@@ -77,11 +77,11 @@ export async function POST(
     // For now, we'll assume if the sengetider exists, the user can access it
 
     const body = await request.json();
-    const { entryDate, actualBedtime, notes } = body;
+    const { entryDate, puttetid, sovKl, vaagnede, notes } = body;
 
-    // Validate required fields
-    if (!entryDate || !actualBedtime) {
-      return NextResponse.json({ error: 'Entry date and actual bedtime are required' }, { status: 400 });
+    // Validate required fields - at least puttetid should be provided
+    if (!entryDate || !puttetid) {
+      return NextResponse.json({ error: 'Entry date and puttetid (bedtime) are required' }, { status: 400 });
     }
 
     // Validate date format (YYYY-MM-DD)
@@ -89,28 +89,40 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid date format. Use YYYY-MM-DD' }, { status: 400 });
     }
 
-    // Validate time format
-    if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/.test(actualBedtime)) {
-      return NextResponse.json({ error: 'Invalid time format. Use HH:MM or HH:MM:SS' }, { status: 400 });
+    // Helper function to validate and format time
+    const validateAndFormatTime = (time: string, fieldName: string) => {
+      if (!time) return null;
+      if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/.test(time)) {
+        throw new Error(`Invalid time format for ${fieldName}. Use HH:MM or HH:MM:SS`);
+      }
+      // Convert HH:MM to HH:MM:SS if needed
+      return time.includes(':') && time.split(':').length === 2 ? `${time}:00` : time;
+    };
+
+    try {
+      const formattedPuttetid = validateAndFormatTime(puttetid, 'puttetid');
+      const formattedSovKl = validateAndFormatTime(sovKl, 'sov kl');
+      const formattedVaagnede = validateAndFormatTime(vaagnede, 'vågnede');
+
+      const entry = await createSengetiderEntry(
+        sengetiderId,
+        dbUser.id,
+        entryDate,
+        formattedPuttetid,
+        formattedSovKl,
+        formattedVaagnede,
+        notes
+      );
+
+      if (!entry) {
+        return NextResponse.json({ error: 'Failed to create sengetider entry' }, { status: 500 });
+      }
+
+      return NextResponse.json({ entry }, { status: 201 });
+
+    } catch (timeError) {
+      return NextResponse.json({ error: (timeError as Error).message }, { status: 400 });
     }
-
-    // Convert HH:MM to HH:MM:SS if needed
-    const formattedBedtime = actualBedtime.includes(':') && actualBedtime.split(':').length === 2 ? 
-      `${actualBedtime}:00` : actualBedtime;
-
-    const entry = await createSengetiderEntry(
-      sengetiderId,
-      dbUser.id,
-      entryDate,
-      formattedBedtime,
-      notes
-    );
-
-    if (!entry) {
-      return NextResponse.json({ error: 'Failed to create sengetider entry' }, { status: 500 });
-    }
-
-    return NextResponse.json({ entry }, { status: 201 });
 
   } catch (error) {
     console.error('Error creating sengetider entry:', error);

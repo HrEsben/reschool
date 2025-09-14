@@ -14,6 +14,7 @@ import { CreateSengetiderDialog } from '@/components/sengetider/create-sengetide
 
 interface AddToolDialogProps {
   childId: number;
+  childName: string;
   onToolAdded: () => void;
   trigger: React.ReactNode;
   isUserAdmin?: boolean;
@@ -59,7 +60,7 @@ const availableTools: ToolOption[] = [
   // }
 ];
 
-export function AddToolDialog({ childId, onToolAdded, trigger, isUserAdmin = false }: AddToolDialogProps) {
+export function AddToolDialog({ childId, childName, onToolAdded, trigger, isUserAdmin = false }: AddToolDialogProps) {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showCreateSmileyDialog, setShowCreateSmileyDialog] = useState(false);
@@ -199,6 +200,7 @@ export function AddToolDialog({ childId, onToolAdded, trigger, isUserAdmin = fal
       {/* Sengetider Creation Dialog */}
       <CreateSengetiderDialog
         childId={childId}
+        childName={childName}
         onSengetiderCreated={handleToolCreated}
         trigger={<div />} // Empty trigger since we control it programmatically
         isOpen={showCreateSengetiderDialog}
