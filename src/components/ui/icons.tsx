@@ -223,6 +223,18 @@ export const UserIcon: React.FC<IconProps> = (props) => (
   </Icon>
 );
 
+// Drag handle icon (three horizontal lines)
+export const DragHandleIcon: React.FC<CustomIconProps> = ({ 
+  size = 'md', 
+  ...props 
+}) => (
+  <Icon boxSize={getIconSize(size)} {...props}>
+    <svg fill="currentColor" viewBox="0 0 20 20">
+      <path d="M3 5h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2z" />
+    </svg>
+  </Icon>
+);
+
 // Export all icons as a single object for easy importing
 export const Icons = {
   Trash: TrashIcon,
@@ -242,6 +254,7 @@ export const Icons = {
   DemoteStar: DemoteStarIcon,
   Menu: MenuIcon,
   User: UserIcon,
+  DragHandle: DragHandleIcon,
 } as const;
 
 // Type for icon names

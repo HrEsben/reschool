@@ -18,6 +18,8 @@ import { EditBarometerDialog } from '@/components/barometer/edit-barometer-dialo
 import { DagensSmileyCard } from '@/components/dagens-smiley/dagens-smiley-card';
 import { EditDagensSmileyDialog } from '@/components/dagens-smiley/edit-dagens-smiley-dialog';
 import { SengetiderCard } from '@/components/sengetider/sengetider-card';
+import { ToolsAnchorNav } from '@/components/ui/tools-anchor-nav';
+import { useToolsNavigation } from '@/hooks/use-tools-navigation';
 import { useBarometers, useDagensSmiley, useSengetider } from '@/lib/queries';
 
 interface BarometerEntry {
@@ -87,6 +89,18 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
   const [isSmileyEditDialogOpen, setIsSmileyEditDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const user = useUser();
+
+  // Tools navigation hook
+  const {
+    tools: navigationTools,
+    isReorderMode,
+    toggleReorderMode,
+    handleReorder,
+  } = useToolsNavigation({
+    barometers: barometers.map(b => ({ id: b.id, topic: b.topic })),
+    dagensSmiley: dagensSmiley.map(s => ({ id: s.id, topic: s.topic })),
+    sengetider: sengetider.map(s => ({ id: s.id })),
+  });
 
   // Convert query error to string for display
   const error = queryError || smileyError || sengetiderError ? 
@@ -265,17 +279,32 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
   const hasTools = totalTools > 0;
 
   return (
-    <VStack gap={4} align="stretch">
+    <>
+      {/* Anchor Navigation - Only show if there are tools and more than one section */}
+      {hasTools && navigationTools.length > 1 && (
+        <ToolsAnchorNav
+          tools={navigationTools}
+          onReorder={handleReorder}
+          isReorderMode={isReorderMode}
+          onToggleReorderMode={toggleReorderMode}
+        />
+      )}
+
+      <VStack gap={4} align="stretch">
       {/* Tools Display */}
       {hasTools ? (
         <VStack gap={6} align="stretch">
-          {/* Barometers Section */}
-          {barometers.length > 0 && (
-            <Box>
-              <VStack gap={4} align="stretch" width="100%">
-                {barometers.map((barometer) => (
+          {/* Render tools in the order specified by navigation */}
+          {navigationTools.map((navTool) => {
+            if (navTool.type === 'barometer') {
+              const barometerId = parseInt(navTool.id.replace('barometer-', ''));
+              const barometer = barometers.find(b => b.id === barometerId);
+              
+              if (!barometer) return null;
+              
+              return (
+                <Box key={navTool.id} id={`tool-section-${navTool.id}`}>
                   <BarometerCard
-                    key={barometer.id}
                     barometer={barometer}
                     onEntryRecorded={handleEntryRecorded}
                     onBarometerDeleted={handleBarometerDeleted}
@@ -283,18 +312,19 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
                     currentUserId={currentUserId || undefined}
                     isUserAdmin={isUserAdmin}
                   />
-                ))}
-              </VStack>
-            </Box>
-          )}
-
-          {/* Dagens Smiley Section */}
-          {dagensSmiley.length > 0 && (
-            <Box>
-              <VStack gap={4} align="stretch" width="100%">
-                {dagensSmiley.map((smiley) => (
+                </Box>
+              );
+            }
+            
+            if (navTool.type === 'dagens-smiley') {
+              const smileyId = parseInt(navTool.id.replace('dagens-smiley-', ''));
+              const smiley = dagensSmiley.find(s => s.id === smileyId);
+              
+              if (!smiley) return null;
+              
+              return (
+                <Box key={navTool.id} id={`tool-section-${navTool.id}`}>
                   <DagensSmileyCard
-                    key={smiley.id}
                     smiley={smiley}
                     onEntryRecorded={handleEntryRecorded}
                     onSmileyDeleted={handleEntryRecorded}
@@ -304,31 +334,29 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
                     isUserAdmin={isUserAdmin}
                     childName={childName}
                   />
-                ))}
-              </VStack>
-            </Box>
-          )}
-
-          {/* Sengetider Section */}
-          {sengetider.length > 0 && (
-            <Box>
-              <VStack gap={4} align="stretch" width="100%">
-                {sengetider.map((sengetiderItem) => (
+                </Box>
+              );
+            }
+            
+            if (navTool.type === 'sengetider' && sengetider.length > 0) {
+              const sengetiderItem = sengetider[0]; // Always just one sengetider
+              
+              return (
+                <Box key={navTool.id} id={`tool-section-${navTool.id}`}>
                   <SengetiderCard
-                    key={sengetiderItem.id}
                     sengetider={sengetiderItem}
                     onEntryRecorded={() => {}} // Placeholder - entries are recorded within the card
                     onSengetiderDeleted={handleSengetiderUpdated}
                     isUserAdmin={isUserAdmin}
                     childName={childName}
                   />
-                ))}
-              </VStack>
-            </Box>
-          )}
+                </Box>
+              );
+            }
+            
+            return null;
+          })}
 
-          {/* Future tool sections will be added here */}
-          
           {/* Add Tool Button - moved below tools */}
           {isUserAdmin && (
             <Box pt={4}>
@@ -430,5 +458,6 @@ export function ToolsManager({ childId, isUserAdmin, childName }: ToolsManagerPr
         />
       )}
     </VStack>
+    </>
   );
 }
