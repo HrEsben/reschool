@@ -19,7 +19,7 @@ import {
 import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { SettingsIcon, TrashIcon } from '@/components/ui/icons';
-import { ToggleTip } from '@/components/ui/toggle-tip';
+import { VisibilityBadge } from '@/components/ui/visibility-badge';
 import { SengetiderEntry, SengetiderWithLatestEntry } from '@/lib/database-service';
 import { useDeleteSengetider } from '@/lib/queries';
 
@@ -268,79 +268,61 @@ export function SengetiderCard({
       overflow="hidden"
     >
       {/* Header */}
-      <Box bg="cream.50" px={6} py={4} borderBottomWidth="1px" borderBottomColor="gray.100">
+      <Box 
+        bg="linear-gradient(135deg, #ebeef2 0%, #ced6e0 50%, #9bb0c4 100%)" 
+        px={6} 
+        py={4} 
+        borderBottomWidth="1px" 
+        borderBottomColor="navy.200"
+      >
         <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
           <VStack align="start" gap={1} flex={1} minW={0}>
             <Heading size="md" color="navy.800">Sengetider for {childName}</Heading>
             {sengetider.description && (
-              <Text fontSize="sm" color="gray.600">
+              <Text fontSize="sm" color="navy.600">
                 {sengetider.description}
               </Text>
             )}
-            <HStack gap={2}>
-              <ToggleTip 
-                content={sengetider.isPublic ? (
-                  <VStack gap={1} align="start">
-                    <Text fontSize="sm" fontWeight="medium" color="gray.700">Alle voksne</Text>
-                    <Text fontSize="xs" color="gray.500">Alle voksne tilknyttet barnet kan se dette værktøj</Text>
-                  </VStack>
-                ) : (
-                  <VStack gap={1} align="start">
-                    <Text fontSize="sm" fontWeight="medium" color="gray.700">Kun dig</Text>
-                    <Text fontSize="xs" color="gray.500">Kun du kan se dette værktøj</Text>
-                  </VStack>
-                )}
-              >
-                <Box
-                  as="button"
-                  px={2}
-                  py={1}
-                  borderRadius="md"
-                  bg={sengetider.isPublic ? "green.100" : "blue.100"}
-                  color={sengetider.isPublic ? "green.700" : "blue.700"}
-                  border="1px solid"
-                  borderColor={sengetider.isPublic ? "green.200" : "blue.200"}
-                  fontSize="xs"
-                  fontWeight="medium"
-                  cursor="help"
-                  _hover={{ opacity: 0.8 }}
-                >
-                  {sengetider.isPublic ? "Alle voksne" : "Kun dig"}
-                </Box>
-              </ToggleTip>
-            </HStack>
           </VStack>
           
-          {isUserAdmin && (
-            <HStack gap={1}>
-              {onSengetiderEdit && (
+          <HStack gap={2} flexShrink={0}>
+            {/* Visibility Badge */}
+            <VisibilityBadge
+              isPublic={sengetider.isPublic}
+            />
+
+            {/* Action Buttons */}
+            {isUserAdmin && (
+              <HStack gap={1}>
+                {onSengetiderEdit && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onSengetiderEdit(sengetider)}
+                    title="Rediger sengetider-værktøj"
+                    p={1}
+                    minW="auto"
+                    color="sage.600"
+                    _hover={{ bg: "sage.50", color: "sage.700" }}
+                  >
+                    <SettingsIcon size={16} />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onSengetiderEdit(sengetider)}
-                  title="Rediger sengetider-værktøj"
+                  onClick={() => setShowDeleteDialog(true)}
+                  title="Slet sengetider-værktøj"
                   p={1}
                   minW="auto"
-                  color="navy.600"
-                  _hover={{ bg: "navy.50", color: "navy.700" }}
+                  color="red.600"
+                  _hover={{ bg: "red.50", color: "red.700" }}
                 >
-                  <SettingsIcon size={16} />
+                  <TrashIcon size={16} />
                 </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowDeleteDialog(true)}
-                title="Slet sengetider-værktøj"
-                p={1}
-                minW="auto"
-                color="red.600"
-                _hover={{ bg: "red.50", color: "red.700" }}
-              >
-                <TrashIcon size={16} />
-              </Button>
-            </HStack>
-          )}
+              </HStack>
+            )}
+          </HStack>
         </Flex>
       </Box>
 

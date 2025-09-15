@@ -11,11 +11,10 @@ import {
   Textarea,
   Heading,
   Slider,
-  useBreakpointValue,
 } from '@chakra-ui/react';
 import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
-import { ToggleTip } from '@/components/ui/toggle-tip';
+import { VisibilityBadge } from '@/components/ui/visibility-badge';
 import { BarometerTimeline, BarometerTimelineRef } from './barometer-timeline-wrapper';
 import { SettingsIcon, TrashIcon } from '@/components/ui/icons';
 
@@ -125,102 +124,6 @@ export function BarometerCard({
   useEffect(() => {
     refreshAccessData();
   }, [refreshAccessData]);
-
-  // Get badge info based on access level
-  const getAccessInfo = () => {
-    // Check if it's public first
-    if (barometer.isPublic) {
-      return {
-        text: 'Alle',
-        bg: 'green.100',
-        color: 'green.700',
-        borderColor: 'green.200'
-      };
-    }
-
-    if (!accessDataLoaded) {
-      return {
-        text: 'Indlæser...',
-        bg: 'gray.100',
-        color: 'gray.700',
-        borderColor: 'gray.200'
-      };
-    }
-
-    // Check if it's creator-only (no specific access users)
-    if (accessUsers.length === 0) {
-      return {
-        text: 'Kun dig',
-        bg: 'blue.100',
-        color: 'blue.700',
-        borderColor: 'blue.200'
-      };
-    }
-
-    // Show number of users with access
-    if (accessUsers.length > 0) {
-      const count = accessUsers.length;
-      const text = count === 1 ? `${count} voksen` : `${count} voksne`;
-      return {
-        text,
-        bg: 'orange.100',
-        color: 'orange.700',
-        borderColor: 'orange.200'
-      };
-    }
-
-    // Fallback
-    return {
-      text: 'Begrænset adgang',
-      bg: 'orange.100',
-      color: 'orange.700',
-      borderColor: 'orange.200'
-    };
-  };
-
-  // Get formatted user names for ToggleTip content
-  const getToggleTipContent = () => {
-    if (barometer.isPublic) {
-      return (
-        <VStack gap={1} align="start">
-          <Text fontSize="sm" fontWeight="medium" color="gray.700">Alle voksne</Text>
-          <Text fontSize="xs" color="gray.500">Alle voksne tilknyttet barnet kan se dette barometer</Text>
-        </VStack>
-      );
-    }
-
-    if (!accessDataLoaded) {
-      return (
-        <Text fontSize="sm" color="gray.600">Indlæser adgangsoplysninger...</Text>
-      );
-    }
-
-    if (accessUsers.length === 0) {
-      return (
-        <VStack gap={1} align="start">
-          <Text fontSize="sm" fontWeight="medium" color="gray.700">Kun dig</Text>
-          <Text fontSize="xs" color="gray.500">Kun du kan se dette barometer</Text>
-        </VStack>
-      );
-    }
-
-    if (accessUsers.length > 0) {
-      return (
-        <VStack gap={1} align="start">
-          <Text fontSize="sm" fontWeight="medium" color="gray.700">Kan ses af:</Text>
-          {accessUsers.map((user, index) => (
-            <Text key={index} fontSize="xs" color="gray.600">
-              • {user.display_name}
-            </Text>
-          ))}
-        </VStack>
-      );
-    }
-
-    return (
-      <Text fontSize="sm" color="gray.600">Begrænset adgang</Text>
-    );
-  };
 
   // Calculate color based on rating position in scale using site's color palette
   const getRatingColor = (rating: number) => {
@@ -740,142 +643,98 @@ export function BarometerCard({
     }
   };
 
-  // Responsive layout: stack badge below title on mobile
-  const isMobile = useBreakpointValue({ base: true, md: false });
-
   return (
     <Box 
       bg="white" 
-      borderRadius="lg" 
+      borderRadius="xl" 
       border="1px solid" 
       borderColor="gray.200" 
       shadow="sm"
+      _hover={{ shadow: "md" }}
+      transition="all 0.2s"
+      overflow="hidden"
     >
-      <Box p={4} borderBottom="1px solid" borderColor="gray.100">
-        <HStack justify="space-between" align="start">
-          <VStack align="start" gap={isMobile ? 2 : 0} flex={1}>
-            <HStack gap={2} align="center">
-              <Heading size="md">{barometer.topic || 'Untitled Barometer'}</Heading>
-              {!isMobile && (
-                <ToggleTip 
-                  content={getToggleTipContent()}
-                  showArrow={true}
-                  positioning={{ placement: "bottom" }}
-                >
-                  <Box
-                    px={2}
-                    py={1}
-                    borderRadius="md"
-                    fontSize="xs"
-                    fontWeight="medium"
-                    bg={getAccessInfo().bg}
-                    color={getAccessInfo().color}
-                    border="1px solid"
-                    borderColor={getAccessInfo().borderColor}
-                    cursor="pointer"
-                    onMouseEnter={fetchAccessData}
-                    onClick={fetchAccessData}
-                    _hover={{
-                      transform: 'scale(1.05)',
-                      boxShadow: 'sm'
-                    }}
-                    transition="all 0.2s"
-                  >
-                    {getAccessInfo().text}
-                  </Box>
-                </ToggleTip>
-              )}
-            </HStack>
-            {isMobile && (
-              <ToggleTip 
-                content={getToggleTipContent()}
-                showArrow={true}
-                positioning={{ placement: "bottom" }}
-              >
-                <Box
-                  px={2}
-                  py={1}
-                  borderRadius="md"
-                  fontSize="xs"
-                  fontWeight="medium"
-                  bg={getAccessInfo().bg}
-                  color={getAccessInfo().color}
-                  border="1px solid"
-                  borderColor={getAccessInfo().borderColor}
-                  cursor="pointer"
-                  onMouseEnter={fetchAccessData}
-                  onClick={fetchAccessData}
-                  _hover={{
-                    transform: 'scale(1.05)',
-                    boxShadow: 'sm'
-                  }}
-                  transition="all 0.2s"
-                  alignSelf="start"
-                >
-                  {getAccessInfo().text}
-                </Box>
-              </ToggleTip>
+      {/* Header */}
+      <Box 
+        bg="linear-gradient(135deg, #f6f8f6 0%, #eef2ef 50%, #d5e0d6 100%)" 
+        px={6} 
+        py={4} 
+        borderBottomWidth="1px" 
+        borderBottomColor="sage.200"
+      >
+        <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
+          <VStack align="start" gap={1} flex={1} minW={0}>
+            <Heading size="md" color="sage.800">{barometer.topic || 'Untitled Barometer'}</Heading>
+            {barometer.description && (
+              <Text fontSize="sm" color="sage.600">
+                {barometer.description}
+              </Text>
             )}
           </VStack>
-          <HStack gap={2}>
+          
+          <HStack gap={2} flexShrink={0}>
+            {/* Visibility Badge */}
+            <VisibilityBadge
+              isPublic={barometer.isPublic}
+              accessUsers={accessUsers}
+              fetchAccessData={fetchAccessData}
+              accessDataLoaded={accessDataLoaded}
+            />
+
+            {/* Action Buttons */}
             {isUserAdmin && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleEditBarometer}
-                title="Rediger barometer"
-                p={1}
-                minW="auto"
-                color="navy.600"
-                _hover={{ bg: "navy.50", color: "navy.700" }}
-                _focus={{ 
-                  bg: "navy.50",
-                  boxShadow: "0 0 0 2px var(--chakra-colors-navy-200)",
-                  outline: "none"
-                }}
-                _focusVisible={{ 
-                  bg: "navy.50",
-                  boxShadow: "0 0 0 2px var(--chakra-colors-navy-200)",
-                  outline: "none"
-                }}
-                borderRadius="md"
-              >
-                <SettingsIcon size="sm" />
-              </Button>
-            )}
-            {isUserAdmin && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDeleteBarometer}
-                loading={deletingBarometer}
-                title="Slet barometer"
-                p={1}
-                minW="auto"
-                color="coral.600"
-                _hover={{ bg: "coral.50", color: "coral.700" }}
-                _focus={{ 
-                  bg: "coral.50",
-                  boxShadow: "0 0 0 2px var(--chakra-colors-coral-200)",
-                  outline: "none"
-                }}
-                _focusVisible={{ 
-                  bg: "coral.50",
-                  boxShadow: "0 0 0 2px var(--chakra-colors-coral-200)",
-                  outline: "none"
-                }}
-                borderRadius="md"
-              >
-                <TrashIcon size="sm" />
-              </Button>
+              <HStack gap={1}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleEditBarometer}
+                  title="Rediger barometer"
+                  p={1}
+                  minW="auto"
+                  color="sage.600"
+                  _hover={{ bg: "sage.50", color: "sage.700" }}
+                  _focus={{ 
+                    bg: "sage.50",
+                    boxShadow: "0 0 0 2px var(--chakra-colors-sage-200)",
+                    outline: "none"
+                  }}
+                  _focusVisible={{ 
+                    bg: "sage.50",
+                    boxShadow: "0 0 0 2px var(--chakra-colors-sage-200)",
+                    outline: "none"
+                  }}
+                  borderRadius="md"
+                >
+                  <SettingsIcon size="sm" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDeleteBarometer}
+                  loading={deletingBarometer}
+                  title="Slet barometer"
+                  p={1}
+                  minW="auto"
+                  color="red.600"
+                  _hover={{ bg: "red.50", color: "red.700" }}
+                  _focus={{ 
+                    bg: "red.50",
+                    boxShadow: "0 0 0 2px var(--chakra-colors-red-200)",
+                    outline: "none"
+                  }}
+                  _focusVisible={{ 
+                    bg: "red.50",
+                    boxShadow: "0 0 0 2px var(--chakra-colors-red-200)",
+                    outline: "none"
+                  }}
+                  borderRadius="md"
+                >
+                  <TrashIcon size="sm" />
+                </Button>
+              </HStack>
             )}
           </HStack>
-        </HStack>
-        {barometer.description && (
-          <Text mt={2} fontSize="sm" color="gray.600">
-            {barometer.description}
-          </Text>
-        )}
+        </Flex>
       </Box>
       
       <Box p={4}>

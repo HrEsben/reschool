@@ -11,6 +11,7 @@ import { DialogManager } from '@/components/ui/dialog-manager';
 import { CreateBarometerDialog } from '@/components/barometer/create-barometer-dialog';
 import { CreateDagensSmileyDialog } from '@/components/dagens-smiley/create-dagens-smiley-dialog';
 import { CreateSengetiderDialog } from '@/components/sengetider/create-sengetider-dialog';
+import { Thermometer, Smile, Bed, Wrench } from 'lucide-react';
 
 interface AddToolDialogProps {
   childId: number;
@@ -24,7 +25,7 @@ interface ToolOption {
   id: string;
   name: string;
   description: string;
-  icon: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
   available: boolean;
 }
 
@@ -33,21 +34,21 @@ const availableTools: ToolOption[] = [
     id: 'barometer',
     name: 'Barometer',
     description: 'Log daglige stemninger og følelser med en simpel skala',
-    icon: '🌡️',
+    icon: Thermometer,
     available: true,
   },
   {
     id: 'dagens-smiley',
     name: 'Dagens smiley',
     description: 'Vælg en smiley og forklar hvorfor du valgte den',
-    icon: '😊',
+    icon: Smile,
     available: true,
   },
   {
     id: 'sengetider',
     name: 'Sengetider',
     description: 'Spor barnets sengetider og rutiner',
-    icon: '🛏️',
+    icon: Bed,
     available: true,
   },
   // Future tools can be added here
@@ -55,7 +56,7 @@ const availableTools: ToolOption[] = [
   //   id: 'habit-tracker',
   //   name: 'Vanetræner',
   //   description: 'Spor daglige vaner og rutiner',
-  //   icon: '✅',
+  //   icon: CheckSquare,
   //   available: false,
   // }
 ];
@@ -151,7 +152,11 @@ export function AddToolDialog({ childId, childName, onToolAdded, trigger, isUser
                 <CheckboxCard.Control>
                   <CheckboxCard.Content>
                     <HStack gap={3} align="center">
-                      <Text fontSize="2xl">{tool.icon || '🔧'}</Text>
+                      {tool.icon ? (
+                        <tool.icon size={20} className="text-gray-600" />
+                      ) : (
+                        <Wrench size={20} className="text-gray-600" />
+                      )}
                       <VStack align="start" gap={1} flex={1}>
                         <HStack>
                           <CheckboxCard.Label fontSize="sm" fontWeight="medium" color={tool.available ? 'gray.800' : 'gray.500'}>

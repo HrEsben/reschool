@@ -12,7 +12,7 @@ import {
 } from '@chakra-ui/react';
 import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
-import { ToggleTip } from '@/components/ui/toggle-tip';
+import { VisibilityBadge } from '@/components/ui/visibility-badge';
 import { SettingsIcon, TrashIcon } from '@/components/ui/icons';
 import { OpenMojiEmoji } from '@/components/ui/openmoji-emoji';
 import { SmileyTimeline, SmileyTimelineRef } from '@/components/smiley/smiley-timeline';
@@ -293,104 +293,6 @@ export function DagensSmileyCard({
     }
   };
 
-  // Get visibility info for display
-  const getVisibilityInfo = () => {
-    if (smiley.isPublic) {
-      return {
-        text: 'Alle voksne',
-        bg: 'green.100',
-        color: 'green.700',
-        borderColor: 'green.200'
-      };
-    }
-
-    // For non-public smileys, we need access data
-    if (!accessDataLoaded) {
-      fetchAccessData();
-      return {
-        text: 'Begrænset adgang',
-        bg: 'orange.100',
-        color: 'orange.700',
-        borderColor: 'orange.200'
-      };
-    }
-
-    // Check if it's creator-only (no specific access users)
-    if (accessUsers.length === 0) {
-      return {
-        text: 'Kun dig',
-        bg: 'blue.100',
-        color: 'blue.700',
-        borderColor: 'blue.200'
-      };
-    }
-
-    // Show number of users with access
-    if (accessUsers.length > 0) {
-      const count = accessUsers.length;
-      const text = count === 1 ? `${count} voksen` : `${count} voksne`;
-      return {
-        text,
-        bg: 'orange.100',
-        color: 'orange.700',
-        borderColor: 'orange.200'
-      };
-    }
-
-    // Fallback
-    return {
-      text: 'Begrænset adgang',
-      bg: 'orange.100',
-      color: 'orange.700',
-      borderColor: 'orange.200'
-    };
-  };
-
-  // Get formatted user names for ToggleTip content
-  const getToggleTipContent = () => {
-    if (smiley.isPublic) {
-      return (
-        <VStack gap={1} align="start">
-          <Text fontSize="sm" fontWeight="medium" color="gray.700">Alle voksne</Text>
-          <Text fontSize="xs" color="gray.500">Alle voksne tilknyttet barnet kan se dette værktøj</Text>
-        </VStack>
-      );
-    }
-
-    if (!accessDataLoaded) {
-      return (
-        <Text fontSize="sm" color="gray.600">Indlæser adgangsoplysninger...</Text>
-      );
-    }
-
-    if (accessUsers.length === 0) {
-      return (
-        <VStack gap={1} align="start">
-          <Text fontSize="sm" fontWeight="medium" color="gray.700">Kun dig</Text>
-          <Text fontSize="xs" color="gray.500">Kun du kan se dette værktøj</Text>
-        </VStack>
-      );
-    }
-
-    const maxShow = 5;
-    const showUsers = accessUsers.slice(0, maxShow);
-    const remaining = accessUsers.length - maxShow;
-
-    return (
-      <VStack gap={1} align="start">
-        <Text fontSize="sm" fontWeight="medium" color="gray.700">Har adgang:</Text>
-        {showUsers.map((user, index) => (
-          <Text key={index} fontSize="xs" color="gray.600">{user.display_name}</Text>
-        ))}
-        {remaining > 0 && (
-          <Text fontSize="xs" color="gray.500">+{remaining} flere</Text>
-        )}
-      </VStack>
-    );
-  };
-
-  const visibilityInfo = getVisibilityInfo();
-
   return (
     <Box
       borderWidth="1px"
@@ -403,37 +305,38 @@ export function DagensSmileyCard({
       overflow="hidden"
     >
       {/* Header */}
-      <Box bg="cream.50" px={6} py={4} borderBottomWidth="1px" borderBottomColor="gray.100">
+      <Box 
+        bg="linear-gradient(135deg, #f9f6f0 0%, #f2ebd9 50%, #e6d4b1 100%)" 
+        px={6} 
+        py={4} 
+        borderBottomWidth="1px" 
+        borderBottomColor="cream.200"
+      >
         <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
           <VStack align="start" gap={1} flex={1} minW={0}>
-            <Text fontSize="lg" fontWeight="semibold" color="sage.700">
-              {getFormattedTodayDate()}
-            </Text>
+            <Flex align="center" gap={3} wrap="wrap">
+              <Heading size="md" color="gray.800">{smiley.topic}</Heading>
+              <Text fontSize="sm" fontWeight="medium" color="gray.600">
+                {getFormattedTodayDate()}
+              </Text>
+            </Flex>
+            {smiley.description && (
+              <Text fontSize="sm" color="gray.700">
+                {smiley.description}
+              </Text>
+            )}
           </VStack>
-          <HStack gap={2}>
+          
+          <HStack gap={2} flexShrink={0}>
             {/* Visibility Badge */}
-            <ToggleTip 
-              content={getToggleTipContent()}
-              onOpenChange={(open) => { if (open) fetchAccessData(); }}
-            >
-              <Box
-                as="button"
-                px={2}
-                py={1}
-                borderRadius="md"
-                bg={visibilityInfo.bg}
-                color={visibilityInfo.color}
-                border="1px solid"
-                borderColor={visibilityInfo.borderColor}
-                fontSize="xs"
-                fontWeight="medium"
-                cursor="help"
-                _hover={{ opacity: 0.8 }}
-              >
-                {visibilityInfo.text}
-              </Box>
-            </ToggleTip>
+            <VisibilityBadge
+              isPublic={smiley.isPublic}
+              accessUsers={accessUsers}
+              fetchAccessData={fetchAccessData}
+              accessDataLoaded={accessDataLoaded}
+            />
 
+            {/* Action Buttons */}
             {isUserAdmin && (
               <HStack gap={1}>
                 <Button
@@ -443,8 +346,8 @@ export function DagensSmileyCard({
                   title="Rediger dagens smiley"
                   p={1}
                   minW="auto"
-                  color="navy.600"
-                  _hover={{ bg: "navy.50", color: "navy.700" }}
+                  color="sage.600"
+                  _hover={{ bg: "sage.50", color: "sage.700" }}
                 >
                   <SettingsIcon size={16} />
                 </Button>
@@ -469,22 +372,6 @@ export function DagensSmileyCard({
       {/* Content */}
       <Box p={6}>
         <VStack gap={6} align="stretch">
-          {/* Topic and Description as large headers */}
-          <VStack gap={3} align="stretch" textAlign="center">
-            <Heading 
-              size="xl" 
-              color="navy.800"
-              lineHeight="shorter"
-            >
-              {smiley.topic}
-            </Heading>
-            {smiley.description && (
-              <Text fontSize="lg" color="gray.600" lineHeight="shorter">
-                {smiley.description}
-              </Text>
-            )}
-          </VStack>
-
           {/* Today's Status Display */}
           {todaysEntry ? (
             // Show today's selected smiley with reasoning

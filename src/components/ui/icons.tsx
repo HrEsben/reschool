@@ -235,6 +235,18 @@ export const DragHandleIcon: React.FC<CustomIconProps> = ({
   </Icon>
 );
 
+// Eye icon for visibility indicators
+export const EyeIcon: React.FC<CustomIconProps> = ({ 
+  size = 'md', 
+  ...props 
+}) => (
+  <Icon boxSize={getIconSize(size)} {...props}>
+    <svg fill="currentColor" viewBox="0 0 20 20">
+      <path d="M10 3C5 3 1.73 7.11 1 10c.73 2.89 4 7 9 7s8.27-4.11 9-7c-.73-2.89-4-7-9-7zm0 12a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z" />
+    </svg>
+  </Icon>
+);
+
 // Export all icons as a single object for easy importing
 export const Icons = {
   Trash: TrashIcon,
@@ -255,6 +267,7 @@ export const Icons = {
   Menu: MenuIcon,
   User: UserIcon,
   DragHandle: DragHandleIcon,
+  Eye: EyeIcon,
 } as const;
 
 // Type for icon names
