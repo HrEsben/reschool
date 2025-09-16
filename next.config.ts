@@ -121,6 +121,48 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // CSS files with correct MIME type - must be before general static rule
+      {
+        source: '/_next/static/css/:path*',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'text/css; charset=utf-8',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      // Specific CSS files pattern
+      {
+        source: '/_next/static/css/app/:path*.css',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'text/css; charset=utf-8',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      // Hash-named CSS files pattern
+      {
+        source: '/_next/static/css/:hash*.css',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'text/css; charset=utf-8',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
       {
         source: '/_next/static/(.*)',
         headers: [
@@ -191,7 +233,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://api.stackframe.co https://vercel.live",
+              "connect-src 'self' https://api.stackframe.co https://api.stack-auth.com https://vercel.live",
               "frame-src 'none'",
               "object-src 'none'",
               "base-uri 'self'",

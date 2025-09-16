@@ -57,13 +57,6 @@ export default function RootLayout({
         <link rel="prefetch" href="/dashboard" />
         <link rel="prefetch" href="/login" />
         
-        {/* Preload critical CSS */}
-        <link 
-          rel="preload" 
-          href="/_next/static/css/app/layout.css" 
-          as="style" 
-        />
-        
         {/* Resource hints for better performance */}
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta httpEquiv="x-dns-prefetch-control" content="on" />
