@@ -50,6 +50,9 @@ export const OpenMojiEmoji = memo<OpenMojiEmojiProps>(({
         alt={alt || unicode}
         width={typeof size === 'number' ? size : 24}
         height={typeof size === 'number' ? size : 24}
+        loading="lazy"
+        placeholder="empty"
+        priority={false}
         style={{ 
           width: size,
           height: size,

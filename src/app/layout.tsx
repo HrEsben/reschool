@@ -9,11 +9,15 @@ import RisingFooter from "@/components/ui/rising-footer";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
+  preload: true,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+  preload: false, // Only preload primary font
 });
 
 export const metadata: Metadata = {
@@ -38,6 +42,25 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className="light">
+      <head>
+        {/* DNS prefetch for external domains */}
+        <link rel="dns-prefetch" href="//api.stackframe.co" />
+        <link rel="dns-prefetch" href="//api.stack-auth.com" />
+        <link rel="dns-prefetch" href="//app.stack-auth.com" />
+        
+        {/* Preload critical fonts */}
+        <link 
+          rel="preload" 
+          href="/fonts/geist-sans.woff2" 
+          as="font" 
+          type="font/woff2" 
+          crossOrigin="" 
+        />
+        
+        {/* Preconnect to important domains */}
+        <link rel="preconnect" href="//api.stackframe.co" />
+        <link rel="preconnect" href="//api.stack-auth.com" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
