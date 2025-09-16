@@ -35,6 +35,19 @@ interface ChildSummary {
   usersCount: number;
   barometersCount: number;
   recentEntriesCount: number;
+  activeIndsatstrappe?: {
+    id: number;
+    title: string;
+    totalSteps: number;
+    completedSteps: number;
+    progressPercent: number;
+    steps: Array<{
+      id: number;
+      stepNumber: number;
+      title: string;
+      isCompleted: boolean;
+    }>;
+  } | null;
 }
 
 interface ChildrenListProps {
@@ -63,10 +76,11 @@ export function ChildrenList({}: ChildrenListProps) {
       
       for (const child of children) {
         try {
-          // Fetch users count and barometers data in parallel
-          const [usersResponse, barometersResponse] = await Promise.all([
+          // Fetch users count, barometers data, and active indsatstrappe in parallel
+          const [usersResponse, barometersResponse, indsatsrappeResponse] = await Promise.all([
             fetch(`/api/children/slug/${child.slug}`),
-            fetch(`/api/children/${child.id}/barometers`)
+            fetch(`/api/children/${child.id}/barometers`),
+            fetch(`/api/children/${child.id}/indsatstrappe/active`)
           ]);
 
           if (usersResponse.ok && barometersResponse.ok) {
@@ -84,10 +98,37 @@ export function ChildrenList({}: ChildrenListProps) {
               }
             }
 
+            // Process active indsatstrappe
+            let activeIndsatstrappe = null;
+            if (indsatsrappeResponse.ok) {
+              const indsatsrappeData = await indsatsrappeResponse.json();
+              if (indsatsrappeData.plan) {
+                const plan = indsatsrappeData.plan;
+                const completedSteps = plan.steps?.filter((step: { isCompleted: boolean }) => step.isCompleted).length || 0;
+                const totalSteps = plan.steps?.length || 0;
+                const progressPercent = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+
+                activeIndsatstrappe = {
+                  id: plan.id,
+                  title: plan.title,
+                  totalSteps,
+                  completedSteps,
+                  progressPercent,
+                  steps: plan.steps?.map((step: any) => ({
+                    id: step.id,
+                    stepNumber: step.stepNumber,
+                    title: step.title,
+                    isCompleted: step.isCompleted
+                  })) || []
+                };
+              }
+            }
+
             summaries[child.id] = {
               usersCount: (userData.users?.length || 0) + (userData.invitations?.length || 0),
               barometersCount: barometersData.barometers?.length || 0,
-              recentEntriesCount
+              recentEntriesCount,
+              activeIndsatstrappe
             };
           }
         } catch (error) {
@@ -95,7 +136,8 @@ export function ChildrenList({}: ChildrenListProps) {
           summaries[child.id] = {
             usersCount: 0,
             barometersCount: 0,
-            recentEntriesCount: 0
+            recentEntriesCount: 0,
+            activeIndsatstrappe: null
           };
         }
       }
@@ -631,60 +673,190 @@ export function ChildrenList({}: ChildrenListProps) {
                 </VStack>
               </Box>
 
-              {/* Divider */}
-              <Box height="1px" bg="#e5e5e5" />
-
-              {/* Footer section with action buttons */}
+              {/* Footer section with action buttons and indsatstrappe */}
               <Box px={{ base: 4, md: 6 }} py={{ base: 3, md: 4 }}>
-                <HStack gap={{ base: 2, md: 3 }} justify="flex-end">
-                  <Button
-                    size={{ base: "sm", md: "md" }}
-                    bg="#81b29a"
-                    color="white"
-                    variant="solid"
-                    onClick={() => router.push(`/${child.slug}`)}
-                    fontWeight="500"
-                    px={{ base: 4, md: 6 }}
-                    borderRadius="full"
-                    _hover={{
-                      bg: "#6da085",
-                      shadow: "md"
-                    }}
-                    transition="all 0.2s ease"
-                  >
-                    Se profil
-                  </Button>
-                  {child.isAdministrator && (
-                    <DeleteChildDialog
-                      trigger={
-                        <Button
-                          size={{ base: "sm", md: "md" }}
-                          borderColor="#e07a5f"
-                          color="#e07a5f"
-                          variant="outline"
-                          fontWeight="500"
-                          p={{ base: 1.5, md: 2 }}
-                          borderRadius="full"
-                          _hover={{
-                            bg: "#e07a5f",
-                            color: "white"
-                          }}
-                          transition="all 0.2s ease"
-                          aria-label="Slet barn"
-                        >
-                          <Icon boxSize={{ base: 3, md: 4 }}>
-                            <svg fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53L15.986 5.952l.149.022a.75.75 0 00.23-1.482A48.16 48.16 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
-                            </svg>
-                          </Icon>
-                        </Button>
-                      }
-                      childName={child.name}
-                      onConfirm={() => handleDeleteChild(child)}
-                      isLoading={deletingChildId === child.id}
-                    />
+                <Flex 
+                  direction={{ base: "column", md: "row" }} 
+                  gap={{ base: 3, md: 4 }} 
+                  align={{ base: "stretch", md: "center" }}
+                  justify={
+                    childSummaries[child.id]?.activeIndsatstrappe || summariesLoading
+                      ? "space-between" 
+                      : "flex-end"
+                  }
+                >
+                  {/* Active Indsatstrappe Section */}
+                  {summariesLoading ? (
+                    <Box flex="1" minW="0">
+                      <Skeleton 
+                        height="14px" 
+                        width="120px" 
+                        borderRadius="sm" 
+                        mb={2}
+                        variant="shine"
+                        css={{
+                          "--start-color": "#3d405b",
+                          "--end-color": "#81b29a",
+                        }}
+                      />
+                      <HStack gap={0}>
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                          <Skeleton 
+                            key={i}
+                            height={`${Math.min(i * 2 + 6, 24)}px`}
+                            width="12px" 
+                            borderRadius="sm" 
+                            variant="shine"
+                            css={{
+                              "--start-color": "#81b29a",
+                              "--end-color": "#f2cc8f",
+                            }}
+                          />
+                        ))}
+                      </HStack>
+                    </Box>
+                  ) : (
+                    childSummaries[child.id]?.activeIndsatstrappe && (
+                                          childSummaries[child.id]?.activeIndsatstrappe && (
+                      <Box flex="1" minW="0">
+                        {/* Inline header with mini stairs and title */}
+                        <Flex align="center" gap={2} mb={2}>
+                          {/* Mini staircase icon */}
+                          <HStack gap={0} align="end">
+                            {[1, 2, 3].map((i) => (
+                              <Box
+                                key={i}
+                                width="6px"
+                                height={`${i * 2 + 2}px`}
+                                bg="#3d405b"
+                                borderRadius="1px"
+                              />
+                            ))}
+                          </HStack>
+                          
+                          {/* Title with header font inline */}
+                          <Heading 
+                            as="h4"
+                            size="sm" 
+                            color="#3d405b" 
+                            truncate
+                            flex="1"
+                          >
+                            {childSummaries[child.id]?.activeIndsatstrappe?.title}
+                          </Heading>
+                        </Flex>
+                        
+                        {/* Main staircase visualization */}
+                        <HStack gap={0} align="end">
+                          {Array.from({ 
+                            length: Math.min(childSummaries[child.id]?.activeIndsatstrappe?.totalSteps || 0, 10) 
+                          }, (_, index) => {
+                            const isCompleted = index < (childSummaries[child.id]?.activeIndsatstrappe?.completedSteps || 0);
+                            const isCurrent = !isCompleted && index === (childSummaries[child.id]?.activeIndsatstrappe?.completedSteps || 0);
+                            const step = childSummaries[child.id]?.activeIndsatstrappe?.steps?.[index];
+                            const stepTitle = step?.title || `Trin ${index + 1}`;
+                            
+                            return (
+                              <Box
+                                key={index}
+                                width="12px"
+                                height={`${Math.min((index + 1) * 2 + 6, 24)}px`}
+                                bg={
+                                  isCompleted 
+                                    ? "#81b29a" 
+                                    : isCurrent 
+                                    ? "#f2cc8f" 
+                                    : "#e5e5e5"
+                                }
+                                borderTop="1px solid"
+                                borderRight="1px solid"
+                                borderTopColor={
+                                  isCompleted 
+                                    ? "#6da085" 
+                                    : isCurrent 
+                                    ? "#e6b366" 
+                                    : "#d0d0d0"
+                                }
+                                borderRightColor={
+                                  isCompleted 
+                                    ? "#6da085" 
+                                    : isCurrent 
+                                    ? "#e6b366" 
+                                    : "#d0d0d0"
+                                }
+                                _first={{
+                                  borderLeft: "1px solid",
+                                  borderLeftColor: isCompleted 
+                                    ? "#6da085" 
+                                    : isCurrent 
+                                    ? "#e6b366" 
+                                    : "#d0d0d0"
+                                }}
+                                title={`${stepTitle}${isCompleted ? ' (fuldført)' : isCurrent ? ' (nuværende)' : ' (ikke startet)'}`}
+                                transition="all 0.2s ease"
+                                _hover={{
+                                  filter: "brightness(1.1)"
+                                }}
+                              />
+                            );
+                          })}
+                        </HStack>
+                      </Box>
+                    )
+                    )
                   )}
-                </HStack>
+
+                  {/* Action buttons */}
+                  <HStack gap={{ base: 2, md: 3 }} flexShrink={0} justify={{ base: "flex-end", md: "flex-start" }}>
+                    <Button
+                      size={{ base: "sm", md: "md" }}
+                      bg="#81b29a"
+                      color="white"
+                      variant="solid"
+                      onClick={() => router.push(`/${child.slug}`)}
+                      fontWeight="500"
+                      px={{ base: 4, md: 6 }}
+                      borderRadius="full"
+                      _hover={{
+                        bg: "#6da085",
+                        shadow: "md"
+                      }}
+                      transition="all 0.2s ease"
+                    >
+                      Se profil
+                    </Button>
+                    {child.isAdministrator && (
+                      <DeleteChildDialog
+                        trigger={
+                          <Button
+                            size={{ base: "sm", md: "md" }}
+                            borderColor="#e07a5f"
+                            color="#e07a5f"
+                            variant="outline"
+                            fontWeight="500"
+                            p={{ base: 1.5, md: 2 }}
+                            borderRadius="full"
+                            _hover={{
+                              bg: "#e07a5f",
+                              color: "white"
+                            }}
+                            transition="all 0.2s ease"
+                            aria-label="Slet barn"
+                          >
+                            <Icon boxSize={{ base: 3, md: 4 }}>
+                              <svg fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53L15.986 5.952l.149.022a.75.75 0 00.23-1.482A48.16 48.16 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                              </svg>
+                            </Icon>
+                          </Button>
+                        }
+                        childName={child.name}
+                        onConfirm={() => handleDeleteChild(child)}
+                        isLoading={deletingChildId === child.id}
+                      />
+                    )}
+                  </HStack>
+                </Flex>
               </Box>
             </Card.Body>
           </Card.Root>
