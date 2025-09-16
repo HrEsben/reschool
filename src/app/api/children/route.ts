@@ -6,6 +6,7 @@ import {
   createChild, 
   getChildrenForUser 
 } from '@/lib/database-service';
+import { apiRateLimit } from '@/lib/rate-limit';
 
 // Type definitions
 export interface Child {
@@ -53,6 +54,22 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting for child creation
+    const rateLimitResult = apiRateLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again later.' },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.reset.toISOString(),
+          }
+        }
+      );
+    }
+    
     const user = await stackServerApp.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

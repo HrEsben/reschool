@@ -1,10 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import crypto from 'crypto';
+import { webhookRateLimit } from '@/lib/rate-limit';
 
 // Webhook endpoint for Stack Auth user events
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Apply rate limiting
+    const rateLimitResult = webhookRateLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded' },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.reset.toISOString(),
+          }
+        }
+      );
+    }
+    
+    // Verify webhook signature for security
+    const signature = request.headers.get('x-stack-signature');
+    const webhookSecret = process.env.STACK_WEBHOOK_SECRET;
+    
+    if (!webhookSecret) {
+      console.error('STACK_WEBHOOK_SECRET not configured');
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
+    }
+    
+    if (!signature) {
+      console.error('Missing webhook signature');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const rawBody = await request.text();
+    const expectedSignature = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(rawBody)
+      .digest('hex');
+    
+    if (signature !== `sha256=${expectedSignature}`) {
+      console.error('Invalid webhook signature');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const body = JSON.parse(rawBody);
     const { event_type, user } = body;
 
     switch (event_type) {
