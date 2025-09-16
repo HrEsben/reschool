@@ -1,15 +1,19 @@
 "use client";
 
 import { Box, Heading, VStack, Grid } from "@chakra-ui/react";
-import { ChildrenManager } from "@/components/children/children-manager";
-import { InvitationManager } from "@/components/invitations/invitation-manager";
-import { LatestRegistrations } from "@/components/dashboard/latest-registrations";
 import { AuthenticatedLayout } from "@/components/layouts/authenticated-layout";
 import { DashboardLoading } from "@/components/layouts/dashboard-loading";
+import { 
+  LazyChildrenManager, 
+  LazyInvitationManager, 
+  LazyLatestRegistrations 
+} from "@/components/dashboard/lazy-dashboard-components";
+import { BfcacheOptimizer } from "@/hooks/use-bfcache-optimization";
 
 export default function Dashboard() {
   return (
-    <AuthenticatedLayout>
+    <BfcacheOptimizer>
+      <AuthenticatedLayout>
       <Box p={{ base: 4, md: 8 }}>
         <DashboardLoading>
           {/* Main Content */}
@@ -29,25 +33,26 @@ export default function Dashboard() {
                 </Box>
                 
                 {/* Pending Invitations Section */}
-                <InvitationManager />
+                <LazyInvitationManager />
                 
                 {/* Child Management Section */}
-                <ChildrenManager />
+                <LazyChildrenManager />
 
                 {/* Latest Registrations on Mobile */}
                 <Box display={{ base: "block", lg: "none" }}>
-                  <LatestRegistrations limit={8} />
+                  <LazyLatestRegistrations limit={8} />
                 </Box>
               </VStack>
 
               {/* Right Column - Latest Registrations on Desktop */}
               <Box display={{ base: "none", lg: "block" }} position="sticky" top="8">
-                <LatestRegistrations limit={8} />
+                <LazyLatestRegistrations limit={8} />
               </Box>
             </Grid>
           </Box>
         </DashboardLoading>
       </Box>
     </AuthenticatedLayout>
+    </BfcacheOptimizer>
   );
 }

@@ -16,8 +16,22 @@ const nextConfig: NextConfig = {
 
   // Bundle optimization
   experimental: {
-    optimizePackageImports: ["@chakra-ui/react", "@tanstack/react-query", "framer-motion"],
+    optimizePackageImports: [
+      "@chakra-ui/react",
+      "@tanstack/react-query", 
+      "framer-motion",
+      "react-icons",
+      "lucide"
+    ],
     scrollRestoration: true,
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
   },
 
   // Webpack optimizations
@@ -27,20 +41,68 @@ const nextConfig: NextConfig = {
       config.optimization.usedExports = true;
       config.optimization.sideEffects = false;
       
-      // Split chunks for better caching
+      // Advanced chunk splitting for better performance
       config.optimization.splitChunks = {
         chunks: 'all',
         cacheGroups: {
+          // Separate React and React DOM
+          react: {
+            test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+            name: 'react',
+            chunks: 'all',
+            priority: 10,
+          },
+          // Chakra UI in its own chunk
+          chakra: {
+            test: /[\\/]node_modules[\\/]@chakra-ui[\\/]/,
+            name: 'chakra',
+            chunks: 'all',
+            priority: 9,
+          },
+          // Emotion (used by Chakra)
+          emotion: {
+            test: /[\\/]node_modules[\\/]@emotion[\\/]/,
+            name: 'emotion',
+            chunks: 'all',
+            priority: 8,
+          },
+          // React Query
+          reactQuery: {
+            test: /[\\/]node_modules[\\/]@tanstack[\\/]/,
+            name: 'react-query',
+            chunks: 'all',
+            priority: 7,
+          },
+          // Framer Motion
+          framerMotion: {
+            test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
+            name: 'framer-motion',
+            chunks: 'all',
+            priority: 6,
+          },
+          // Stack Auth
+          stackAuth: {
+            test: /[\\/]node_modules[\\/]@stackframe[\\/]/,
+            name: 'stack-auth',
+            chunks: 'all',
+            priority: 5,
+          },
+          // Other vendor libraries
           vendor: {
             test: /[\\/]node_modules[\\/]/,
             name: 'vendors',
             chunks: 'all',
+            priority: 1,
+            minChunks: 1,
+            enforce: true,
           },
+          // Common chunks for reused code
           common: {
             name: 'common',
             minChunks: 2,
-            priority: 5,
+            priority: 0,
             reuseExistingChunk: true,
+            enforce: true,
           },
         },
       };
@@ -74,6 +136,26 @@ const nextConfig: NextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      // API routes with shorter cache
+      {
+        source: '/api/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'private, no-cache, no-store, max-age=0, must-revalidate',
+          },
+        ],
+      },
+      // Pages optimized for bfcache
+      {
+        source: '/dashboard',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'private, max-age=0, must-revalidate',
           },
         ],
       },

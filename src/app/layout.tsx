@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Provider } from "@/components/ui/provider";
 import RisingFooter from "@/components/ui/rising-footer";
+import { BfcacheMonitor } from "@/components/performance/bfcache-monitor";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,18 +49,28 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="//api.stack-auth.com" />
         <link rel="dns-prefetch" href="//app.stack-auth.com" />
         
-        {/* Preload critical fonts */}
-        <link 
-          rel="preload" 
-          href="/fonts/geist-sans.woff2" 
-          as="font" 
-          type="font/woff2" 
-          crossOrigin="" 
-        />
-        
         {/* Preconnect to important domains */}
         <link rel="preconnect" href="//api.stackframe.co" />
         <link rel="preconnect" href="//api.stack-auth.com" />
+        
+        {/* Prefetch critical routes */}
+        <link rel="prefetch" href="/dashboard" />
+        <link rel="prefetch" href="/login" />
+        
+        {/* Preload critical CSS */}
+        <link 
+          rel="preload" 
+          href="/_next/static/css/app/layout.css" 
+          as="style" 
+        />
+        
+        {/* Resource hints for better performance */}
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta httpEquiv="x-dns-prefetch-control" content="on" />
+        
+        {/* Optimize for bfcache */}
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="theme-color" content="#fdfcf8" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
@@ -77,9 +88,29 @@ export default function RootLayout({
                 {children}
               </div>
               <RisingFooter />
+              <BfcacheMonitor />
             </StackTheme>
           </StackProvider>
         </Provider>
+        
+        {/* Service Worker Registration */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                      console.log('SW registered: ', registration);
+                    })
+                    .catch(function(registrationError) {
+                      console.log('SW registration failed: ', registrationError);
+                    });
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
