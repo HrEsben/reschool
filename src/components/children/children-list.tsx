@@ -114,7 +114,7 @@ export function ChildrenList({}: ChildrenListProps) {
                   totalSteps,
                   completedSteps,
                   progressPercent,
-                  steps: plan.steps?.map((step: any) => ({
+                  steps: plan.steps?.map((step: { id: number; stepNumber: number; title: string; isCompleted: boolean }) => ({
                     id: step.id,
                     stepNumber: step.stepNumber,
                     title: step.title,
