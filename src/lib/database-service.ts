@@ -160,6 +160,79 @@ export interface SengetiderWithLatestEntry extends Sengetider {
   recordedByName?: string;
 }
 
+// Indsatstrappe (intervention ladder/action plan) interfaces
+export interface Indsatstrappe {
+  id: number;
+  childId: number;
+  createdBy: number;
+  title: string;
+  description?: string;
+  isActive: boolean;
+  startDate: string; // DATE format YYYY-MM-DD
+  targetDate?: string; // DATE format YYYY-MM-DD (estimated completion)
+  completedDate?: string; // DATE format YYYY-MM-DD (actual completion)
+  isCompleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IndsatstrappePlan extends Indsatstrappe {
+  steps: IndsatsSteps[];
+  currentStepIndex?: number; // Index of the current active step
+  totalSteps: number;
+  completedSteps: number;
+  createdByName?: string;
+}
+
+export interface IndsatsSteps {
+  id: number;
+  indsatstrapeId: number;
+  stepNumber: number;
+  title: string;
+  description?: string;
+  målsætning?: string; // Text describing when/how the goal is achieved
+  startDate?: string; // DATE format YYYY-MM-DD
+  targetEndDate?: string; // DATE format YYYY-MM-DD
+  isCompleted: boolean;
+  completedAt?: string;
+  completedBy?: number;
+  completedByName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IndsatsStepsWithEntries extends IndsatsSteps {
+  linkedEntries: IndsatstrappePlanEntry[];
+  entryCount: number;
+}
+
+export interface Indsatstrappe_UserAccess {
+  id: number;
+  indsatstrapeId: number;
+  userId: number;
+  createdAt: string;
+}
+
+// Link between tool entries and indsatstrappe steps
+export interface IndsatstrappePlanEntry {
+  id: number;
+  indsatsStepId: number;
+  barometerEntryId?: number;
+  dagensSmileyEntryId?: number;
+  sengetiderEntryId?: number;
+  notes?: string;
+  createdAt: string;
+  
+  // Populated data for display
+  entryType?: 'barometer' | 'dagens-smiley' | 'sengetider';
+  entryData?: any; // The actual entry data from the respective tool
+  toolInfo?: {
+    id: number;
+    topic: string;
+    type: string;
+  };
+}
+
 interface StackAuthUser {
   id: string;
   primaryEmail: string | null;
@@ -2605,5 +2678,467 @@ export async function updateSengetiderEntry(
   } catch (error) {
     console.error('Error updating sengetider entry:', error);
     return null;
+  }
+}
+
+// ====================================================================
+// INDSATSTRAPPE (Intervention Ladder) Functions
+// ====================================================================
+
+// Create a new indsatstrappe plan
+export async function createIndsatstrappe(
+  childId: number,
+  createdBy: number,
+  title: string,
+  description?: string,
+  isActive: boolean = true,
+  startDate?: string, // Optional start date, defaults to today
+  targetDate?: string,
+  accessibleUserIds?: number[]
+): Promise<Indsatstrappe> {
+  const client = await getClient();
+  
+  try {
+    await client.query('BEGIN');
+
+    // Deactivate other plans if this one is active
+    if (isActive) {
+      await client.query(
+        'UPDATE indsatstrappe SET is_active = false WHERE child_id = $1 AND is_active = true',
+        [childId]
+      );
+    }
+
+    // Create the plan with start_date defaulting to today if not provided
+    const planResult = await client.query(
+      `INSERT INTO indsatstrappe (child_id, created_by, title, description, is_active, start_date, target_date, updated_at)
+       VALUES ($1, $2, $3, $4, $5, COALESCE($6, CURRENT_DATE), $7, NOW())
+       RETURNING *`,
+      [childId, createdBy, title, description, isActive, startDate, targetDate]
+    );
+
+    const plan = planResult.rows[0];
+
+    // Add user access control if specified
+    if (accessibleUserIds && accessibleUserIds.length > 0) {
+      const accessValues = accessibleUserIds.map((_, index) => 
+        `($1, $${index + 2})`
+      ).join(', ');
+
+      await client.query(
+        `INSERT INTO indsatstrappe_user_access (indsatstrappe_id, user_id)
+         VALUES ${accessValues}`,
+        [plan.id, ...accessibleUserIds]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    return {
+      id: plan.id,
+      childId: plan.child_id,
+      createdBy: plan.created_by,
+      title: plan.title,
+      description: plan.description,
+      isActive: plan.is_active,
+      startDate: plan.start_date,
+      targetDate: plan.target_date,
+      completedDate: plan.completed_date,
+      isCompleted: plan.is_completed,
+      createdAt: new Date(plan.created_at).toISOString(),
+      updatedAt: new Date(plan.updated_at).toISOString()
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error creating indsatstrappe:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+// Get all indsatstrappe plans for a child
+export async function getIndsatsrappeForChild(
+  childId: number,
+  userId?: number
+): Promise<IndsatstrappePlan[]> {
+  try {
+    let queryText = `
+      SELECT 
+        i.*,
+        u.display_name as created_by_name,
+        COUNT(s.id) as total_steps,
+        COUNT(CASE WHEN s.is_completed = true THEN 1 END) as completed_steps
+      FROM indsatstrappe i
+      LEFT JOIN users u ON i.created_by = u.id
+      LEFT JOIN indsatstrappe_steps s ON i.id = s.indsatstrappe_id
+      WHERE i.child_id = $1
+    `;
+    
+    const queryParams = [childId];
+
+    // Add access control if userId is provided
+    if (userId) {
+      queryText += `
+        AND (i.created_by = $2 OR 
+             EXISTS (SELECT 1 FROM indsatstrappe_user_access iua WHERE iua.indsatstrappe_id = i.id AND iua.user_id = $2) OR
+             EXISTS (SELECT 1 FROM user_child_relations ucr WHERE ucr.child_id = i.child_id AND ucr.user_id = $2 AND ucr.is_administrator = true))
+      `;
+      queryParams.push(userId);
+    }
+
+    queryText += `
+      GROUP BY i.id, u.display_name
+      ORDER BY i.is_active DESC, i.created_at DESC
+    `;
+
+    const result = await query(queryText, queryParams);
+    
+    // For each plan, get its steps
+    const plans: IndsatstrappePlan[] = [];
+    
+    for (const row of result.rows) {
+      const steps = await getIndsatsStepsForPlan(row.id);
+      const currentStepIndex = steps.findIndex(step => !step.isCompleted);
+      
+      plans.push({
+        id: row.id,
+        childId: row.child_id,
+        createdBy: row.created_by,
+        title: row.title,
+        description: row.description,
+        isActive: row.is_active,
+        startDate: row.start_date,
+        targetDate: row.target_date,
+        completedDate: row.completed_date,
+        isCompleted: row.is_completed,
+        createdAt: new Date(row.created_at).toISOString(),
+        updatedAt: new Date(row.updated_at).toISOString(),
+        steps,
+        currentStepIndex: currentStepIndex >= 0 ? currentStepIndex : undefined,
+        totalSteps: parseInt(row.total_steps),
+        completedSteps: parseInt(row.completed_steps),
+        createdByName: row.created_by_name
+      });
+    }
+
+    return plans;
+  } catch (error) {
+    console.error('Error fetching indsatstrappe for child:', error);
+    return [];
+  }
+}
+
+// Get steps for an indsatstrappe plan
+export async function getIndsatsStepsForPlan(planId: number): Promise<IndsatsSteps[]> {
+  try {
+    const result = await query(
+      `SELECT 
+         s.*,
+         u.display_name as completed_by_name
+       FROM indsatstrappe_steps s
+       LEFT JOIN users u ON s.completed_by = u.id
+       WHERE s.indsatstrappe_id = $1
+       ORDER BY s.step_number ASC`,
+      [planId]
+    );
+
+    return result.rows.map(row => ({
+      id: row.id,
+      indsatstrapeId: row.indsatstrappe_id,
+      stepNumber: row.step_number,
+      title: row.title,
+      description: row.description,
+      målsætning: row.målsætning,
+      startDate: row.start_date,
+      targetEndDate: row.target_end_date,
+      isCompleted: row.is_completed,
+      completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : undefined,
+      completedBy: row.completed_by,
+      completedByName: row.completed_by_name,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    }));
+  } catch (error) {
+    console.error('Error fetching indsats steps for plan:', error);
+    return [];
+  }
+}
+
+// Add a step to an indsatstrappe plan
+export async function addIndsatsStep(
+  planId: number,
+  title: string,
+  description?: string,
+  målsætning?: string
+): Promise<IndsatsSteps> {
+  try {
+    // Get the next step number
+    const maxStepResult = await query(
+      'SELECT COALESCE(MAX(step_number), 0) as max_step FROM indsatstrappe_steps WHERE indsatstrappe_id = $1',
+      [planId]
+    );
+    
+    const nextStepNumber = (maxStepResult.rows[0]?.max_step || 0) + 1;
+
+    const result = await query(
+      `INSERT INTO indsatstrappe_steps (indsatstrappe_id, step_number, title, description, målsætning, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       RETURNING *`,
+      [planId, nextStepNumber, title, description, målsætning]
+    );
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      indsatstrapeId: row.indsatstrappe_id,
+      stepNumber: row.step_number,
+      title: row.title,
+      description: row.description,
+      målsætning: row.målsætning,
+      startDate: row.start_date,
+      targetEndDate: row.target_end_date,
+      isCompleted: row.is_completed,
+      completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : undefined,
+      completedBy: row.completed_by,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error adding indsats step:', error);
+    throw error;
+  }
+}
+
+// Complete a step
+export async function completeIndsatsStep(
+  stepId: number,
+  completedBy: number
+): Promise<IndsatsSteps | null> {
+  try {
+    const result = await query(
+      `UPDATE indsatstrappe_steps 
+       SET is_completed = true, completed_at = NOW(), completed_by = $2, updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [stepId, completedBy]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      indsatstrapeId: row.indsatstrappe_id,
+      stepNumber: row.step_number,
+      title: row.title,
+      description: row.description,
+      startDate: row.start_date,
+      targetEndDate: row.target_end_date,
+      isCompleted: row.is_completed,
+      completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : undefined,
+      completedBy: row.completed_by,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error completing indsats step:', error);
+    return null;
+  }
+}
+
+// Link a tool entry to an indsatstrappe step
+export async function linkToolEntryToStep(
+  stepId: number,
+  entryType: 'barometer' | 'dagens-smiley' | 'sengetider',
+  entryId: number,
+  notes?: string
+): Promise<IndsatstrappePlanEntry> {
+  try {
+    let columnName: string;
+    switch (entryType) {
+      case 'barometer':
+        columnName = 'barometer_entry_id';
+        break;
+      case 'dagens-smiley':
+        columnName = 'dagens_smiley_entry_id';
+        break;
+      case 'sengetider':
+        columnName = 'sengetider_entry_id';
+        break;
+      default:
+        throw new Error(`Unknown entry type: ${entryType}`);
+    }
+
+    const result = await query(
+      `INSERT INTO indsatstrappe_tool_entries (indsatstrappe_step_id, ${columnName}, notes)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+      [stepId, entryId, notes]
+    );
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      indsatsStepId: row.indsatstrappe_step_id,
+      barometerEntryId: row.barometer_entry_id,
+      dagensSmileyEntryId: row.dagens_smiley_entry_id,
+      sengetiderEntryId: row.sengetider_entry_id,
+      notes: row.notes,
+      createdAt: new Date(row.created_at).toISOString(),
+      entryType
+    };
+  } catch (error) {
+    console.error('Error linking tool entry to step:', error);
+    throw error;
+  }
+}
+
+// Get the active indsatstrappe plan for a child
+export async function getActiveIndsatsrappeForChild(
+  childId: number,
+  userId?: number
+): Promise<IndsatstrappePlan | null> {
+  try {
+    const plans = await getIndsatsrappeForChild(childId, userId);
+    return plans.find(plan => plan.isActive) || null;
+  } catch (error) {
+    console.error('Error fetching active indsatstrappe for child:', error);
+    return null;
+  }
+}
+
+// Update indsatstrappe plan
+export async function updateIndsatstrappe(
+  id: number,
+  data: {
+    title?: string;
+    description?: string;
+    isActive?: boolean;
+    targetDate?: string;
+    accessibleUserIds?: number[];
+  }
+): Promise<Indsatstrappe | null> {
+  const client = await getClient();
+  
+  try {
+    await client.query('BEGIN');
+
+    // If setting this plan as active, deactivate others for the same child
+    if (data.isActive === true) {
+      await client.query(
+        `UPDATE indsatstrappe 
+         SET is_active = false 
+         WHERE child_id = (SELECT child_id FROM indsatstrappe WHERE id = $1) 
+         AND id != $1`,
+        [id]
+      );
+    }
+
+    // Update the plan
+    const updateFields = [];
+    const updateValues = [];
+    let valueIndex = 1;
+
+    if (data.title !== undefined) {
+      updateFields.push(`title = $${valueIndex}`);
+      updateValues.push(data.title);
+      valueIndex++;
+    }
+    if (data.description !== undefined) {
+      updateFields.push(`description = $${valueIndex}`);
+      updateValues.push(data.description);
+      valueIndex++;
+    }
+    if (data.isActive !== undefined) {
+      updateFields.push(`is_active = $${valueIndex}`);
+      updateValues.push(data.isActive);
+      valueIndex++;
+    }
+    if (data.targetDate !== undefined) {
+      updateFields.push(`target_date = $${valueIndex}`);
+      updateValues.push(data.targetDate);
+      valueIndex++;
+    }
+
+    updateFields.push(`updated_at = NOW()`);
+    updateValues.push(id);
+
+    const result = await client.query(
+      `UPDATE indsatstrappe SET ${updateFields.join(', ')} WHERE id = $${valueIndex} RETURNING *`,
+      updateValues
+    );
+
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    // Update access control if specified
+    if (data.accessibleUserIds !== undefined) {
+      // Remove existing access
+      await client.query('DELETE FROM indsatstrappe_user_access WHERE indsatstrappe_id = $1', [id]);
+      
+      // Add new access
+      if (data.accessibleUserIds.length > 0) {
+        const accessValues = data.accessibleUserIds.map((_, index) => 
+          `($1, $${index + 2})`
+        ).join(', ');
+
+        await client.query(
+          `INSERT INTO indsatstrappe_user_access (indsatstrappe_id, user_id)
+           VALUES ${accessValues}`,
+          [id, ...data.accessibleUserIds]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      childId: row.child_id,
+      createdBy: row.created_by,
+      title: row.title,
+      description: row.description,
+      isActive: row.is_active,
+      startDate: row.start_date,
+      targetDate: row.target_date,
+      completedDate: row.completed_date,
+      isCompleted: row.is_completed,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating indsatstrappe:', error);
+    return null;
+  } finally {
+    client.release();
+  }
+}
+
+// Delete indsatstrappe plan
+export async function deleteIndsatstrappe(id: number): Promise<boolean> {
+  try {
+    const result = await query('DELETE FROM indsatstrappe WHERE id = $1', [id]);
+    return result.rowCount !== null && result.rowCount > 0;
+  } catch (error) {
+    console.error('Error deleting indsatstrappe:', error);
+    return false;
+  }
+}
+
+// Delete indsatstrappe step
+export async function deleteIndsatsStep(id: number): Promise<boolean> {
+  try {
+    const result = await query('DELETE FROM indsatstrappe_steps WHERE id = $1', [id]);
+    return result.rowCount !== null && result.rowCount > 0;
+  } catch (error) {
+    console.error('Error deleting indsats step:', error);
+    return false;
   }
 }

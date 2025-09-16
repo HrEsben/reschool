@@ -24,6 +24,7 @@ import { DeleteInvitationDialog } from '@/components/ui/delete-invitation-dialog
 import { PromoteUserDialog } from '@/components/ui/promote-user-dialog';
 import { DemoteUserDialog } from '@/components/ui/demote-user-dialog';
 import { ToolsManager, ToolsManagerRef } from '@/components/tools/tools-manager';
+import { IndsatsrappeManager } from '@/components/indsatstrappe/indsatstrappe-manager';
 import { AdminStarIcon, DemoteStarIcon } from '@/components/ui/icons';
 import { useChildBySlug, useRemoveUserFromChild, useDeleteInvitation, useDeleteChild, usePromoteUserToAdmin, useDemoteUserFromAdmin } from '@/lib/queries';
 
@@ -444,6 +445,13 @@ export default function ChildSlugPage() {
             isUserAdmin={isCurrentUserAdmin}
             childName={childData.child.name}
             hideAddButton={true}
+          />
+
+          {/* Indsatstrappe Section */}
+          <IndsatsrappeManager
+            childId={childData.child.id}
+            childName={childData.child.name}
+            isUserAdmin={isCurrentUserAdmin}
           />
 
           {/* Connected Users Section */}

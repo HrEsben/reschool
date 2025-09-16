@@ -2,7 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Sengetider, 
   SengetiderEntry, 
-  SengetiderWithLatestEntry 
+  SengetiderWithLatestEntry,
+  Indsatstrappe,
+  IndsatstrappePlan,
+  IndsatsSteps,
+  IndsatstrappePlanEntry
 } from '@/lib/database-service';
 
 // Types (matching your existing interfaces)
@@ -75,6 +79,10 @@ export const queryKeys = {
   barometer: (id: number) => ['barometers', id] as const,
   dagensSmiley: (childId: string) => ['children', childId, 'dagens-smiley'] as const,
   smiley: (id: number) => ['dagens-smiley', id] as const,
+  indsatstrappe: (childId: string) => ['children', childId, 'indsatstrappe'] as const,
+  indsatsplan: (id: number) => ['indsatstrappe', id] as const,
+  indsatsSteps: (planId: number) => ['indsatstrappe', planId, 'steps'] as const,
+  activeIndsatsplan: (childId: string) => ['children', childId, 'indsatstrappe', 'active'] as const,
   sengetider: (childId: string) => ['children', childId, 'sengetider'] as const,
   sengetiderTool: (id: number) => ['sengetider', id] as const,
   sengetiderEntries: (sengetiderId: number) => ['sengetider', sengetiderId, 'entries'] as const,
@@ -208,6 +216,27 @@ const api = {
     }
     const data = await response.json();
     return data.users || [];
+  },
+
+  async fetchIndsatstrappe(childId: string): Promise<IndsatstrappePlan[]> {
+    const response = await fetch(`/api/children/${childId}/indsatstrappe`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch indsatstrappe');
+    }
+    const data = await response.json();
+    return data.plans || [];
+  },
+
+  async fetchActiveIndsatstrappe(childId: string): Promise<IndsatstrappePlan | null> {
+    const response = await fetch(`/api/children/${childId}/indsatstrappe/active`);
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null; // No active plan
+      }
+      throw new Error('Failed to fetch active indsatstrappe');
+    }
+    const data = await response.json();
+    return data.plan || null;
   },
 };
 
@@ -772,6 +801,128 @@ const sengetiderApi = {
   },
 };
 
+// Indsatstrappe (Intervention ladder) API
+const indsatsrappeApi = {
+  async createIndsatstrappe(childId: string, data: {
+    title: string;
+    description?: string;
+    startDate?: string;
+    accessibleUserIds?: number[];
+  }): Promise<Indsatstrappe> {
+    const response = await fetch(`/api/children/${childId}/indsatstrappe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create indsatstrappe');
+    }
+    return response.json();
+  },
+
+  async updateIndsatstrappe(planId: number, data: {
+    title?: string;
+    description?: string;
+    isActive?: boolean;
+    targetDate?: string;
+    accessibleUserIds?: number[];
+  }): Promise<Indsatstrappe> {
+    const response = await fetch(`/api/indsatstrappe/${planId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update indsatstrappe');
+    }
+    return response.json();
+  },
+
+  async deleteIndsatstrappe(planId: number): Promise<void> {
+    const response = await fetch(`/api/indsatstrappe/${planId}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete indsatstrappe');
+    }
+  },
+
+  async addStep(planId: number, data: {
+    title: string;
+    description?: string;
+    målsætning?: string;
+  }): Promise<IndsatsSteps> {
+    const response = await fetch(`/api/indsatstrappe/${planId}/steps`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to add step');
+    }
+    return response.json();
+  },
+
+  async completeStep(stepId: number): Promise<IndsatsSteps> {
+    const response = await fetch(`/api/indsatstrappe/steps/${stepId}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to complete step');
+    }
+    return response.json();
+  },
+
+  async deleteStep(stepId: number): Promise<void> {
+    const response = await fetch(`/api/indsatstrappe/steps/${stepId}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete step');
+    }
+  },
+
+  async linkToolEntry(stepId: number, data: {
+    entryType: 'barometer' | 'dagens-smiley' | 'sengetider';
+    entryId: number;
+    notes?: string;
+  }): Promise<IndsatstrappePlanEntry> {
+    const response = await fetch(`/api/indsatstrappe/steps/${stepId}/link-entry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to link tool entry');
+    }
+    return response.json();
+  },
+
+  async fetchSteps(planId: number): Promise<IndsatsSteps[]> {
+    const response = await fetch(`/api/indsatstrappe/${planId}/steps`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch steps');
+    }
+    const data = await response.json();
+    return data.steps || [];
+  },
+};
+
 // Sengetider (Bedtime tracking) hooks
 
 export function useSengetider(childId: string) {
@@ -952,5 +1103,150 @@ export function useDeleteSengetiderEntry() {
         queryKey: queryKeys.sengetiderTool(variables.sengetiderId) 
       });
     },
+  });
+}
+
+// ====================================================================
+// INDSATSTRAPPE (Intervention Ladder) Hooks
+// ====================================================================
+
+export function useIndsatstrappe(childId: string) {
+  return useQuery({
+    queryKey: queryKeys.indsatstrappe(childId),
+    queryFn: () => api.fetchIndsatstrappe(childId),
+    enabled: !!childId,
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+  });
+}
+
+export function useActiveIndsatstrappe(childId: string) {
+  return useQuery({
+    queryKey: queryKeys.activeIndsatsplan(childId),
+    queryFn: () => api.fetchActiveIndsatstrappe(childId),
+    enabled: !!childId,
+    staleTime: 1000 * 60 * 2, // Shorter stale time for active plan
+  });
+}
+
+export function useCreateIndsatstrappe() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (data: { childId: string } & Parameters<typeof indsatsrappeApi.createIndsatstrappe>[1]) => 
+      indsatsrappeApi.createIndsatstrappe(data.childId, data),
+    onSuccess: (data, variables) => {
+      // Invalidate indsatstrappe queries for the child
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatstrappe(variables.childId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activeIndsatsplan(variables.childId) });
+      // Also invalidate child data since it may affect child profile display
+      queryClient.invalidateQueries({ queryKey: queryKeys.child(variables.childId) });
+    },
+  });
+}
+
+export function useUpdateIndsatstrappe() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { planId: number; childId: string } & Parameters<typeof indsatsrappeApi.updateIndsatstrappe>[1]) => 
+      indsatsrappeApi.updateIndsatstrappe(data.planId, data),
+    onSuccess: (data, variables) => {
+      // Invalidate all related queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatstrappe(variables.childId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activeIndsatsplan(variables.childId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatsplan(variables.planId) });
+    },
+  });
+}
+
+export function useDeleteIndsatstrappe() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { planId: number; childId: string }) => {
+      await indsatsrappeApi.deleteIndsatstrappe(data.planId);
+      return data;
+    },
+    onSuccess: (data) => {
+      // Invalidate indsatstrappe queries for the child
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatstrappe(data.childId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activeIndsatsplan(data.childId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatsplan(data.planId) });
+    },
+  });
+}
+
+export function useAddIndsatsStep() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { planId: number; childId: string } & Parameters<typeof indsatsrappeApi.addStep>[1]) => 
+      indsatsrappeApi.addStep(data.planId, data),
+    onSuccess: (data, variables) => {
+      // Invalidate plan and step queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatstrappe(variables.childId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatsplan(variables.planId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatsSteps(variables.planId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activeIndsatsplan(variables.childId) });
+    },
+  });
+}
+
+export function useCompleteIndsatsStep() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { stepId: number; planId: number; childId: string }) => 
+      indsatsrappeApi.completeStep(data.stepId),
+    onSuccess: (data, variables) => {
+      // Invalidate all related queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatstrappe(variables.childId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatsplan(variables.planId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatsSteps(variables.planId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activeIndsatsplan(variables.childId) });
+    },
+  });
+}
+
+export function useDeleteIndsatsStep() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { stepId: number; planId: number; childId: string }) => {
+      await indsatsrappeApi.deleteStep(data.stepId);
+      return data;
+    },
+    onSuccess: (data) => {
+      // Invalidate plan and step queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatstrappe(data.childId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatsplan(data.planId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatsSteps(data.planId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activeIndsatsplan(data.childId) });
+    },
+  });
+}
+
+export function useLinkToolEntryToStep() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { stepId: number; planId: number; childId: string } & Parameters<typeof indsatsrappeApi.linkToolEntry>[1]) => 
+      indsatsrappeApi.linkToolEntry(data.stepId, data),
+    onSuccess: (data, variables) => {
+      // Invalidate step and plan queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatstrappe(variables.childId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatsplan(variables.planId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.indsatsSteps(variables.planId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activeIndsatsplan(variables.childId) });
+    },
+  });
+}
+
+export function useIndsatsSteps(planId: number) {
+  return useQuery({
+    queryKey: queryKeys.indsatsSteps(planId),
+    queryFn: () => indsatsrappeApi.fetchSteps(planId),
+    enabled: !!planId,
+    staleTime: 1000 * 60 * 3, // Consider data fresh for 3 minutes
   });
 }
