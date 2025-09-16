@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://api.stackframe.co https://vercel.live",
+              "connect-src 'self' https://api.stackframe.co https://api.stack-auth.com https://app.stack-auth.com https://1.1.1.1 https://vercel.live",
               "frame-src 'none'",
               "object-src 'none'",
               "base-uri 'self'",
