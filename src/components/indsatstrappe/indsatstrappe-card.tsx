@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   VStack,
@@ -11,10 +11,13 @@ import {
   Button,
   Separator,
   Icon,
-  Accordion
+  Accordion,
+  IconButton
 } from '@chakra-ui/react';
 import { CheckIcon, AddIcon } from '@/components/ui/icons';
+import { MdEdit } from 'react-icons/md';
 import { IndsatstrappePlan } from '@/lib/database-service';
+import { EditStepDialog } from './edit-step-dialog';
 
 // Target/goal icon component  
 const TargetIcon = () => (
@@ -23,32 +26,25 @@ const TargetIcon = () => (
   </svg>
 );
 
-// Arrow icon component for målsætning
-const ArrowIcon = () => (
-  <svg fill="currentColor" viewBox="0 0 20 20" width="1em" height="1em">
-    <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-  </svg>
-);
-
 interface IndsatsrappeCardProps {
   plan: IndsatstrappePlan;
   isUserAdmin: boolean;
   onAddStep?: () => void;
-  onCompleteStep?: (stepId: number) => void;
   onEditPlan?: () => void;
   onNextStep?: (stepId: number) => void;
-  onPreviousStep?: (stepId: number) => void;
+  onPreviousStep?: () => void;
 }
 
 export function IndsatsrappeCard({
   plan,
   isUserAdmin,
   onAddStep,
-  onCompleteStep,
   onEditPlan,
   onNextStep,
   onPreviousStep
 }: IndsatsrappeCardProps) {
+  const [editingStep, setEditingStep] = useState<typeof plan.steps[0] | null>(null);
+  
   const progressPercentage = plan.totalSteps > 0 ? (plan.completedSteps / plan.totalSteps) * 100 : 0;
   const currentStep = plan.steps.find(step => !step.isCompleted);
   
@@ -192,19 +188,21 @@ export function IndsatsrappeCard({
                     <HStack gap={2} align="center">
                       <Badge 
                         colorPalette="sage" 
-                        size="xs" 
+                        size="sm" 
                         variant="solid"
                         borderRadius="full"
+                        px={3}
+                        py={1}
                       >
                         Trin {currentStep.stepNumber}
                       </Badge>
-                      <Text fontSize="sm" fontWeight="medium">
+                      <Text fontSize="md" fontWeight="medium">
                         {currentStep.title}
                       </Text>
                     </HStack>
                     
                     {currentStep.description && (
-                      <Text fontSize="xs" color="fg.muted">
+                      <Text fontSize="sm" color="fg.muted">
                         {currentStep.description}
                       </Text>
                     )}
@@ -214,17 +212,17 @@ export function IndsatsrappeCard({
                         <Badge 
                           colorPalette="sage" 
                           variant="subtle" 
-                          size="xs"
-                          px={2}
+                          size="sm"
+                          px={3}
                           py={1}
                           borderRadius="md"
-                          fontSize="xs"
+                          fontSize="sm"
                           fontWeight="semibold"
                           ml={-1}
                         >
                           Målsætning
                         </Badge>
-                        <Text fontSize="xs" color="fg.default" pl={1}>
+                        <Text fontSize="sm" color="fg.default" pl={1}>
                           {currentStep.målsætning}
                         </Text>
                       </VStack>
@@ -239,7 +237,7 @@ export function IndsatsrappeCard({
                           size="sm" 
                           variant="outline"
                           colorScheme="gray"
-                          onClick={() => onPreviousStep(currentStep.id)}
+                          onClick={() => onPreviousStep()}
                         >
                           ← Forrige trin
                         </Button>
@@ -281,11 +279,17 @@ export function IndsatsrappeCard({
                       <Accordion.ItemTrigger
                         bg={isCompleted ? "green.50" : isCurrentStep ? "sage.50" : "transparent"}
                         borderColor={isCompleted ? "green.200" : isCurrentStep ? "sage.200" : "gray.200"}
+                        py={4}
+                        px={4}
                         _hover={{
-                          bg: isCompleted ? "green.100" : isCurrentStep ? "sage.100" : "gray.50"
+                          bg: isCompleted ? "green.100" : isCurrentStep ? "sage.100" : "gray.50",
+                          "& .edit-button": {
+                            opacity: 1,
+                            visibility: "visible"
+                          }
                         }}
                       >
-                        <HStack gap={3} align="center" flex={1}>
+                        <HStack gap={4} align="center" flex={1}>
                           <Badge 
                             size="md" 
                             variant={isCompleted ? "solid" : isCurrentStep ? "solid" : "outline"}
@@ -322,6 +326,26 @@ export function IndsatsrappeCard({
                           >
                             {step.title}
                           </Text>
+                          {isUserAdmin && (
+                            <IconButton
+                              className="edit-button"
+                              aria-label="Rediger trin"
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setEditingStep(step);
+                              }}
+                              color="gray.500"
+                              opacity={0}
+                              visibility="hidden"
+                              transition="all 0.2s"
+                              _hover={{ color: "gray.700", bg: "gray.100" }}
+                            >
+                              <MdEdit />
+                            </IconButton>
+                          )}
                           {isCompleted && (
                             <Icon color="green.600" size="sm">
                               <CheckIcon />
@@ -339,7 +363,7 @@ export function IndsatsrappeCard({
                             </Badge>
                           )}
                         </HStack>
-                        <Accordion.ItemIndicator />
+                        <Accordion.ItemIndicator ml={2} />
                       </Accordion.ItemTrigger>
                     
                     <Accordion.ItemContent>
@@ -420,6 +444,19 @@ export function IndsatsrappeCard({
           </Box>
         )}
       </VStack>
+      
+      {/* Edit Step Dialog */}
+      {editingStep && (
+        <EditStepDialog
+          step={editingStep}
+          planId={plan.id}
+          childId={plan.childId.toString()}
+          isOpen={!!editingStep}
+          setIsOpen={(isOpen) => {
+            if (!isOpen) setEditingStep(null);
+          }}
+        />
+      )}
     </Box>
   );
 }

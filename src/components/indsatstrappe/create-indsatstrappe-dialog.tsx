@@ -2,14 +2,12 @@
 
 import React, { useState } from 'react';
 import {
-  Button,
   VStack,
   HStack,
   Input,
   Textarea,
   Text,
   Box,
-  Separator,
   Tabs,
   Checkbox
 } from '@chakra-ui/react';
@@ -115,7 +113,7 @@ export function CreateIndsatsrappeDialog({
       
       setIsOpen(false);
       onSuccess?.();
-    } catch (error) {
+    } catch {
       showToast({
         title: "Fejl",
         description: "Kunne ikke oprette indsatstrappe",
@@ -351,8 +349,9 @@ export function CreateIndsatsrappeDialog({
                         <Checkbox.Root
                           key={user.id}
                           checked={selectedUserIds.includes(user.id)}
-                          onCheckedChange={(details: any) => {
-                            if (details.checked) {
+                          onCheckedChange={(details: { checked: string | boolean }) => {
+                            const isChecked = details.checked === true || details.checked === 'true';
+                            if (isChecked) {
                               setSelectedUserIds([...selectedUserIds, user.id]);
                             } else {
                               setSelectedUserIds(selectedUserIds.filter(id => id !== user.id));

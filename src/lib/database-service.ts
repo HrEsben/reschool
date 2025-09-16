@@ -225,7 +225,7 @@ export interface IndsatstrappePlanEntry {
   
   // Populated data for display
   entryType?: 'barometer' | 'dagens-smiley' | 'sengetider';
-  entryData?: any; // The actual entry data from the respective tool
+  entryData?: Record<string, unknown>; // The actual entry data from the respective tool
   toolInfo?: {
     id: number;
     topic: string;
@@ -2935,6 +2935,7 @@ export async function completeIndsatsStep(
       stepNumber: row.step_number,
       title: row.title,
       description: row.description,
+      målsætning: row.målsætning,
       startDate: row.start_date,
       targetEndDate: row.target_end_date,
       isCompleted: row.is_completed,
@@ -2945,6 +2946,45 @@ export async function completeIndsatsStep(
     };
   } catch (error) {
     console.error('Error completing indsats step:', error);
+    return null;
+  }
+}
+
+// Mark a step as incomplete (go back functionality)
+export async function markIndsatsStepIncomplete(
+  stepId: number
+): Promise<IndsatsSteps | null> {
+  try {
+    const result = await query(
+      `UPDATE indsatstrappe_steps 
+       SET is_completed = false, completed_at = NULL, completed_by = NULL, updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [stepId]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      indsatstrapeId: row.indsatstrappe_id,
+      stepNumber: row.step_number,
+      title: row.title,
+      description: row.description,
+      målsætning: row.målsætning,
+      startDate: row.start_date,
+      targetEndDate: row.target_end_date,
+      isCompleted: row.is_completed,
+      completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : undefined,
+      completedBy: row.completed_by,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error marking indsats step as incomplete:', error);
     return null;
   }
 }
@@ -3128,6 +3168,47 @@ export async function deleteIndsatstrappe(id: number): Promise<boolean> {
     return result.rowCount !== null && result.rowCount > 0;
   } catch (error) {
     console.error('Error deleting indsatstrappe:', error);
+    return false;
+  }
+}
+
+// Update indsatstrappe step
+export async function updateIndsatsStep(
+  id: number, 
+  updates: { title?: string; description?: string; målsætning?: string }
+): Promise<boolean> {
+  try {
+    const fields = [];
+    const values = [];
+    let paramCount = 0;
+
+    if (updates.title !== undefined) {
+      fields.push(`title = $${++paramCount}`);
+      values.push(updates.title);
+    }
+    if (updates.description !== undefined) {
+      fields.push(`description = $${++paramCount}`);
+      values.push(updates.description);
+    }
+    if (updates.målsætning !== undefined) {
+      fields.push(`målsætning = $${++paramCount}`);
+      values.push(updates.målsætning);
+    }
+
+    if (fields.length === 0) {
+      return true; // No updates needed
+    }
+
+    fields.push(`updated_at = $${++paramCount}`);
+    values.push(new Date());
+    values.push(id); // Add id as the last parameter
+
+    const updateQuery = `UPDATE indsatstrappe_steps SET ${fields.join(', ')} WHERE id = $${++paramCount}`;
+    const result = await query(updateQuery, values);
+    
+    return result.rowCount !== null && result.rowCount > 0;
+  } catch (error) {
+    console.error('Error updating indsats step:', error);
     return false;
   }
 }

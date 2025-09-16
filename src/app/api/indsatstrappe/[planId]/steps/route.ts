@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stackServerApp } from '@/stack';
 import {
   getUserByStackAuthId,
-  isUserAdministratorForChild,
   getIndsatsStepsForPlan,
   addIndsatsStep
 } from '@/lib/database-service';

@@ -13,8 +13,9 @@ import {
 import { AddIcon } from '@/components/ui/icons';
 import { IndsatsrappeCard } from './indsatstrappe-card';
 import { CreateIndsatsrappeDialog } from './create-indsatstrappe-dialog';
+import { EditIndsatsrappeDialog } from './edit-indsatstrappe-dialog';
 import { AddMultipleStepsDialog } from './add-multiple-steps-dialog';
-import { useActiveIndsatstrappe, useCompleteIndsatsStep } from '@/lib/queries';
+import { useActiveIndsatstrappe, useCompleteIndsatsStep, useUncompleteIndsatsStep } from '@/lib/queries';
 import { showToast } from '@/components/ui/simple-toast';
 
 interface IndsatsrappeManagerProps {
@@ -29,6 +30,7 @@ export function IndsatsrappeManager({
   isUserAdmin
 }: IndsatsrappeManagerProps) {
   const [isAddStepsDialogOpen, setIsAddStepsDialogOpen] = useState(false);
+  const [isEditPlanDialogOpen, setIsEditPlanDialogOpen] = useState(false);
   
   // Fetch active indsatstrappe plan
   const { 
@@ -38,6 +40,7 @@ export function IndsatsrappeManager({
   } = useActiveIndsatstrappe(childId.toString());
   
   const completeStepMutation = useCompleteIndsatsStep();
+  const uncompleteStepMutation = useUncompleteIndsatsStep();
   
   const error = queryError ? (queryError instanceof Error ? queryError.message : 'Der opstod en fejl') : null;
 
@@ -60,7 +63,7 @@ export function IndsatsrappeManager({
         description: "Trinnet er markeret som fuldført",
         type: "success"
       });
-    } catch (error) {
+    } catch {
       showToast({
         title: "Fejl",
         description: "Kunne ikke fuldføre trinnet",
@@ -74,40 +77,41 @@ export function IndsatsrappeManager({
     await handleCompleteStep(stepId);
   };
 
-  const handlePreviousStep = async (stepId: number) => {
+  const handlePreviousStep = async () => {
     if (!activePlan) return;
     
-    // Find the step to mark as incomplete
-    const sortedSteps = activePlan.steps.sort((a, b) => a.stepNumber - b.stepNumber);
-    const currentStepIndex = sortedSteps.findIndex(step => step.id === stepId);
-    const previousStep = currentStepIndex > 0 ? sortedSteps[currentStepIndex - 1] : null;
-    
-    if (previousStep && previousStep.isCompleted) {
-      try {
-        // You'll need to implement an uncomplete step mutation
-        // For now, let's show a message
-        showToast({
-          title: "Forrige trin",
-          description: "Funktion kommer snart - mulighed for at gå tilbage til forrige trin",
-          type: "info"
-        });
-      } catch (error) {
-        showToast({
-          title: "Fejl",
-          description: "Kunne ikke gå til forrige trin",
-          type: "error"
-        });
-      }
+    try {
+      // Find the current step and the previous step
+      const sortedSteps = activePlan.steps.sort((a, b) => a.stepNumber - b.stepNumber);
+      const currentStep = activePlan.steps.find(step => !step.isCompleted);
+      const currentStepIndex = currentStep ? sortedSteps.findIndex(step => step.id === currentStep.id) : -1;
+      const previousStep = currentStepIndex > 0 ? sortedSteps[currentStepIndex - 1] : null;
+      
+      if (!previousStep) return;
+      
+      // Uncomplete the previous step to make it the new current step
+      await uncompleteStepMutation.mutateAsync({
+        stepId: previousStep.id,
+        planId: activePlan.id,
+        childId: childId.toString()
+      });
+      
+      showToast({
+        title: "Trin markeret som ikke-fuldført",
+        description: "Du er gået tilbage til det forrige trin",
+        type: "success"
+      });
+    } catch {
+      showToast({
+        title: "Fejl",
+        description: "Kunne ikke gå til forrige trin",
+        type: "error"
+      });
     }
   };
 
   const handleEditPlan = () => {
-    // TODO: Open edit plan dialog
-    showToast({
-      title: "Rediger Indsatstrappe",
-      description: "Funktionalitet kommer snart...",
-      type: "info"
-    });
+    setIsEditPlanDialogOpen(true);
   };
 
   // Loading state
@@ -278,7 +282,6 @@ export function IndsatsrappeManager({
         plan={activePlan}
         isUserAdmin={isUserAdmin}
         onAddStep={handleAddStep}
-        onCompleteStep={handleCompleteStep}
         onEditPlan={handleEditPlan}
         onNextStep={handleNextStep}
         onPreviousStep={handlePreviousStep}
@@ -292,6 +295,21 @@ export function IndsatsrappeManager({
           planId={activePlan.id}
           childId={childId.toString()}
           planTitle={activePlan.title}
+        />
+      )}
+
+      {/* Edit Plan Dialog */}
+      {activePlan && (
+        <EditIndsatsrappeDialog
+          isOpen={isEditPlanDialogOpen}
+          setIsOpen={setIsEditPlanDialogOpen}
+          plan={activePlan}
+          childId={childId}
+          childName={childName}
+          isUserAdmin={isUserAdmin}
+          onSuccess={() => {
+            // Refetch will happen automatically through React Query
+          }}
         />
       )}
     </VStack>

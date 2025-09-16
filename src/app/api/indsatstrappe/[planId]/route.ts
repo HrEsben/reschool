@@ -4,8 +4,7 @@ import {
   getUserByStackAuthId,
   isUserAdministratorForChild,
   updateIndsatstrappe,
-  deleteIndsatstrappe,
-  getIndsatsrappeForChild
+  deleteIndsatstrappe
 } from '@/lib/database-service';
 
 // PUT /api/indsatstrappe/[planId]

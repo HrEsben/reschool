@@ -4,8 +4,7 @@ import {
   getUserByStackAuthId,
   isUserAdministratorForChild,
   getIndsatsrappeForChild,
-  createIndsatstrappe,
-  getActiveIndsatsrappeForChild
+  createIndsatstrappe
 } from '@/lib/database-service';
 
 // GET /api/children/[childId]/indsatstrappe

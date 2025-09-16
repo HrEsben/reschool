@@ -884,6 +884,37 @@ const indsatsrappeApi = {
     return response.json();
   },
 
+  async uncompleteStep(stepId: number): Promise<IndsatsSteps> {
+    const response = await fetch(`/api/indsatstrappe/steps/${stepId}/uncomplete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to mark step as incomplete');
+    }
+    return response.json();
+  },
+
+  async updateStep(stepId: number, data: {
+    title: string;
+    description?: string;
+    målsætning?: string;
+  }): Promise<IndsatsSteps> {
+    const response = await fetch(`/api/indsatstrappe/steps/${stepId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update step');
+    }
+    return response.json();
+  },
+
   async deleteStep(stepId: number): Promise<void> {
     const response = await fetch(`/api/indsatstrappe/steps/${stepId}`, {
       method: 'DELETE',
@@ -1198,6 +1229,38 @@ export function useCompleteIndsatsStep() {
   return useMutation({
     mutationFn: (data: { stepId: number; planId: number; childId: string }) => 
       indsatsrappeApi.completeStep(data.stepId),
+    onSuccess: async (data, variables) => {
+      // Force immediate refetch of all related queries
+      await queryClient.refetchQueries({ queryKey: queryKeys.activeIndsatsplan(variables.childId) });
+      await queryClient.refetchQueries({ queryKey: queryKeys.indsatstrappe(variables.childId) });
+      await queryClient.refetchQueries({ queryKey: queryKeys.indsatsplan(variables.planId) });
+      await queryClient.refetchQueries({ queryKey: queryKeys.indsatsSteps(variables.planId) });
+    },
+  });
+}
+
+export function useUncompleteIndsatsStep() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { stepId: number; planId: number; childId: string }) => 
+      indsatsrappeApi.uncompleteStep(data.stepId),
+    onSuccess: async (data, variables) => {
+      // Force immediate refetch of all related queries
+      await queryClient.refetchQueries({ queryKey: queryKeys.activeIndsatsplan(variables.childId) });
+      await queryClient.refetchQueries({ queryKey: queryKeys.indsatstrappe(variables.childId) });
+      await queryClient.refetchQueries({ queryKey: queryKeys.indsatsplan(variables.planId) });
+      await queryClient.refetchQueries({ queryKey: queryKeys.indsatsSteps(variables.planId) });
+    },
+  });
+}
+
+export function useUpdateIndsatsStep() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { stepId: number; planId: number; childId: string } & Parameters<typeof indsatsrappeApi.updateStep>[1]) => 
+      indsatsrappeApi.updateStep(data.stepId, data),
     onSuccess: (data, variables) => {
       // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: queryKeys.indsatstrappe(variables.childId) });
