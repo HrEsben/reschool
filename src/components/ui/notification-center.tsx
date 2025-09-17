@@ -37,22 +37,37 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (retryCount = 0) => {
     try {
-      setLoading(true);
-      const response = await fetch('/api/notifications');
+      if (retryCount === 0) setLoading(true);
+      
+      const response = await fetch('/api/notifications', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
       if (response.ok) {
         const data = await response.json();
         setNotifications(data.notifications || []);
         setUnreadCount(data.unreadCount || 0);
+        setLoading(false);
       } else {
         console.error('Failed to fetch notifications:', response.status);
+        if (retryCount < 2) {
+          setTimeout(() => fetchNotifications(retryCount + 1), 1000 * (retryCount + 1));
+        } else {
+          setLoading(false);
+        }
       }
     } catch (error) {
       console.error('Error fetching notifications:', error);
-    } finally {
-      setLoading(false);
+      if (retryCount < 2) {
+        setTimeout(() => fetchNotifications(retryCount + 1), 1000 * (retryCount + 1));
+      } else {
+        setLoading(false);
+      }
     }
   };  useEffect(() => {
     if (isOpen) {
@@ -298,15 +313,31 @@ interface NotificationBellProps {
 export function NotificationBell({ onClick }: NotificationBellProps) {
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = async (retryCount = 0) => {
     try {
-      const response = await fetch('/api/notifications?unreadOnly=true');
+      const response = await fetch('/api/notifications?unreadOnly=true', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
       if (response.ok) {
         const data = await response.json();
         setUnreadCount(data.unreadCount);
+      } else {
+        console.warn(`Failed to fetch notifications: ${response.status}`);
+        if (retryCount < 2) {
+          // Retry after a short delay
+          setTimeout(() => fetchUnreadCount(retryCount + 1), 1000 * (retryCount + 1));
+        }
       }
     } catch (error) {
       console.error('Error fetching unread count:', error);
+      if (retryCount < 2) {
+        // Retry after a short delay for network errors
+        setTimeout(() => fetchUnreadCount(retryCount + 1), 1000 * (retryCount + 1));
+      }
     }
   };
 
