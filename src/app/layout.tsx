@@ -5,7 +5,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Provider } from "@/components/ui/provider";
 import RisingFooter from "@/components/ui/rising-footer";
-import { BfcacheMonitor } from "@/components/performance/bfcache-monitor";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -81,29 +80,9 @@ export default function RootLayout({
                 {children}
               </div>
               <RisingFooter />
-              <BfcacheMonitor />
             </StackTheme>
           </StackProvider>
         </Provider>
-        
-        {/* Service Worker Registration */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js')
-                    .then(function(registration) {
-                      console.log('SW registered: ', registration);
-                    })
-                    .catch(function(registrationError) {
-                      console.log('SW registration failed: ', registrationError);
-                    });
-                });
-              }
-            `,
-          }}
-        />
       </body>
     </html>
   );
