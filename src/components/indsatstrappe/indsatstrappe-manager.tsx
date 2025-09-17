@@ -10,6 +10,7 @@ import {
   Button,
   Skeleton
 } from '@chakra-ui/react';
+import { FaStairs } from 'react-icons/fa6';
 import { AddIcon } from '@/components/ui/icons';
 import { IndsatsrappeCard } from './indsatstrappe-card';
 import { CreateIndsatsrappeDialog } from './create-indsatstrappe-dialog';
@@ -161,9 +162,17 @@ export function IndsatsrappeManager({
         p={{ base: 4, md: 6 }}
       >
         <VStack gap={4} align="stretch">
-          <Heading size="lg" color="fg.default" fontWeight="600">
-            Indsatstrappe
-          </Heading>
+          <HStack justify="space-between" align="center">
+            <VStack align="start" gap={2}>
+              <HStack align="center" gap={2}>
+                {/* Staircase icon - matching anchor menu */}
+                <FaStairs size={18} color="#3d405b" />
+                <Heading size="lg" color="fg.default" fontWeight="600">
+                  Indsatstrappe
+                </Heading>
+              </HStack>
+            </VStack>
+          </HStack>
           
           <Box 
             p={4} 
@@ -194,9 +203,13 @@ export function IndsatsrappeManager({
         <VStack gap={4} align="stretch">
           <HStack justify="space-between" align="center">
             <VStack align="start" gap={2}>
-              <Heading size="lg" color="fg.default" fontWeight="600">
-                Indsatstrappe
-              </Heading>
+              <HStack align="center" gap={2}>
+                {/* Staircase icon - matching anchor menu */}
+                <FaStairs size={18} color="#3d405b" />
+                <Heading size="lg" color="fg.default" fontWeight="600">
+                  Indsatstrappe
+                </Heading>
+              </HStack>
               <Text color="fg.muted" fontSize="sm">
                 Struktureret handlingsplan for {childName}
               </Text>

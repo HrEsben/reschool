@@ -276,95 +276,106 @@ export function IndsatsrappeCard({
                   
                   return (
                     <Accordion.Item key={step.id} value={`step-${step.id}`}>
-                      <Accordion.ItemTrigger
-                        bg={isCompleted ? "green.50" : isCurrentStep ? "sage.50" : "transparent"}
-                        borderColor={isCompleted ? "green.200" : isCurrentStep ? "sage.200" : "gray.200"}
-                        py={4}
-                        px={4}
+                      <Box 
+                        position="relative"
                         _hover={{
-                          bg: isCompleted ? "green.100" : isCurrentStep ? "sage.100" : "gray.50",
                           "& .edit-button": {
                             opacity: 1,
                             visibility: "visible"
                           }
                         }}
                       >
-                        <HStack gap={4} align="center" flex={1}>
-                          <Badge 
-                            size="md" 
-                            variant={isCompleted ? "solid" : isCurrentStep ? "solid" : "outline"}
-                            colorPalette={isCompleted ? "green" : isCurrentStep ? "sage" : "gray"}
-                            borderRadius="full"
-                            minW="10"
-                            h="10"
-                            display="flex"
-                            alignItems="center"
-                            justifyContent="center"
-                            position="relative"
-                            fontSize="sm"
-                          >
-                            {step.stepNumber}
-                            {isCurrentStep && !isCompleted && (
-                              <Box
-                                position="absolute"
-                                top="-1"
-                                right="-1"
-                                w="3"
-                                h="3"
-                                bg="sage.500"
-                                borderRadius="full"
-                                border="2px solid white"
-                              />
-                            )}
-                          </Badge>
-                          <Text 
-                            fontSize="md" 
-                            fontWeight="medium"
-                            color={isCompleted ? "green.700" : isCurrentStep ? "sage.700" : "fg.default"}
-                            flex={1}
-                            textAlign="left"
-                          >
-                            {step.title}
-                          </Text>
-                          {isUserAdmin && (
-                            <IconButton
-                              className="edit-button"
-                              aria-label="Rediger trin"
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setEditingStep(step);
-                              }}
-                              color="gray.500"
-                              opacity={0}
-                              visibility="hidden"
-                              transition="all 0.2s"
-                              _hover={{ color: "gray.700", bg: "gray.100" }}
-                            >
-                              <MdEdit />
-                            </IconButton>
-                          )}
-                          {isCompleted && (
-                            <Icon color="green.600" size="sm">
-                              <CheckIcon />
-                            </Icon>
-                          )}
-                          {isCurrentStep && !isCompleted && (
+                        <Accordion.ItemTrigger
+                          bg={isCompleted ? "green.50" : isCurrentStep ? "sage.50" : "transparent"}
+                          borderColor={isCompleted ? "green.200" : isCurrentStep ? "sage.200" : "gray.200"}
+                          py={4}
+                          px={4}
+                          _hover={{
+                            bg: isCompleted ? "green.100" : isCurrentStep ? "sage.100" : "gray.50"
+                          }}
+                        >
+                          <HStack gap={4} align="center" flex={1}>
                             <Badge 
-                              colorPalette="sage" 
-                              variant="subtle" 
-                              size="xs"
-                              px={2}
+                              size="md" 
+                              variant={isCompleted ? "solid" : isCurrentStep ? "solid" : "outline"}
+                              colorPalette={isCompleted ? "green" : isCurrentStep ? "sage" : "gray"}
                               borderRadius="full"
+                              minW="10"
+                              h="10"
+                              display="flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              position="relative"
+                              fontSize="sm"
                             >
-                              Aktiv
+                              {step.stepNumber}
+                              {isCurrentStep && !isCompleted && (
+                                <Box
+                                  position="absolute"
+                                  top="-1"
+                                  right="-1"
+                                  w="3"
+                                  h="3"
+                                  bg="sage.500"
+                                  borderRadius="full"
+                                  border="2px solid white"
+                                />
+                              )}
                             </Badge>
-                          )}
-                        </HStack>
-                        <Accordion.ItemIndicator ml={2} />
-                      </Accordion.ItemTrigger>
+                            <Text 
+                              fontSize="md" 
+                              fontWeight="medium"
+                              color={isCompleted ? "green.700" : isCurrentStep ? "sage.700" : "fg.default"}
+                              flex={1}
+                              textAlign="left"
+                            >
+                              {step.title}
+                            </Text>
+                            {isCompleted && (
+                              <Icon color="green.600" size="sm">
+                                <CheckIcon />
+                              </Icon>
+                            )}
+                            {isCurrentStep && !isCompleted && (
+                              <Badge 
+                                colorPalette="sage" 
+                                variant="subtle" 
+                                size="xs"
+                                px={2}
+                                borderRadius="full"
+                              >
+                                Aktiv
+                              </Badge>
+                            )}
+                          </HStack>
+                          <Accordion.ItemIndicator ml={2} />
+                        </Accordion.ItemTrigger>
+                        {isUserAdmin && (
+                          <IconButton
+                            className="edit-button"
+                            aria-label="Rediger trin"
+                            variant="ghost"
+                            size="sm"
+                            position="absolute"
+                            top="50%"
+                            right="10"
+                            transform="translateY(-50%)"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setEditingStep(step);
+                            }}
+                            color="gray.500"
+                            opacity={0}
+                            visibility="hidden"
+                            transition="all 0.2s"
+                            _hover={{ color: "gray.700", bg: "gray.100" }}
+                            zIndex={1}
+                          >
+                            <MdEdit />
+                          </IconButton>
+                        )}
+                      </Box>
                     
                     <Accordion.ItemContent>
                       <Accordion.ItemBody>

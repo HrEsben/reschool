@@ -19,6 +19,7 @@ import {
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 import { useChildren, useDeleteChild, usePrefetchBarometers } from '@/lib/queries';
 import { PocketKnife } from 'lucide-react';
+import { FaStairs } from 'react-icons/fa6';
 import { showToast } from '@/components/ui/simple-toast';
 
 interface Child {
@@ -721,18 +722,8 @@ export function ChildrenList({}: ChildrenListProps) {
                       <Box flex="1" minW="0">
                         {/* Inline header with mini stairs and title */}
                         <Flex align="center" gap={2} mb={2}>
-                          {/* Mini staircase icon */}
-                          <HStack gap={0} align="end">
-                            {[1, 2, 3].map((i) => (
-                              <Box
-                                key={i}
-                                width="6px"
-                                height={`${i * 2 + 2}px`}
-                                bg="#3d405b"
-                                borderRadius="1px"
-                              />
-                            ))}
-                          </HStack>
+                          {/* Staircase icon - matching anchor menu */}
+                          <FaStairs size={14} color="#3d405b" />
                           
                           {/* Title with header font inline */}
                           <Heading 

@@ -7,19 +7,21 @@ interface ToolItem {
   name: string;
   title: string; // The actual display title
   count: number;
-  type: 'barometer' | 'dagens-smiley' | 'sengetider';
+  type: 'barometer' | 'dagens-smiley' | 'sengetider' | 'indsatstrappe';
 }
 
 interface UseToolsNavigationProps {
   barometers?: Array<{ id: number; topic: string }>;
   dagensSmiley?: Array<{ id: number; topic: string }>;
   sengetider?: Array<{ id: number }>;
+  indsatstrappe?: { hasActive: boolean }; // Simple flag to indicate if there's an active indsatstrappe
 }
 
 export function useToolsNavigation({
   barometers = [],
   dagensSmiley = [],
   sengetider = [],
+  indsatstrappe,
 }: UseToolsNavigationProps = {}) {
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [toolOrder, setToolOrder] = useState<Array<{ id: string; name: string; type: string }>>(() => {
@@ -74,6 +76,15 @@ export function useToolsNavigation({
         type: 'sengetider'
       });
     }
+
+    // Add indsatstrappe (always show in navigation, even if not created yet)
+    allTools.push({
+      id: 'indsatstrappe',
+      name: 'Indsatstrappe',
+      title: 'Indsatstrappe',
+      count: 1,
+      type: 'indsatstrappe'
+    });
     
     // Apply saved order if it exists
     if (toolOrder.length > 0) {

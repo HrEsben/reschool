@@ -77,6 +77,22 @@ export function VisibilityBadge({
     }
   };
 
+  const getBadgeText = () => {
+    if (isPublic) {
+      return "Alle";
+    }
+    
+    if (!accessDataLoaded) {
+      return "...";
+    }
+    
+    if (accessUsers.length === 0) {
+      return "Kun dig";
+    }
+    
+    return "Udvalgte";
+  };
+
   return (
     <ToggleTip 
       content={getToggleTipContent()}
@@ -101,7 +117,7 @@ export function VisibilityBadge({
         gap={1}
       >
         <Eye size={12} />
-        <Text>Alle</Text>
+        <Text>{getBadgeText()}</Text>
       </Box>
     </ToggleTip>
   );

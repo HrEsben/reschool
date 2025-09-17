@@ -447,13 +447,6 @@ export default function ChildSlugPage() {
             hideAddButton={true}
           />
 
-          {/* Indsatstrappe Section */}
-          <IndsatsrappeManager
-            childId={childData.child.id}
-            childName={childData.child.name}
-            isUserAdmin={isCurrentUserAdmin}
-          />
-
           {/* Connected Users Section */}
           <Box 
             bg="bg.surface" 

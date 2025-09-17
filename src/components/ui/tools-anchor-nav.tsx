@@ -12,13 +12,15 @@ import {
   useBreakpointValue,
 } from '@chakra-ui/react';
 import { DragHandleIcon, SettingsIcon } from '@/components/ui/icons';
+import { Thermometer, Smile, Bed } from 'lucide-react';
+import { FaStairs } from "react-icons/fa6";
 
 interface ToolItem {
   id: string;
   name: string;
   title: string; // The actual display title (topic for barometer/smiley, "Sengetider" for sengetider)
   count: number;
-  type: 'barometer' | 'dagens-smiley' | 'sengetider';
+  type: 'barometer' | 'dagens-smiley' | 'sengetider' | 'indsatstrappe';
 }
 
 interface ToolsAnchorNavProps {
@@ -44,6 +46,22 @@ export function ToolsAnchorNav({
   
   // Responsive positioning
   const isMobile = useBreakpointValue({ base: true, md: false });
+
+  // Helper function to get the appropriate icon for each tool type
+  const getToolIcon = (type: string) => {
+    switch (type) {
+      case 'barometer':
+        return Thermometer;
+      case 'dagens-smiley':
+        return Smile;
+      case 'sengetider':
+        return Bed;
+      case 'indsatstrappe':
+        return FaStairs;
+      default:
+        return null;
+    }
+  };
 
   // Set up intersection observer to track active sections
   useEffect(() => {
@@ -160,21 +178,26 @@ export function ToolsAnchorNav({
         <Box
           position="fixed"
           top="50%"
-          left={20}
+          left={10}
           transform="translateY(-50%)"
           zIndex={100}
           className={className}
         >
           <VStack 
-            p={3}
-            gap={2}
-            minW="120px"
-            maxW="180px"
+            p={6}
+            gap={3}
+            minW="160px"
+            maxW="220px"
             transition="all 0.3s ease"
+            role="group"
             _hover={{
               "& .settings-icon": {
                 opacity: 1,
                 transform: "scale(1)",
+              },
+              "& .tool-icon": {
+                opacity: 1,
+                transform: "translateX(0)",
               }
             }}
           >
@@ -203,11 +226,12 @@ export function ToolsAnchorNav({
             )}
 
             {/* Tool navigation items */}
-            <VStack gap={1} w="100%">
+            <VStack gap={2} w="100%">
               {tools.map((tool) => {
                 const isActive = activeSection === tool.id;
                 const isDragging = draggedItem === tool.id;
                 const isDragOver = dragOver === tool.id;
+                const ToolIcon = getToolIcon(tool.type);
                 
                 return (
                   <Box
@@ -239,14 +263,29 @@ export function ToolsAnchorNav({
                       _active={{
                         transform: isReorderMode ? "none" : "scale(0.98)"
                       }}
-                      px={3}
-                      py={2}
+                      px={4}
+                      py={3}
                       h="auto"
-                      minH="36px"
+                      minH="42px"
                       borderRadius="lg"
                       transition="all 0.3s ease"
                     >
-                      <HStack gap={2} w="100%" justify="flex-end">
+                      <HStack gap={3} w="100%" justify="flex-end">
+                        {/* Tool icon - only show on hover and when not in reorder mode */}
+                        {ToolIcon && !isReorderMode && (
+                          <Box
+                            className="tool-icon"
+                            opacity={0}
+                            transform="translateX(8px)"
+                            transition="all 0.3s ease"
+                          >
+                            <ToolIcon 
+                              size={14} 
+                              color={isActive ? "currentColor" : "currentColor"}
+                            />
+                          </Box>
+                        )}
+                        
                         <Text 
                           fontSize="sm" 
                           fontWeight={isActive ? "semibold" : "medium"}
@@ -255,7 +294,7 @@ export function ToolsAnchorNav({
                           textOverflow="ellipsis"
                           whiteSpace="nowrap"
                           textAlign="right"
-                          maxW="140px"
+                          maxW="150px"
                           transition="all 0.2s ease"
                           _groupHover={{
                             fontSize: "md",
