@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { subscribeUser, unsubscribeUser, sendNotification } from '../../app/actions'
-import { Box, Button, Input, Text, VStack } from '@chakra-ui/react'
+import { Box, Button, Input, Text, VStack, HStack } from '@chakra-ui/react'
 import { toaster } from '@/components/ui/toaster'
+import { Bell } from 'lucide-react'
 
 // Helper function to convert VAPID key from base64 to Uint8Array
 function urlBase64ToUint8Array(base64String: string) {
@@ -180,9 +181,12 @@ export function PushNotificationManager() {
   return (
     <Box p={4} borderWidth={1} borderRadius="md">
       <VStack gap={4} align="stretch">
-        <Text fontSize="lg" fontWeight="bold">
-          🔔 Push Notifikationer
-        </Text>
+        <HStack gap={2}>
+          <Bell size={20} />
+          <Text fontSize="lg" fontWeight="bold">
+            Push Notifikationer
+          </Text>
+        </HStack>
         
         {subscription ? (
           <VStack gap={3} align="stretch">
@@ -240,7 +244,10 @@ export function PushNotificationManager() {
               loading={isLoading}
               loadingText="Tilmelder..."
             >
-              Tilmeld notifikationer
+              <HStack gap={2}>
+                <Bell size={16} />
+                <Text>Tilmeld notifikationer</Text>
+              </HStack>
             </Button>
           </VStack>
         )}
