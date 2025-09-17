@@ -21,7 +21,7 @@ import { SengetiderCard } from '@/components/sengetider/sengetider-card';
 import { IndsatsrappeManager } from '@/components/indsatstrappe/indsatstrappe-manager';
 import { ToolsAnchorNav } from '@/components/ui/tools-anchor-nav';
 import { useToolsNavigation } from '@/hooks/use-tools-navigation';
-import { useBarometers, useDagensSmiley, useSengetider, useActiveIndsatstrappe } from '@/lib/queries';
+import { useBarometers, useDagensSmiley, useSengetider } from '@/lib/queries';
 
 interface BarometerEntry {
   id: number;
@@ -90,7 +90,6 @@ export const ToolsManager = forwardRef<ToolsManagerRef, ToolsManagerProps>(
   const { data: barometers = [], isLoading: loading, error: queryError } = useBarometers(childId.toString());
   const { data: dagensSmiley = [], isLoading: smileyLoading, error: smileyError } = useDagensSmiley(childId.toString());
   const { data: sengetider = [], isLoading: sengetiderLoading, error: sengetiderError } = useSengetider(childId.toString());
-  const { data: activeIndsatstrappe, isLoading: indsatsrappeLoading, error: indsatsrappeError } = useActiveIndsatstrappe(childId.toString());
   const [editingBarometer, setEditingBarometer] = useState<Barometer | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingSmiley, setEditingSmiley] = useState<DagensSmiley | null>(null);
@@ -109,7 +108,6 @@ export const ToolsManager = forwardRef<ToolsManagerRef, ToolsManagerProps>(
     barometers: barometers.map(b => ({ id: b.id, topic: b.topic })),
     dagensSmiley: dagensSmiley.map(s => ({ id: s.id, topic: s.topic })),
     sengetider: sengetider.map(s => ({ id: s.id })),
-    indsatstrappe: { hasActive: !!activeIndsatstrappe },
   });
 
   // Expose openAddDialog method to parent via ref
@@ -123,9 +121,9 @@ export const ToolsManager = forwardRef<ToolsManagerRef, ToolsManagerProps>(
   }), []);
 
   // Convert query error to string for display
-  const error = queryError || smileyError || sengetiderError || indsatsrappeError ? 
-    ((queryError instanceof Error ? queryError.message : (smileyError instanceof Error ? smileyError.message : (sengetiderError instanceof Error ? sengetiderError.message : (indsatsrappeError instanceof Error ? indsatsrappeError.message : 'Kunne ikke indlæse værktøjer'))))) : null;
-  const isLoading = loading || smileyLoading || sengetiderLoading || indsatsrappeLoading;
+  const error = queryError || smileyError || sengetiderError ? 
+    ((queryError instanceof Error ? queryError.message : (smileyError instanceof Error ? smileyError.message : (sengetiderError instanceof Error ? sengetiderError.message : 'Kunne ikke indlæse værktøjer')))) : null;
+  const isLoading = loading || smileyLoading || sengetiderLoading;
 
   // Get current user's database ID
   useEffect(() => {

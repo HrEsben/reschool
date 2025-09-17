@@ -14,14 +14,13 @@ interface UseToolsNavigationProps {
   barometers?: Array<{ id: number; topic: string }>;
   dagensSmiley?: Array<{ id: number; topic: string }>;
   sengetider?: Array<{ id: number }>;
-  indsatstrappe?: { hasActive: boolean }; // Simple flag to indicate if there's an active indsatstrappe
+  // indsatstrappe prop not needed since it's always included
 }
 
 export function useToolsNavigation({
   barometers = [],
   dagensSmiley = [],
   sengetider = [],
-  indsatstrappe,
 }: UseToolsNavigationProps = {}) {
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [toolOrder, setToolOrder] = useState<Array<{ id: string; name: string; type: string }>>(() => {

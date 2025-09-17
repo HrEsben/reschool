@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Box, 
   Button, 
@@ -37,7 +37,7 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const fetchNotifications = async (retryCount = 0) => {
+  const fetchNotifications = useCallback(async (retryCount = 0) => {
     try {
       if (retryCount === 0) setLoading(true);
       
@@ -69,11 +69,11 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
         setLoading(false);
       }
     }
-  };  useEffect(() => {
+  }, []);  useEffect(() => {
     if (isOpen) {
       fetchNotifications();
     }
-  }, [isOpen]);
+  }, [isOpen, fetchNotifications]);
 
   const markAsRead = async (notificationId: number) => {
     try {
@@ -313,7 +313,7 @@ interface NotificationBellProps {
 export function NotificationBell({ onClick }: NotificationBellProps) {
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const fetchUnreadCount = async (retryCount = 0) => {
+  const fetchUnreadCount = useCallback(async (retryCount = 0) => {
     try {
       const response = await fetch('/api/notifications?unreadOnly=true', {
         method: 'GET',
@@ -339,7 +339,7 @@ export function NotificationBell({ onClick }: NotificationBellProps) {
         setTimeout(() => fetchUnreadCount(retryCount + 1), 1000 * (retryCount + 1));
       }
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchUnreadCount();
@@ -347,7 +347,7 @@ export function NotificationBell({ onClick }: NotificationBellProps) {
     // Refresh count every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchUnreadCount]);
 
   return (
     <Box position="relative">
