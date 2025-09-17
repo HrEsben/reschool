@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackServerApp } from "../stack";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -48,17 +48,6 @@ export const metadata: Metadata = {
       { url: "/apple-touch-icon.png", sizes: "180x180" },
     ],
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: "cover",
-  },
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#81b29a" },
-    { media: "(prefers-color-scheme: dark)", color: "#81b29a" },
-  ],
   formatDetection: {
     telephone: false,
   },
@@ -71,6 +60,18 @@ export const metadata: Metadata = {
     "msapplication-TileColor": "#81b29a",
     "msapplication-config": "none",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#81b29a" },
+    { media: "(prefers-color-scheme: dark)", color: "#81b29a" },
+  ],
 };
 
 export default function RootLayout({

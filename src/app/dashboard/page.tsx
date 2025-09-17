@@ -9,6 +9,7 @@ import {
   LazyLatestRegistrations 
 } from "@/components/dashboard/lazy-dashboard-components";
 import { BfcacheOptimizer } from "@/hooks/use-bfcache-optimization";
+import { PushNotificationManager } from "@/components/ui/push-notification-manager";
 
 export default function Dashboard() {
   return (
@@ -38,6 +39,11 @@ export default function Dashboard() {
                 {/* Child Management Section */}
                 <LazyChildrenManager />
 
+                {/* Push Notifications on Mobile */}
+                <Box display={{ base: "block", lg: "none" }}>
+                  <PushNotificationManager />
+                </Box>
+
                 {/* Latest Registrations on Mobile */}
                 <Box display={{ base: "block", lg: "none" }}>
                   <LazyLatestRegistrations limit={8} />
@@ -46,7 +52,13 @@ export default function Dashboard() {
 
               {/* Right Column - Latest Registrations on Desktop */}
               <Box display={{ base: "none", lg: "block" }} position="sticky" top="8">
-                <LazyLatestRegistrations limit={8} />
+                <VStack gap={6} align="stretch">
+                  {/* Push Notifications */}
+                  <PushNotificationManager />
+                  
+                  {/* Latest Registrations */}
+                  <LazyLatestRegistrations limit={8} />
+                </VStack>
               </Box>
             </Grid>
           </Box>
