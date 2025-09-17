@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Provider } from "@/components/ui/provider";
 import RisingFooter from "@/components/ui/rising-footer";
+import { PWAInstallPrompt } from "@/components/ui/pwa-install-prompt";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,15 +24,52 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ReSchool - En tryg vej tilbage i skole",
   description: "En tryg vej tilbage i skole for børn med ufrivilligt skolefravær",
-   icons: {
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "ReSchool",
+    startupImage: [
+      {
+        url: "/apple-touch-icon.png",
+        media: "(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)",
+      },
+    ],
+  },
+  icons: {
     icon: [
       { url: "/favicon.ico" },
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [
       { url: "/apple-touch-icon.png", sizes: "180x180" },
     ],
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: "cover",
+  },
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#81b29a" },
+    { media: "(prefers-color-scheme: dark)", color: "#81b29a" },
+  ],
+  formatDetection: {
+    telephone: false,
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "default",
+    "apple-mobile-web-app-title": "ReSchool",
+    "application-name": "ReSchool",
+    "msapplication-TileColor": "#81b29a",
+    "msapplication-config": "none",
   },
 };
 
@@ -62,7 +100,16 @@ export default function RootLayout({
         
         {/* Optimize for bfcache */}
         <meta name="format-detection" content="telephone=no" />
-        <meta name="theme-color" content="#fdfcf8" />
+        <meta name="theme-color" content="#81b29a" />
+        
+        {/* PWA iOS specific meta tags */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="ReSchool" />
+        
+        {/* Additional PWA meta tags */}
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="application-name" content="ReSchool" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
@@ -78,6 +125,7 @@ export default function RootLayout({
                 minHeight: '100vh'
               }}>
                 {children}
+                <PWAInstallPrompt />
               </div>
               <RisingFooter />
             </StackTheme>
