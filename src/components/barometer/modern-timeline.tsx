@@ -238,35 +238,7 @@ const getRatingDisplay = (rating: number, barometer: Barometer): string | React.
   return '�';
 };
 
-// Format date for display (e.g., "Torsdag 8. september, 14:30")
-const formatDateTime = (dateString: string): string => {
-  const date = new Date(dateString);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  
-  // Check if it's today or yesterday
-  if (date.toDateString() === today.toDateString()) {
-    return `I dag, ${date.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
-  }
-  if (date.toDateString() === yesterday.toDateString()) {
-    return `I går, ${date.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
-  }
-  
-  // Format as Danish date with time
-  const weekdays = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
-  const months = [
-    'januar', 'februar', 'marts', 'april', 'maj', 'juni',
-    'juli', 'august', 'september', 'oktober', 'november', 'december'
-  ];
-  
-  const weekday = weekdays[date.getDay()];
-  const day = date.getDate();
-  const month = months[date.getMonth()];
-  const time = date.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit', hour12: false });
-  
-  return `${weekday} ${day}. ${month}, ${time}`;
-};
+// Note: formatDateTime function removed as it's unused - replaced by formatEntryDateTime
 
 // Format the entry date and time for timeline display
 const formatEntryDateTime = (entryDate: string, createdAt: string): string => {

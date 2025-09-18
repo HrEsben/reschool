@@ -2,15 +2,14 @@
 
 import { useState } from 'react';
 import {
-  Box,
-  Input,
   VStack,
   Text,
-  HStack,
+  Input,
   Button,
   Flex,
+  Box,
 } from '@chakra-ui/react';
-import { format, isAfter, isBefore, subMonths } from 'date-fns';
+import { format, isAfter, isBefore } from 'date-fns';
 import { da } from 'date-fns/locale';
 
 interface RetrospectiveDatePickerProps {

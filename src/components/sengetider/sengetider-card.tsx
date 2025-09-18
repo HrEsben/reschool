@@ -12,9 +12,7 @@ import {
   Input,
   Textarea,
   Grid,
-  GridItem,
   useBreakpointValue,
-  IconButton,
 } from '@chakra-ui/react';
 import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
@@ -56,12 +54,9 @@ export function SengetiderCard({
     return today;
   });
   const [hasUserInput, setHasUserInput] = useState(false); // Track if user has started typing
-  const [mounted, setMounted] = useState(false);
 
   // Handle hydration
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  
 
   // React Query mutation for deleting sengetider
   const deleteSengetiderMutation = useDeleteSengetider();

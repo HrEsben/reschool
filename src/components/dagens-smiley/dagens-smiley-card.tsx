@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import {
   Box,
   Button,
@@ -82,12 +82,9 @@ export function DagensSmileyCard({
     today.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
     return today;
   });
-  const [mounted, setMounted] = useState(false);
 
   // Handle hydration
-  useEffect(() => {
-    setMounted(true);
-  }, []); // Default to today
+   // Default to today
   const timelineRef = useRef<SmileyTimelineRef>(null);
 
   // Fetch entries for the timeline

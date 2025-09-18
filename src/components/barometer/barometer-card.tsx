@@ -85,12 +85,8 @@ export function BarometerCard({
     today.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
     return today;
   });
-  const [mounted, setMounted] = useState(false);
 
-  // Handle hydration
-  useEffect(() => {
-    setMounted(true);
-  }, []); // Default to today
+  // Handle hydration // Default to today
   const timelineRef = useRef<BarometerTimelineRef>(null);
 
   // Fetch access data when needed (for lazy loading on hover/click)

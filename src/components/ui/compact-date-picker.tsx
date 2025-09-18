@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Button,
   Input,
@@ -28,39 +28,13 @@ export function CompactDatePicker({
   disabled = false,
   size = "md"
 }: CompactDatePickerProps) {
-  const [mounted, setMounted] = useState(false);
   const [dateInput, setDateInput] = useState('');
   const [isOpen, setIsOpen] = useState(false);
 
-  // Handle hydration - only mount after client-side
+  // Update dateInput when selectedDate changes
   useEffect(() => {
-    setMounted(true);
     setDateInput(format(selectedDate, 'yyyy-MM-dd'));
-  }, []);
-
-  // Update dateInput when selectedDate changes (only after mounted)
-  useEffect(() => {
-    if (mounted) {
-      setDateInput(format(selectedDate, 'yyyy-MM-dd'));
-    }
-  }, [selectedDate, mounted]);
-
-  // Don't render complex content until mounted to prevent hydration mismatches
-  if (!mounted) {
-    return (
-      <Button
-        size={size}
-        variant="outline"
-        borderColor="cream.300"
-        color="navy.700"
-        _hover={{ borderColor: "cream.400", bg: "cream.50" }}
-        disabled={true}
-        suppressHydrationWarning
-      >
-        I dag
-      </Button>
-    );
-  }
+  }, [selectedDate]);
 
   // All date calculations moved inside mounted guard
   const today = new Date();
