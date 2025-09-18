@@ -19,8 +19,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const pool = getPool();
-    
     // Check if subscription already exists
     const existingSubscription = await pool.query(
       'SELECT id FROM push_subscriptions WHERE user_id = $1 AND endpoint = $2',
@@ -71,8 +69,6 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const pool = getPool();
-    
     await pool.query(
       'DELETE FROM push_subscriptions WHERE user_id = $1 AND endpoint = $2',
       [user.id, endpoint]

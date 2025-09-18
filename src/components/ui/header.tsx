@@ -16,7 +16,7 @@ import {
 import { useRouter, usePathname } from "next/navigation";
 import { useState, memo, useCallback, useEffect } from "react";
 import { UserAvatar } from "./user-avatar";
-import { NotificationBell, NotificationCenter } from "./notification-center";
+import NotificationInbox from "./notification-inbox";
 
 export const Header = memo(function Header() {
   const user = useUser();
@@ -25,7 +25,6 @@ export const Header = memo(function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<Array<{ label: string; href: string }>>([]);
-  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
   const [dbUserId, setDbUserId] = useState<number | null>(null);
 
   // Fetch database user ID when user is available
@@ -208,11 +207,9 @@ export const Header = memo(function Header() {
 
         {/* Right side items */}
         <HStack gap={4} align="center" display={{ base: "none", md: "flex" }}>
-          {/* Notification Bell - visible on desktop only */}
+          {/* Novu Notification Inbox - visible on desktop only */}
           {user && (
-            <NotificationBell 
-              onClick={() => setIsNotificationCenterOpen(true)} 
-            />
+            <NotificationInbox />
           )}
           
           {/* User Avatar - visible on desktop */}
@@ -223,7 +220,7 @@ export const Header = memo(function Header() {
           )}
         </HStack>
 
-        {/* Mobile right side - notification bell + hamburger menu */}
+        {/* Mobile right side - notification inbox + hamburger menu */}
         {user && (
           <HStack 
             gap={2} 
@@ -234,10 +231,8 @@ export const Header = memo(function Header() {
             top="50%"
             transform="translateY(-50%)"
           >
-            {/* Notification Bell - positioned left of hamburger on mobile */}
-            <NotificationBell 
-              onClick={() => setIsNotificationCenterOpen(true)} 
-            />
+            {/* Novu Notification Inbox - positioned left of hamburger on mobile */}
+            <NotificationInbox />
             
             {/* Mobile menu button */}
             <IconButton
@@ -357,26 +352,6 @@ export const Header = memo(function Header() {
                 </Text>
                 <VStack gap={1} align="stretch">
                   <Button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      setIsNotificationCenterOpen(true);
-                    }}
-                    variant="ghost"
-                    justifyContent="flex-start"
-                    h="auto"
-                    p={4}
-                    borderRadius="lg"
-                    fontWeight="500"
-                    fontSize="md"
-                    color="fg.default"
-                    _hover={{ 
-                      bg: "gray.50"
-                    }}
-                    _active={{ bg: "gray.100" }}
-                  >
-                    Notifikationer
-                  </Button>
-                  <Button
                     onClick={() => dbUserId && handleMenuItemClick(`/users/${dbUserId}`)}
                     variant="ghost"
                     justifyContent="flex-start"
@@ -424,12 +399,6 @@ export const Header = memo(function Header() {
           </Drawer.Content>
         </Drawer.Positioner>
       </Drawer.Root>
-
-      {/* Notification Center */}
-      <NotificationCenter 
-        isOpen={isNotificationCenterOpen}
-        onClose={() => setIsNotificationCenterOpen(false)}
-      />
     </Box>
   );
 });

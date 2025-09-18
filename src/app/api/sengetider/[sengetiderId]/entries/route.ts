@@ -4,8 +4,11 @@ import {
   createSengetiderEntry, 
   getSengetiderEntries,
   getUserByStackAuthId,
-  getSengetiderById
+  getSengetiderById,
+  getUsersForChild,
+  getChildById
 } from '@/lib/database-service';
+import { notifyChildSubmission } from '@/lib/novu-eu';
 
 export async function GET(
   request: NextRequest,
@@ -116,6 +119,40 @@ export async function POST(
 
       if (!entry) {
         return NextResponse.json({ error: 'Failed to create sengetider entry' }, { status: 500 });
+      }
+
+      // Send notifications to all users connected to this child
+      try {
+        const child = await getChildById(sengetiderTool.childId);
+        const childUsers = await getUsersForChild(sengetiderTool.childId);
+        
+        if (child && childUsers.length > 0) {
+          // Get subscriber IDs (exclude the user who made the submission)
+          const subscriberIds = childUsers
+            .filter(user => user.id !== dbUser.id)
+            .map(user => user.stackAuthId)
+            .filter(Boolean);
+
+          if (subscriberIds.length > 0) {
+            await notifyChildSubmission(
+              subscriberIds,
+              child.name,
+              'Sengetider',
+              'sengetider',
+              dbUser.displayName || 'En bruger',
+              {
+                entry_date: entryDate,
+                puttetid: formattedPuttetid,
+                sov_kl: formattedSovKl,
+                vaagnede: formattedVaagnede,
+                notes: notes || null
+              }
+            );
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error sending sengetider entry notifications:', notificationError);
+        // Don't fail the API call if notifications fail
       }
 
       return NextResponse.json({ entry }, { status: 201 });

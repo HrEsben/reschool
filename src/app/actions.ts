@@ -110,6 +110,13 @@ export async function sendNotification(message: string) {
 
     const dbUserId = dbUserResult.rows[0].id;
 
+    // Get unread notification count for badge
+    const unreadCountResult = await pool.query(
+      'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND read = FALSE',
+      [dbUserId]
+    );
+    const unreadCount = parseInt(unreadCountResult.rows[0]?.count || '0') + 1; // +1 for the new notification
+
     // Get the user's subscription
     const subscriptionResult = await pool.query(
       'SELECT endpoint, p256dh_key, auth_key FROM push_subscriptions WHERE user_id = $1',
@@ -131,15 +138,17 @@ export async function sendNotification(message: string) {
       }
     };
 
-    // Send the notification using the modern approach
+    // Send the notification using the modern approach with badge count
     await sendPushMessage(pushSubscription, {
       title: 'ReSchool',
       body: message,
       icon: '/android-chrome-192x192.png',
       badge: '/android-chrome-192x192.png',
+      badgeCount: unreadCount, // Include badge count for iOS PWA
       data: {
         url: '/',
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        badgeCount: unreadCount
       }
     });
 
@@ -170,6 +179,25 @@ async function sendPushMessage(subscription: PushSubscription, payload: any) {
   // For now, this is a placeholder that demonstrates the structure
 
   return { success: true };
+}
+
+// Function to clear badge count (call when user views notifications)
+export async function clearNotificationBadge() {
+  try {
+    const user = await stackServerApp.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // In a real implementation, you might want to trigger a service worker message
+    // to clear the badge immediately. For now, this is a placeholder.
+    console.log('Badge clearing requested for user:', user.id);
+    
+    return { success: true, message: 'Badge clear requested' };
+  } catch (error) {
+    console.error('Error clearing badge:', error);
+    throw new Error('Failed to clear badge');
+  }
 }
 
 // Function to send notifications to all subscribed users

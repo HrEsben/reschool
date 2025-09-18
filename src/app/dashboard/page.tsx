@@ -10,6 +10,7 @@ import {
 } from "@/components/dashboard/lazy-dashboard-components";
 import { BfcacheOptimizer } from "@/hooks/use-bfcache-optimization";
 import { PushNotificationManager } from "@/components/ui/push-notification-manager";
+import NovuTester from "@/components/ui/novu-tester";
 
 export default function Dashboard() {
   return (
@@ -44,6 +45,11 @@ export default function Dashboard() {
                   <PushNotificationManager />
                 </Box>
 
+                {/* Novu Test on Mobile */}
+                <Box display={{ base: "block", lg: "none" }}>
+                  <NovuTester />
+                </Box>
+
                 {/* Latest Registrations on Mobile */}
                 <Box display={{ base: "block", lg: "none" }}>
                   <LazyLatestRegistrations limit={8} />
@@ -55,6 +61,9 @@ export default function Dashboard() {
                 <VStack gap={6} align="stretch">
                   {/* Push Notifications */}
                   <PushNotificationManager />
+                  
+                  {/* Novu Test */}
+                  <NovuTester />
                   
                   {/* Latest Registrations */}
                   <LazyLatestRegistrations limit={8} />

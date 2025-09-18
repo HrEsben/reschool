@@ -10,6 +10,7 @@ import {
   syncUserToDatabase
 } from '@/lib/database-service';
 import { createChildAddedNotification, createUserJoinedChildNotification } from '@/lib/notification-service';
+import { createNovuSubscriber, notifyAdultConnectedToChild } from '@/lib/novu-eu';
 
 export async function POST(
   request: NextRequest,
@@ -100,23 +101,47 @@ export async function POST(
 
     // Create notifications
     try {
-      // Notify the new user that they've been added to the child
+      // 1. Ensure new user exists in Novu EU  
+      await createNovuSubscriber(
+        user.id, // Stack Auth ID (string)
+        user.primaryEmail || undefined,
+        user.displayName?.split(' ')[0] || undefined,
+        user.displayName?.split(' ')[1] || undefined
+      );
+
+      // 2. Notify the new user that they've been added to the child
       await createChildAddedNotification(
         currentUser.id,
         child.name,
         child.slug
       );
 
-      // Notify other users of the child that a new user has joined
+      // 3. Get other users for Novu notifications
       const childWithUsers = await getChildWithUsers(invitation.childId);
       if (childWithUsers) {
         const otherUsers = childWithUsers.users.filter(u => u.id !== currentUser.id);
+        
+        // 4. Create database notifications for existing users
         for (const otherUser of otherUsers) {
           await createUserJoinedChildNotification(
             otherUser.id,
             currentUser.displayName || currentUser.email,
             child.name,
             child.slug
+          );
+        }
+
+        // 5. Send Novu notifications to other users
+        if (otherUsers.length > 0) {
+          const subscriberIds = otherUsers.map(u => u.stackAuthId);
+          const adultRelation = invitation.customRelationName || invitation.relation;
+          
+          await notifyAdultConnectedToChild(
+            subscriberIds,
+            currentUser.displayName || currentUser.email,
+            child.name,
+            adultRelation,
+            invitationData.inviterName
           );
         }
       }

@@ -121,7 +121,7 @@ export function UserAvatar() {
               const response = await fetch('/api/users/me');
               if (response.ok) {
                 const userData = await response.json();
-                router.push(`/users/${userData.id}`);
+                router.push(`/users/${userData.user.id}`);
               } else {
                 console.error('Failed to get user data');
               }

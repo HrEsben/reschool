@@ -14,6 +14,8 @@ import {
 import { useRouter } from 'next/navigation';
 import { BellIcon, CheckIcon } from 'lucide-react';
 import { AcceptInvitationDialog } from './accept-invitation-dialog';
+import { clearNotificationBadge } from '@/app/actions';
+import { clearBadgeClient } from '@/lib/badge-utils';
 
 export interface Notification {
   id: number;
@@ -91,7 +93,15 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
             n.id === notificationId ? { ...n, read: true } : n
           )
         );
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        setUnreadCount(prev => {
+          const newCount = Math.max(0, prev - 1);
+          // Clear badge if no unread notifications remain
+          if (newCount === 0) {
+            clearNotificationBadge().catch(console.error);
+            clearBadgeClient(); // Clear badge immediately on client
+          }
+          return newCount;
+        });
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -113,6 +123,9 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
           prev.map(n => ({ ...n, read: true }))
         );
         setUnreadCount(0);
+        // Clear badge when all notifications are marked as read
+        clearNotificationBadge().catch(console.error);
+        clearBadgeClient(); // Clear badge immediately on client
       }
     } catch (error) {
       console.error('Error marking all notifications as read:', error);

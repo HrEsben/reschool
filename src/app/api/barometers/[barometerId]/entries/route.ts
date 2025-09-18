@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stackServerApp } from '@/stack';
 import { 
   recordBarometerEntry, 
-  getBarometerById,
+  getBarometerEntries,
   getUserByStackAuthId,
+  getBarometerById,
   isUserAdministratorForChild,
-  getBarometerEntries
+  getUsersForChild,
+  getChildById
 } from '@/lib/database-service';
 import { query } from '@/lib/db';
+import { notifyChildSubmission } from '@/lib/novu-eu';
 
 export async function GET(
   request: NextRequest,
@@ -92,6 +95,39 @@ export async function POST(
     
     if (!entry) {
       return NextResponse.json({ error: 'Failed to record entry' }, { status: 500 });
+    }
+
+    // Send notifications to all users connected to this child
+    try {
+      const child = await getChildById(barometer.childId);
+      const childUsers = await getUsersForChild(barometer.childId);
+      
+      if (child && childUsers.length > 0) {
+        // Get subscriber IDs (exclude the user who made the submission)
+        const subscriberIds = childUsers
+          .filter(user => user.id !== dbUser.id)
+          .map(user => user.stackAuthId)
+          .filter(Boolean);
+
+        if (subscriberIds.length > 0) {
+          await notifyChildSubmission(
+            subscriberIds,
+            child.name,
+            barometer.topic,
+            'barometer',
+            dbUser.displayName || 'En bruger',
+            {
+              rating: rating,
+              comment: comment || null,
+              scale_min: barometer.scaleMin,
+              scale_max: barometer.scaleMax
+            }
+          );
+        }
+      }
+    } catch (notificationError) {
+      console.error('Error sending barometer entry notifications:', notificationError);
+      // Don't fail the API call if notifications fail
     }
 
     return NextResponse.json({ entry }, { status: 201 });

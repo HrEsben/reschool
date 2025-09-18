@@ -5,8 +5,11 @@ import {
   getDagensSmileyById,
   getUserByStackAuthId,
   checkUserDagensSmileyAccess,
-  getDagensSmileyEntries
+  getDagensSmileyEntries,
+  getUsersForChild,
+  getChildById
 } from '@/lib/database-service';
+import { notifyChildSubmission } from '@/lib/novu-eu';
 
 export async function GET(
   request: NextRequest,
@@ -99,6 +102,37 @@ export async function POST(
 
     if (!entry) {
       return NextResponse.json({ error: 'Failed to record entry' }, { status: 500 });
+    }
+
+    // Send notifications to all users connected to this child
+    try {
+      const child = await getChildById(smiley.childId);
+      const childUsers = await getUsersForChild(smiley.childId);
+      
+      if (child && childUsers.length > 0) {
+        // Get subscriber IDs (exclude the user who made the submission)
+        const subscriberIds = childUsers
+          .filter(user => user.id !== dbUser.id)
+          .map(user => user.stackAuthId)
+          .filter(Boolean);
+
+        if (subscriberIds.length > 0) {
+          await notifyChildSubmission(
+            subscriberIds,
+            child.name,
+            smiley.topic,
+            'dagens-smiley',
+            dbUser.displayName || 'En bruger',
+            {
+              selected_emoji: selectedEmoji,
+              reasoning: reasoning || null
+            }
+          );
+        }
+      }
+    } catch (notificationError) {
+      console.error('Error sending smiley entry notifications:', notificationError);
+      // Don't fail the API call if notifications fail
     }
 
     return NextResponse.json(entry, { status: 201 });

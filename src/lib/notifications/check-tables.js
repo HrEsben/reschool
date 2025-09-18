@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
-require('dotenv').config({ path: '.env.local' });
-const { Client } = require('pg');
+import { config } from 'dotenv';
+import { Client } from 'pg';
+
+config({ path: '.env.local' });
 
 async function checkTables() {
   console.log('🔍 Checking database tables...');
