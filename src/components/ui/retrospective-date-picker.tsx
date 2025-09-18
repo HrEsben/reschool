@@ -119,23 +119,11 @@ export function RetrospectiveDatePicker({
         </Flex>
       </Box>
 
-      {/* Display selected date in Danish */}
-      <Box>
-        <Text fontSize="sm" color="gray.600">
-          <strong>Valgt dato:</strong> {format(selectedDate, 'EEEE d. MMMM yyyy', { locale: da })}
-          {isToday && (
-            <Text as="span" color="sage.600" ml={2} fontSize="xs">
-              (i dag)
-            </Text>
-          )}
-        </Text>
-      </Box>
-
       {/* Warning for old dates */}
       {!isToday && (
         <Box>
           <Text fontSize="xs" color="orange.600" fontStyle="italic">
-            📅 Du registrerer for en tidligere dato
+            Du registrerer for en tidligere dato
           </Text>
         </Box>
       )}

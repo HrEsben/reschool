@@ -83,7 +83,7 @@ export function CompactDatePicker({
       return 'I dag';
     }
     
-    return `📅 ${format(selectedDate, 'd/M', { locale: da })}`;
+    return format(selectedDate, 'd/M', { locale: da });
   };
 
   return (
@@ -175,18 +175,6 @@ export function CompactDatePicker({
               ))}
             </Flex>
           </VStack>
-
-          {/* Display selected date */}
-          <Box pt={3} borderTop="1px solid" borderColor="gray.200">
-            <Text fontSize="sm" color="gray.600" textAlign="center">
-              <strong>Valgt:</strong> {format(selectedDate, 'EEEE d. MMMM yyyy', { locale: da })}
-            </Text>
-            {!isToday && (
-              <Text fontSize="xs" color="orange.600" textAlign="center" fontStyle="italic" mt={1}>
-                📅 Tidligere dato
-              </Text>
-            )}
-          </Box>
         </VStack>
       </DialogManager>
     </>
