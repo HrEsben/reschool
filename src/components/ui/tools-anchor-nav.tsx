@@ -173,15 +173,23 @@ export function ToolsAnchorNav({
 
   return (
     <Portal>
-      {/* Only show on desktop - hidden on mobile for better UX */}
+      {/* Only show on desktop when there's enough space - hidden on mobile and narrow screens */}
       {!isMobile && (
         <Box
           position="fixed"
           top="50%"
-          left={10}
+          left={0}
           transform="translateY(-50%)"
           zIndex={100}
           className={className}
+          // Dynamic positioning based on viewport and content width
+          style={{
+            // Calculate left position: center viewport minus half of max content width (7xl = 80rem = 1280px) 
+            // minus navigation width (220px) minus safe padding (40px)
+            left: `max(20px, calc((100vw - 1280px) / 2 - 260px))`,
+          }}
+          // Hide when viewport is too narrow (less than ~1600px total width needed)
+          display={{ base: "none", xl: "block" }}
         >
           <VStack 
             p={6}
