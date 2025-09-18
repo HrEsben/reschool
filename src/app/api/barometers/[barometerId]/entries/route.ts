@@ -75,7 +75,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { rating, comment } = body;
+    const { rating, comment, entryDate } = body;
 
     if (typeof rating !== 'number' || rating < barometer.scaleMin || rating > barometer.scaleMax) {
       return NextResponse.json({ 
@@ -83,11 +83,17 @@ export async function POST(
       }, { status: 400 });
     }
 
+    // Validate entryDate format if provided (YYYY-MM-DD)
+    if (entryDate && !/^\d{4}-\d{2}-\d{2}$/.test(entryDate)) {
+      return NextResponse.json({ error: 'Invalid date format. Use YYYY-MM-DD' }, { status: 400 });
+    }
+
     const entry = await recordBarometerEntry(
       barometerId, 
       dbUser.id, 
       rating, 
-      comment || undefined
+      comment || undefined,
+      entryDate // Pass the optional entryDate
     );
     
     if (!entry) {

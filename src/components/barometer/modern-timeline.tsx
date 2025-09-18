@@ -268,6 +268,68 @@ const formatDateTime = (dateString: string): string => {
   return `${weekday} ${day}. ${month}, ${time}`;
 };
 
+// Format the entry date and time for timeline display
+const formatEntryDateTime = (entryDate: string, createdAt: string): string => {
+  try {
+    // Parse the createdAt timestamp for the time component
+    const createdDate = new Date(createdAt);
+    const time = createdDate.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit', hour12: false });
+    
+    // Handle different entryDate formats
+    let year: number, month: number, day: number;
+    
+    if (entryDate.includes('T')) {
+      // ISO timestamp format (e.g., "2025-09-16T22:00:00.000Z")
+      const entryDateObj = new Date(entryDate);
+      year = entryDateObj.getFullYear();
+      month = entryDateObj.getMonth() + 1; // getMonth() is 0-indexed
+      day = entryDateObj.getDate();
+    } else {
+      // YYYY-MM-DD format
+      const dateParts = entryDate.split('-').map(Number);
+      [year, month, day] = dateParts;
+    }
+    
+    // Validate date components
+    if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
+      console.warn('Invalid date components:', { entryDate, year, month, day });
+      return `${entryDate.split('T')[0]}, ${time}`;
+    }
+    
+    // Create date object for comparison (month is 0-indexed in Date constructor)
+    const entryDateObj = new Date(year, month - 1, day);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // Check if entry date is today or yesterday
+    if (entryDateObj.toDateString() === today.toDateString()) {
+      return `I dag, ${time}`;
+    }
+    if (entryDateObj.toDateString() === yesterday.toDateString()) {
+      return `I går, ${time}`;
+    }
+    
+    // Format as Danish date with time
+    const weekdays = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
+    const months = [
+      'januar', 'februar', 'marts', 'april', 'maj', 'juni',
+      'juli', 'august', 'september', 'oktober', 'november', 'december'
+    ];
+    
+    const weekday = weekdays[entryDateObj.getDay()];
+    const monthName = months[entryDateObj.getMonth()];
+    
+    return `${weekday} ${day}. ${monthName}, ${time}`;
+  } catch (error) {
+    console.error('Error in formatEntryDateTime:', error, { entryDate, createdAt });
+    // Fallback to simple formatting
+    const fallbackTime = new Date(createdAt).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const simpleDateString = entryDate.includes('T') ? entryDate.split('T')[0] : entryDate;
+    return `${simpleDateString}, ${fallbackTime}`;
+  }
+};
+
 export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>(
   ({ entries, barometer, onDeleteEntry, canDelete = false, limit }, ref) => {
     const [localEntries, setLocalEntries] = useState<BarometerEntry[]>(entries);
@@ -422,7 +484,7 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
                   <VStack gap={2} align="flex-start" w="full">
                     {/* Date and time info */}
                     <Text fontSize="xs" color="gray.500">
-                      {formatDateTime(entry.createdAt)}
+                      {formatEntryDateTime(entry.entryDate, entry.createdAt)}
                     </Text>
                     
                     {/* Comment */}

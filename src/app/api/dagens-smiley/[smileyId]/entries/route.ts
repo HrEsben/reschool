@@ -83,18 +83,24 @@ export async function POST(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    const { selectedEmoji, reasoning } = await request.json();
+    const { selectedEmoji, reasoning, entryDate } = await request.json();
 
     // Validate input
     if (!selectedEmoji || typeof selectedEmoji !== 'string') {
       return NextResponse.json({ error: 'Selected emoji is required' }, { status: 400 });
     }
 
+    // Validate entryDate format if provided (YYYY-MM-DD)
+    if (entryDate && !/^\d{4}-\d{2}-\d{2}$/.test(entryDate)) {
+      return NextResponse.json({ error: 'Invalid date format. Use YYYY-MM-DD' }, { status: 400 });
+    }
+
     const entry = await recordDagensSmileyEntry(
       smileyId,
       dbUser.id,
       selectedEmoji,
-      reasoning
+      reasoning,
+      entryDate // Pass the optional entryDate
     );
 
     if (!entry) {

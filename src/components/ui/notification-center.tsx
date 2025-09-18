@@ -13,6 +13,7 @@ import {
 } from '@chakra-ui/react';
 import { useRouter } from 'next/navigation';
 import { BellIcon, CheckIcon } from 'lucide-react';
+import { useUser } from '@stackframe/stack';
 import { AcceptInvitationDialog } from './accept-invitation-dialog';
 
 export interface Notification {
@@ -36,8 +37,17 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const user = useUser();
 
   const fetchNotifications = useCallback(async (retryCount = 0) => {
+    // Don't fetch if user is not authenticated
+    if (!user) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setLoading(false);
+      return;
+    }
+
     try {
       if (retryCount === 0) setLoading(true);
       
@@ -52,6 +62,11 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
         const data = await response.json();
         setNotifications(data.notifications || []);
         setUnreadCount(data.unreadCount || 0);
+        setLoading(false);
+      } else if (response.status === 401) {
+        // User is not authenticated
+        setNotifications([]);
+        setUnreadCount(0);
         setLoading(false);
       } else {
         console.error('Failed to fetch notifications:', response.status);
@@ -69,13 +84,15 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
         setLoading(false);
       }
     }
-  }, []);  useEffect(() => {
+  }, [user]);  useEffect(() => {
     if (isOpen) {
       fetchNotifications();
     }
   }, [isOpen, fetchNotifications]);
 
   const markAsRead = async (notificationId: number) => {
+    if (!user) return;
+    
     try {
       const response = await fetch('/api/notifications', {
         method: 'PATCH',
@@ -92,6 +109,8 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
           )
         );
         setUnreadCount(prev => Math.max(0, prev - 1));
+      } else if (response.status === 401) {
+        console.warn('User not authenticated for marking notification as read');
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -99,6 +118,8 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
   };
 
   const markAllAsRead = async () => {
+    if (!user) return;
+    
     try {
       const response = await fetch('/api/notifications', {
         method: 'PATCH',
@@ -113,6 +134,8 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
           prev.map(n => ({ ...n, read: true }))
         );
         setUnreadCount(0);
+      } else if (response.status === 401) {
+        console.warn('User not authenticated for marking all notifications as read');
       }
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
@@ -312,8 +335,15 @@ interface NotificationBellProps {
 
 export function NotificationBell({ onClick }: NotificationBellProps) {
   const [unreadCount, setUnreadCount] = useState(0);
+  const user = useUser();
 
   const fetchUnreadCount = useCallback(async (retryCount = 0) => {
+    // Don't fetch if user is not authenticated
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+
     try {
       const response = await fetch('/api/notifications?unreadOnly=true', {
         method: 'GET',
@@ -325,6 +355,9 @@ export function NotificationBell({ onClick }: NotificationBellProps) {
       if (response.ok) {
         const data = await response.json();
         setUnreadCount(data.unreadCount);
+      } else if (response.status === 401) {
+        // User is not authenticated, reset count
+        setUnreadCount(0);
       } else {
         console.warn(`Failed to fetch notifications: ${response.status}`);
         if (retryCount < 2) {
@@ -339,15 +372,18 @@ export function NotificationBell({ onClick }: NotificationBellProps) {
         setTimeout(() => fetchUnreadCount(retryCount + 1), 1000 * (retryCount + 1));
       }
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchUnreadCount();
     
-    // Refresh count every 30 seconds
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, [fetchUnreadCount]);
+    // Only set up polling if user is authenticated
+    if (user) {
+      // Refresh count every 30 seconds
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [fetchUnreadCount, user]);
 
   return (
     <Box position="relative">

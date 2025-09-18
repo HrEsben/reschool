@@ -7,20 +7,34 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { system } from "./theme"
 import { SimpleToaster } from "./simple-toast"
 import { queryClient } from "@/lib/query-client"
+import { useEffect, useState } from "react"
 
 export function Provider(props: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   return (
     <QueryClientProvider client={queryClient}>
       <ChakraProvider value={system}>
-        <ThemeProvider 
-          attribute="class" 
-          disableTransitionOnChange
-          forcedTheme="light"
-          defaultTheme="light"
-        >
-          {props.children}
-          <SimpleToaster />
-        </ThemeProvider>
+        {mounted ? (
+          <ThemeProvider 
+            attribute="class" 
+            disableTransitionOnChange
+            forcedTheme="light"
+            defaultTheme="light"
+          >
+            {props.children}
+            <SimpleToaster />
+          </ThemeProvider>
+        ) : (
+          <div suppressHydrationWarning>
+            {props.children}
+            <SimpleToaster />
+          </div>
+        )}
       </ChakraProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

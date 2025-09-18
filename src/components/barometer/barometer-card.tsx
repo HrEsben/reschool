@@ -15,6 +15,7 @@ import {
 import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { VisibilityBadge } from '@/components/ui/visibility-badge';
+import { CompactDatePicker } from '@/components/ui/compact-date-picker';
 import { BarometerTimeline, BarometerTimelineRef } from './barometer-timeline-wrapper';
 import { SettingsIcon, TrashIcon } from '@/components/ui/icons';
 
@@ -78,6 +79,18 @@ export function BarometerCard({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [accessUsers, setAccessUsers] = useState<AccessUser[]>([]);
   const [accessDataLoaded, setAccessDataLoaded] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    // Use a stable date to prevent hydration mismatches
+    const today = new Date();
+    today.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
+    return today;
+  });
+  const [mounted, setMounted] = useState(false);
+
+  // Handle hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []); // Default to today
   const timelineRef = useRef<BarometerTimelineRef>(null);
 
   // Fetch access data when needed (for lazy loading on hover/click)
@@ -217,6 +230,7 @@ export function BarometerCard({
         body: JSON.stringify({
           rating: ratingToUse,
           comment: comment.trim() || undefined,
+          entryDate: selectedDate.toISOString().split('T')[0], // Add the selected date in YYYY-MM-DD format
         }),
       });
 
@@ -739,6 +753,7 @@ export function BarometerCard({
       
       <Box p={4}>
         <VStack gap={4} align="stretch">
+          
           {/* Rating Display */}
           <Box>
             {generateRatingDisplay()}
@@ -771,7 +786,7 @@ export function BarometerCard({
           </Box>
 
           {/* Action Buttons */}
-          <HStack gap={2}>
+          <HStack gap={3}>
             <Button
               onClick={handleSubmit}
               loading={loading}
@@ -795,6 +810,14 @@ export function BarometerCard({
             >
               {hasEntryToday ? 'Opdater vurdering' : 'Registrer vurdering'}
             </Button>
+            
+            <CompactDatePicker
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              maxDaysBack={90}
+              disabled={loading}
+              size="md"
+            />
           </HStack>
 
           {/* Registreringer Timeline */}

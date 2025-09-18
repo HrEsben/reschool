@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -15,6 +15,7 @@ import { DialogManager } from '@/components/ui/dialog-manager';
 import { VisibilityBadge } from '@/components/ui/visibility-badge';
 import { SettingsIcon, TrashIcon } from '@/components/ui/icons';
 import { OpenMojiEmoji } from '@/components/ui/openmoji-emoji';
+import { CompactDatePicker } from '@/components/ui/compact-date-picker';
 import { SmileyTimeline, SmileyTimelineRef } from '@/components/smiley/smiley-timeline';
 import { SmileySelectionDialog } from './smiley-selection-dialog';
 import { useQuery } from '@tanstack/react-query';
@@ -75,6 +76,18 @@ export function DagensSmileyCard({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [accessUsers, setAccessUsers] = useState<AccessUser[]>([]);
   const [accessDataLoaded, setAccessDataLoaded] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    // Use a stable date to prevent hydration mismatches
+    const today = new Date();
+    today.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
+    return today;
+  });
+  const [mounted, setMounted] = useState(false);
+
+  // Handle hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []); // Default to today
   const timelineRef = useRef<SmileyTimelineRef>(null);
 
   // Fetch entries for the timeline
@@ -92,40 +105,42 @@ export function DagensSmileyCard({
   // Extract entries array from the response
   const entries = entriesData?.entries || [];
 
-  // Helper function to get today's date in YYYY-MM-DD format (local timezone)
-  const getTodayDateString = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
+  // Helper function to format date to YYYY-MM-DD string (local timezone)
+  const formatDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
 
-  // Helper function to get today's entry - check both sources
-  const getTodaysEntry = () => {
-    const todayString = getTodayDateString();
+  // Helper function to get entry for selected date
+  const getEntryForDate = (date: Date) => {
+    const dateString = formatDateString(date);
     
     // First check entries from the timeline query
     const timelineEntry = entries.find((entry: DagensSmileyEntry) => {
       // Convert entry date to local date string to match our comparison
       const entryDate = new Date(entry.entryDate);
-      const entryDateString = `${entryDate.getFullYear()}-${String(entryDate.getMonth() + 1).padStart(2, '0')}-${String(entryDate.getDate()).padStart(2, '0')}`;
-      return entryDateString === todayString;
+      const entryDateString = formatDateString(entryDate);
+      return entryDateString === dateString;
     });
     
     if (timelineEntry) return timelineEntry;
     
-    // Also check if the smiley's latestEntry is for today
+    // Also check if the smiley's latestEntry is for this date
     if (smiley.latestEntry) {
       const latestDate = new Date(smiley.latestEntry.entryDate);
-      const latestDateString = `${latestDate.getFullYear()}-${String(latestDate.getMonth() + 1).padStart(2, '0')}-${String(latestDate.getDate()).padStart(2, '0')}`;
-      if (latestDateString === todayString) {
+      const latestDateString = formatDateString(latestDate);
+      if (latestDateString === dateString) {
         return smiley.latestEntry;
       }
     }
     
     return null;
   };
+
+  // Get entry for the currently selected date
+  const selectedDateEntry = getEntryForDate(selectedDate);
 
   // Helper function to format today's date in Danish
   const getFormattedTodayDate = () => {
@@ -140,8 +155,6 @@ export function DagensSmileyCard({
     
     return `${dayName} d. ${day}. ${monthName}`;
   };
-
-  const todaysEntry = getTodaysEntry();
 
   // Fetch access data when needed (for lazy loading on hover/click)
   const fetchAccessData = async () => {
@@ -182,6 +195,7 @@ export function DagensSmileyCard({
         body: JSON.stringify({
           selectedEmoji,
           reasoning: reasoning.trim() || undefined,
+          entryDate: formatDateString(selectedDate), // Add the selected date
         }),
       });
 
@@ -372,72 +386,67 @@ export function DagensSmileyCard({
       {/* Content */}
       <Box p={6}>
         <VStack gap={6} align="stretch">
-          {/* Today's Status Display */}
-          {todaysEntry ? (
-            // Show today's selected smiley with reasoning
+          
+          {/* Show existing entry for selected date */}
+          {selectedDateEntry && (
             <Box
-              bg="sage.50"
-              p={6}
+              p={4}
+              bg="cream.50"
               borderRadius="lg"
               border="1px solid"
-              borderColor="sage.200"
-              textAlign="center"
+              borderColor="cream.300"
             >
-              <VStack gap={4} align="center">
-                <Text fontSize="md" fontWeight="medium" color="sage.700">
-                  Dagens valg:
-                </Text>
+              <Text fontSize="sm" fontWeight="medium" color="navy.700" mb={2}>
+                Eksisterende smiley for {selectedDate.toDateString() === new Date().toDateString() ? 'i dag' : selectedDate.toLocaleDateString('da-DK')}:
+              </Text>
+              <VStack gap={2} align="center">
                 <OpenMojiEmoji 
-                  unicode={todaysEntry.selectedEmoji} 
-                  size={96}
+                  unicode={selectedDateEntry.selectedEmoji} 
+                  size={48}
                 />
-                {todaysEntry.reasoning && (
-                  <Text fontSize="md" color="gray.700" textAlign="center">
-                    {todaysEntry.reasoning}
+                {selectedDateEntry.reasoning && (
+                  <Text fontSize="sm" color="gray.700" textAlign="center">
+                    {selectedDateEntry.reasoning}
                   </Text>
                 )}
               </VStack>
-            </Box>
-          ) : (
-            // Show prompt when no smiley is selected today
-            <Box
-              bg="cream.50"
-              p={6}
-              borderRadius="lg"
-              border="1px solid"
-              borderColor="cream.200"
-              textAlign="center"
-            >
-              <Text fontSize="lg" fontWeight="medium" color="navy.700" mb={2}>
-                Ingen smiley valgt endnu
-              </Text>
-              <Text fontSize="md" color="gray.600">
-                Vælg en smiley for at beskrive hvordan det går i dag
+              <Text fontSize="xs" color="gray.500" mt={2} textAlign="center">
+                Vælg en ny smiley nedenfor for at opdatere
               </Text>
             </Box>
           )}
 
           {/* Add New Entry Button with Dialog */}
-          <SmileySelectionDialog
-            trigger={
-              <Button
-                bg="sage.500"
-                color="white"
-                _hover={{ bg: "sage.600" }}
-                size="lg"
-                width="100%"
-                _active={{
-                  transform: "scale(1.02)"
-                }}
-                transition="all 0.2s"
-              >
-                {todaysEntry ? "Ændr dagens smiley" : "Vælg smiley"}
-              </Button>
-            }
-            smileyTopic={smiley.topic}
-            onSubmit={handleSmileySubmit}
-            loading={loading}
-          />
+          <HStack gap={3}>
+            <SmileySelectionDialog
+              trigger={
+                <Button
+                  bg="sage.500"
+                  color="white"
+                  _hover={{ bg: "sage.600" }}
+                  size="lg"
+                  flex={1}
+                  _active={{
+                    transform: "scale(1.02)"
+                  }}
+                  transition="all 0.2s"
+                >
+                  {selectedDateEntry ? "Ændr smiley" : "Vælg smiley"}
+                </Button>
+              }
+              smileyTopic={smiley.topic}
+              onSubmit={handleSmileySubmit}
+              loading={loading}
+            />
+            
+            <CompactDatePicker
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              maxDaysBack={90}
+              disabled={loading}
+              size="lg"
+            />
+          </HStack>
 
           {/* Timeline */}
           <SmileyTimeline

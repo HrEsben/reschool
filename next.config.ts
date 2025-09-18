@@ -1,8 +1,52 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Optimize compilation performance
   experimental: {
-    optimizePackageImports: ["@chakra-ui/react"],
+    optimizePackageImports: ["@chakra-ui/react", "@tanstack/react-query", "react-icons", "date-fns"],
+    // Help with Fast Refresh issues
+    forceSwcTransforms: true,
+  },
+
+  // Enable Turbopack for faster builds (Next.js 15+) with HMR fixes
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
+    // Disable some experimental features that might cause HMR issues
+    resolveExtensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
+  },
+
+  // Improve build caching
+  onDemandEntries: {
+    // period (in ms) where the server will keep pages in the buffer
+    maxInactiveAge: 25 * 1000,
+    // number of pages that should be kept simultaneously without being disposed
+    pagesBufferLength: 2,
+  },
+
+  // Optimize webpack for development
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      // Improve development performance
+      config.watchOptions = {
+        poll: 1000,
+        aggregateTimeout: 300,
+        ignored: /node_modules/,
+      };
+      
+      // Enable webpack caching
+      config.cache = {
+        type: 'filesystem',
+        buildDependencies: {
+          config: [__filename],
+        },
+      };
+    }
+    return config;
   },
   async headers() {
     return [
