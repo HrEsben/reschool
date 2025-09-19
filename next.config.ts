@@ -51,8 +51,21 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*)',
+        // HTML pages - prevent aggressive caching on mobile
+        source: '/((?!_next|api|favicon.ico|.*\\.).*)',
         headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
+          },
+          {
+            key: 'Expires',
+            value: '0',
+          },
           {
             key: 'X-Frame-Options',
             value: 'DENY',
@@ -89,6 +102,34 @@ const nextConfig: NextConfig = {
               "frame-ancestors 'none'",
               "upgrade-insecure-requests"
             ].join('; '),
+          },
+        ],
+      },
+      {
+        // Static assets - allow caching but with shorter duration for mobile
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, s-maxage=31536000, immutable',
+          },
+        ],
+      },
+      {
+        // API routes - no caching for dynamic content
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
+          },
+          {
+            key: 'Expires',
+            value: '0',
           },
         ],
       },

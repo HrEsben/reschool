@@ -487,27 +487,25 @@ export function BarometerCard({
     for (let i = barometer.scaleMin; i <= barometer.scaleMax; i++) {
       const color = getRatingColor(i);
       buttons.push(
-        <Button
+                <Button
           key={i}
           variant={selectedRating === i ? "solid" : "outline"}
-          bg={selectedRating === i ? color : { base: `${color}30`, md: "white" }}
-          color={selectedRating === i ? "white" : { base: "white", md: "navy.700" }}
+          bg={selectedRating === i ? color : { base: `${color}20`, md: "white" }}
+          color={selectedRating === i ? "white" : { base: "navy.800", md: "navy.700" }}
           borderColor={selectedRating === i ? color : color}
           borderWidth="2px"
-          size={{ base: scaleLength > 7 ? "sm" : "md", md: "lg" }}
           onClick={() => handleRatingClick(i)}
-          minW={{ base: scaleLength > 7 ? "35px" : "45px", md: "50px" }}
-          h={{ base: scaleLength > 7 ? "35px" : "45px", md: "50px" }}
-          fontSize={{ base: scaleLength > 7 ? "sm" : "md", md: "lg" }}
-          fontWeight="semibold"
-          borderRadius="lg"
-          flex="1"
-          maxW={{ base: scaleLength > 7 ? "40px" : "50px", md: "none" }}
+          minW={{ base: scaleLength > 7 ? "35px" : "45px", md: "60px" }}
+          w={{ base: scaleLength > 7 ? "35px" : "45px", md: "60px" }}
+          h={{ base: scaleLength > 7 ? "35px" : "45px", md: "60px" }}
+          fontSize={{ base: scaleLength > 7 ? "md" : "lg", md: "2xl" }}
+          borderRadius="full"
+          flex="0 0 auto"
           _hover={{
-            bg: selectedRating === i ? color : "sage.50",
+            bg: color,
             borderColor: color,
-            color: selectedRating === i ? "white" : "navy.700",
-            transform: "scale(1.05)"
+            color: "white",
+            transform: "scale(1.1)"
           }}
           _focus={{
             borderColor: color,
@@ -521,7 +519,7 @@ export function BarometerCard({
           }}
           transition="all 0.2s"
         >
-          {i}
+          {getSmiley(i)}
         </Button>
       );
     }

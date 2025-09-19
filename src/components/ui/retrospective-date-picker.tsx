@@ -1,16 +1,15 @@
 "use client";
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
+  Button,
+  Input,
   VStack,
   Text,
-  Input,
-  Button,
   Flex,
   Box,
 } from '@chakra-ui/react';
 import { format, isAfter, isBefore } from 'date-fns';
-import { da } from 'date-fns/locale';
 
 interface RetrospectiveDatePickerProps {
   selectedDate: Date;
@@ -79,7 +78,7 @@ export function RetrospectiveDatePicker({
         <Input
           type="date"
           value={dateInput}
-          onChange={(e) => handleDateInputChange(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleDateInputChange(e.target.value)}
           min={format(minDate, 'yyyy-MM-dd')}
           max={format(today, 'yyyy-MM-dd')}
           size="md"

@@ -7,7 +7,6 @@ import {
   VStack,
   Text,
   Flex,
-  Box,
 } from '@chakra-ui/react';
 import { format, isAfter, isBefore } from 'date-fns';
 import { da } from 'date-fns/locale';

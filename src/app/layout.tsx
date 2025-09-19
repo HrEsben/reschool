@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Provider } from "@/components/ui/provider";
 import RisingFooter from "@/components/ui/rising-footer";
+import { ClientMobileCacheFix } from "@/components/mobile/client-mobile-cache-fix";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,6 +44,15 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="light">
       <head>
+        {/* Cache busting and mobile optimization */}
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Pragma" content="no-cache" />
+        <meta httpEquiv="Expires" content="0" />
+        <meta name="cache-version" content="1.0.0" />
+        
+        {/* PWA Manifest */}
+        <link rel="manifest" href="/site.webmanifest" />
+        
         {/* DNS prefetch for external domains */}
         <link rel="dns-prefetch" href="//api.stackframe.co" />
         <link rel="dns-prefetch" href="//api.stack-auth.com" />
@@ -68,20 +78,22 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Provider>
-          <StackProvider app={stackServerApp}>
-            <StackTheme>
-              <div style={{ 
-                position: 'relative', 
-                zIndex: 10, 
-                borderBottom: '1px solid #e5e5e5',
-                backgroundColor: '#fdfcf8', // Eggshell background for content
-                minHeight: '100vh'
-              }}>
-                {children}
-              </div>
-              <RisingFooter />
-            </StackTheme>
-          </StackProvider>
+          <ClientMobileCacheFix>
+            <StackProvider app={stackServerApp}>
+              <StackTheme>
+                <div style={{ 
+                  position: 'relative', 
+                  zIndex: 10, 
+                  borderBottom: '1px solid #e5e5e5',
+                  backgroundColor: '#fdfcf8', // Eggshell background for content
+                  minHeight: '100vh'
+                }}>
+                  {children}
+                </div>
+                <RisingFooter />
+              </StackTheme>
+            </StackProvider>
+          </ClientMobileCacheFix>
         </Provider>
       </body>
     </html>
