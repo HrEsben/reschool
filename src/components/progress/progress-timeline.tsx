@@ -68,6 +68,22 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
       return 'Ugyldig dato';
     }
   };
+  
+  const formatDateRange = (startDate: string | null, endDate: string | null, durationDays?: number | null) => {
+    if (!startDate && !endDate) {
+      return 'Ingen datoer angivet';
+    }
+    
+    const start = startDate ? formatDate(startDate) : 'Start ikke angivet';
+    const end = endDate ? formatDate(endDate) : 'Igangværende';
+    
+    if (durationDays !== null && durationDays !== undefined) {
+      const dayText = durationDays === 1 ? 'dag' : 'dage';
+      return `${start} - ${end} (${durationDays} ${dayText})`;
+    }
+    
+    return `${start} - ${end}`;
+  };
 
   const getEntryDisplayData = (entry: ProgressEntry): {
     icon: string;
@@ -286,13 +302,17 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                                 </Box>
                               )}
 
-                              <HStack gap={4} fontSize="xs" color="gray.500">
-                                {step.timePerriod.startDate && (
-                                  <Text>Start: {formatDate(step.timePerriod.startDate)}</Text>
-                                )}
-                                {step.timePerriod.endDate && (
-                                  <Text>Slut: {formatDate(step.timePerriod.endDate)}</Text>
-                                )}
+                              <HStack gap={4} fontSize="xs" color="gray.500" wrap="wrap">
+                                {/* Date Range Badge */}
+                                <Badge
+                                  colorPalette={step.isCompleted ? 'sage' : 'navy'}
+                                  size="sm"
+                                  px={3}
+                                  py={1}
+                                >
+                                  📅 {formatDateRange(step.timePerriod.startDate, step.timePerriod.endDate, step.durationDays)}
+                                </Badge>
+                                
                                 {step.completedAt && (
                                   <Text>Afsluttet: {formatDateTime(step.completedAt)}</Text>
                                 )}

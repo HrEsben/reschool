@@ -184,6 +184,20 @@ export interface IndsatstrappePlan extends Indsatstrappe {
   createdByName?: string;
 }
 
+// Step period tracking - records when a step was active
+export interface IndsatsStepPeriod {
+  id: number;
+  stepId: number;
+  startDate: string; // When this period started
+  endDate?: string; // When this period ended (undefined means currently active)
+  activatedBy?: number;
+  deactivatedBy?: number;
+  activatedByName?: string;
+  deactivatedByName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface IndsatsSteps {
   id: number;
   indsatstrapeId: number;
@@ -199,6 +213,8 @@ export interface IndsatsSteps {
   completedByName?: string;
   createdAt: string;
   updatedAt: string;
+  // Array of all periods when this step was active
+  activePeriods?: IndsatsStepPeriod[];
 }
 
 export interface IndsatsStepsWithEntries extends IndsatsSteps {
@@ -2872,7 +2888,7 @@ export async function getIndsatsStepsForPlan(planId: number): Promise<IndsatsSte
       [planId]
     );
 
-    return result.rows.map(row => ({
+    const steps = result.rows.map(row => ({
       id: row.id,
       indsatstrapeId: row.indsatstrappe_id,
       stepNumber: row.step_number,
@@ -2888,9 +2904,175 @@ export async function getIndsatsStepsForPlan(planId: number): Promise<IndsatsSte
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString()
     }));
+    
+    // Get periods for all steps
+    const stepIds = steps.map(step => step.id);
+    const periodsByStep = await getPeriodsForSteps(stepIds);
+    
+    // Add periods to each step
+    return steps.map(step => ({
+      ...step,
+      activePeriods: periodsByStep[step.id] || []
+    }));
   } catch (error) {
     console.error('Error fetching indsats steps for plan:', error);
     return [];
+  }
+}
+
+// Get all periods for a step
+export async function getStepPeriods(stepId: number): Promise<IndsatsStepPeriod[]> {
+  try {
+    const result = await query(`
+      SELECT 
+        sp.*,
+        u1.display_name as activated_by_name,
+        u2.display_name as deactivated_by_name
+      FROM indsatstrappe_step_periods sp
+      LEFT JOIN users u1 ON sp.activated_by = u1.id
+      LEFT JOIN users u2 ON sp.deactivated_by = u2.id
+      WHERE sp.step_id = $1
+      ORDER BY sp.start_date ASC
+    `, [stepId]);
+
+    return result.rows.map(row => ({
+      id: row.id,
+      stepId: row.step_id,
+      startDate: new Date(row.start_date).toISOString(),
+      endDate: row.end_date ? new Date(row.end_date).toISOString() : undefined,
+      activatedBy: row.activated_by,
+      deactivatedBy: row.deactivated_by,
+      activatedByName: row.activated_by_name,
+      deactivatedByName: row.deactivated_by_name,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    }));
+  } catch (error) {
+    console.error('Error fetching step periods:', error);
+    return [];
+  }
+}
+
+// Get periods for multiple steps
+export async function getPeriodsForSteps(stepIds: number[]): Promise<{ [stepId: number]: IndsatsStepPeriod[] }> {
+  if (stepIds.length === 0) return {};
+  
+  try {
+    const result = await query(`
+      SELECT 
+        sp.*,
+        u1.display_name as activated_by_name,
+        u2.display_name as deactivated_by_name
+      FROM indsatstrappe_step_periods sp
+      LEFT JOIN users u1 ON sp.activated_by = u1.id
+      LEFT JOIN users u2 ON sp.deactivated_by = u2.id
+      WHERE sp.step_id = ANY($1)
+      ORDER BY sp.step_id, sp.start_date ASC
+    `, [stepIds]);
+
+    const periodsByStep: { [stepId: number]: IndsatsStepPeriod[] } = {};
+    
+    for (const row of result.rows) {
+      const stepId = row.step_id;
+      if (!periodsByStep[stepId]) {
+        periodsByStep[stepId] = [];
+      }
+      
+      periodsByStep[stepId].push({
+        id: row.id,
+        stepId: row.step_id,
+        startDate: new Date(row.start_date).toISOString(),
+        endDate: row.end_date ? new Date(row.end_date).toISOString() : undefined,
+        activatedBy: row.activated_by,
+        deactivatedBy: row.deactivated_by,
+        activatedByName: row.activated_by_name,
+        deactivatedByName: row.deactivated_by_name,
+        createdAt: new Date(row.created_at).toISOString(),
+        updatedAt: new Date(row.updated_at).toISOString()
+      });
+    }
+    
+    return periodsByStep;
+  } catch (error) {
+    console.error('Error fetching periods for steps:', error);
+    return {};
+  }
+}
+
+// Create a new step period (when step becomes active)
+export async function createStepPeriod(
+  stepId: number, 
+  activatedBy: number,
+  startDate?: Date
+): Promise<IndsatsStepPeriod | null> {
+  try {
+    // First, end any currently active period for this step
+    await query(`
+      UPDATE indsatstrappe_step_periods 
+      SET end_date = NOW(), deactivated_by = $2, updated_at = NOW()
+      WHERE step_id = $1 AND end_date IS NULL
+    `, [stepId, activatedBy]);
+    
+    // Create new active period
+    const result = await query(`
+      INSERT INTO indsatstrappe_step_periods (step_id, start_date, activated_by)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [stepId, startDate || new Date(), activatedBy]);
+    
+    if (result.rows.length === 0) {
+      return null;
+    }
+    
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      stepId: row.step_id,
+      startDate: new Date(row.start_date).toISOString(),
+      endDate: row.end_date ? new Date(row.end_date).toISOString() : undefined,
+      activatedBy: row.activated_by,
+      deactivatedBy: row.deactivated_by,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error creating step period:', error);
+    return null;
+  }
+}
+
+// End the current active period for a step
+export async function endStepPeriod(
+  stepId: number,
+  deactivatedBy: number,
+  endDate?: Date
+): Promise<IndsatsStepPeriod | null> {
+  try {
+    const result = await query(`
+      UPDATE indsatstrappe_step_periods 
+      SET end_date = $3, deactivated_by = $2, updated_at = NOW()
+      WHERE step_id = $1 AND end_date IS NULL
+      RETURNING *
+    `, [stepId, deactivatedBy, endDate || new Date()]);
+    
+    if (result.rows.length === 0) {
+      return null;
+    }
+    
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      stepId: row.step_id,
+      startDate: new Date(row.start_date).toISOString(),
+      endDate: row.end_date ? new Date(row.end_date).toISOString() : undefined,
+      activatedBy: row.activated_by,
+      deactivatedBy: row.deactivated_by,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error ending step period:', error);
+    return null;
   }
 }
 
@@ -2957,6 +3139,9 @@ export async function completeIndsatsStep(
       return null;
     }
 
+    // End the current active period for this step
+    await endStepPeriod(stepId, completedBy);
+
     const row = result.rows[0];
     return {
       id: row.id,
@@ -2981,7 +3166,8 @@ export async function completeIndsatsStep(
 
 // Mark a step as incomplete (go back functionality)
 export async function markIndsatsStepIncomplete(
-  stepId: number
+  stepId: number,
+  uncompletedBy: number
 ): Promise<IndsatsSteps | null> {
   try {
     const result = await query(
@@ -2995,6 +3181,9 @@ export async function markIndsatsStepIncomplete(
     if (result.rows.length === 0) {
       return null;
     }
+
+    // Create a new active period for this step (step back means the step becomes active again)
+    await createStepPeriod(stepId, uncompletedBy);
 
     const row = result.rows[0];
     return {
@@ -3459,38 +3648,91 @@ function groupEntriesByStepTiming(
 ): StepWithGroupedEntries[] {
   const groupedSteps: StepWithGroupedEntries[] = [];
   
+  console.log('=== GROUP ENTRIES BY STEP TIMING DEBUG (Using Periods) ===');
+  console.log(`Total steps: ${steps.length}, Total entries: ${allEntries.length}`);
+  
   // Sort steps by step number
   const sortedSteps = [...steps].sort((a, b) => a.stepNumber - b.stepNumber);
   
-  for (let i = 0; i < sortedSteps.length; i++) {
-    const step = sortedSteps[i];
-    const nextStep = sortedSteps[i + 1];
+  // If we have no steps, return empty
+  if (sortedSteps.length === 0) {
+    console.log('No steps found, returning empty array');
+    return [];
+  }
+  
+  for (const step of sortedSteps) {
+    console.log(`\n--- Processing Step ${step.stepNumber} ---`);
+    console.log(`Step has ${step.activePeriods?.length || 0} periods`);
     
-    // Determine the time period for this step
-    const stepStartDate = step.startDate ? new Date(step.startDate) : null;
-    const stepEndDate = step.completedAt ? new Date(step.completedAt) : 
-                       (nextStep?.startDate ? new Date(nextStep.startDate) : null);
+    // Get all periods for this step
+    const periods = step.activePeriods || [];
     
-    // Find entries that fall within this step's time period
+    // Log each period
+    periods.forEach((period, index) => {
+      console.log(`  Period ${index + 1}: ${period.startDate} to ${period.endDate || 'ongoing'}`);
+    });
+    
+    // Find entries that fall within any of the step's active periods
     const stepEntries = allEntries.filter(entry => {
       const entryDate = new Date(entry.createdAt);
       
-      // If no start date, include entries from the beginning
-      const afterStart = !stepStartDate || entryDate >= stepStartDate;
+      // Check if entry falls within any period for this step
+      const isInAnyPeriod = periods.some(period => {
+        const periodStart = new Date(period.startDate);
+        const periodEnd = period.endDate ? new Date(period.endDate) : null;
+        
+        const afterStart = entryDate >= periodStart;
+        const beforeEnd = !periodEnd || entryDate <= periodEnd;
+        
+        const isInThisPeriod = afterStart && beforeEnd;
+        
+        if (isInThisPeriod) {
+          console.log(`  Entry ${entry.id} (${entry.toolType}) at ${entryDate.toISOString()} matches period: ${period.startDate} to ${period.endDate || 'ongoing'}`);
+        }
+        
+        return isInThisPeriod;
+      });
       
-      // If no end date (current step), include entries up to now
-      const beforeEnd = !stepEndDate || entryDate < stepEndDate;
-      
-      return afterStart && beforeEnd;
+      return isInAnyPeriod;
     });
+    
+    console.log(`Step ${step.stepNumber} matched ${stepEntries.length} entries across ${periods.length} periods`);
+    
+    // Calculate overall time range and total duration
+    let overallStartDate: string | null = null;
+    let overallEndDate: string | null = null;
+    let totalDurationDays: number | null = null;
+    
+    if (periods.length > 0) {
+      // Overall start is the earliest period start
+      overallStartDate = periods.reduce((earliest, period) => {
+        return !earliest || period.startDate < earliest ? period.startDate : earliest;
+      }, null as string | null);
+      
+      // Overall end is the latest period end (or null if any period is ongoing)
+      const hasOngoingPeriod = periods.some(p => !p.endDate);
+      if (!hasOngoingPeriod) {
+        overallEndDate = periods.reduce((latest, period) => {
+          return !latest || !period.endDate || period.endDate > latest ? period.endDate : latest;
+        }, null as string | null);
+      }
+      
+      // Calculate total duration across all periods
+      if (overallStartDate) {
+        const startDate = new Date(overallStartDate);
+        const endDate = overallEndDate ? new Date(overallEndDate) : new Date();
+        totalDurationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      }
+    }
     
     groupedSteps.push({
       ...step,
       groupedEntries: stepEntries,
       timePerriod: {
-        startDate: stepStartDate?.toISOString() || null,
-        endDate: stepEndDate?.toISOString() || null
-      }
+        startDate: overallStartDate,
+        endDate: overallEndDate
+      },
+      durationDays: totalDurationDays
     });
   }
   
@@ -3515,6 +3757,7 @@ export interface StepWithGroupedEntries extends IndsatsStepsWithEntries {
     startDate: string | null;
     endDate: string | null;
   };
+  durationDays?: number | null;
 }
 
 export interface ProgressEntry {

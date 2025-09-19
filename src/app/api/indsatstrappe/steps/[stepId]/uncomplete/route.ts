@@ -29,7 +29,7 @@ export async function POST(
     }
 
     // Mark the step as incomplete
-    const uncompletedStep = await markIndsatsStepIncomplete(stepId);
+    const uncompletedStep = await markIndsatsStepIncomplete(stepId, dbUser.id);
 
     if (!uncompletedStep) {
       return NextResponse.json({ error: 'Step not found' }, { status: 404 });
