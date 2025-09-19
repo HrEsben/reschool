@@ -70,6 +70,8 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
   };
   
   const formatDateRange = (startDate: string | null, endDate: string | null, durationDays?: number | null) => {
+    console.log('formatDateRange called with:', { startDate, endDate, durationDays });
+    
     if (!startDate && !endDate) {
       return 'Ingen datoer angivet';
     }
@@ -254,6 +256,8 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                   const hasEntries = step.groupedEntries.length > 0;
                   const isCurrentStep = index === (plan.currentStepIndex || 0);
 
+                  console.log(`Step ${step.stepNumber} timePerriod:`, step.timePerriod);
+
                   return (
                     <Timeline.Item key={step.id}>
                       <Timeline.Indicator 
@@ -302,6 +306,55 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                                 </Box>
                               )}
 
+                              {/* Inline Emoji Timeline */}
+                              {hasEntries && (
+                                <Box
+                                  bg="cream.25"
+                                  p={3}
+                                  borderRadius="md"
+                                  border="1px solid"
+                                  borderColor="cream.200"
+                                >
+                                  <Text fontSize="xs" color="gray.600" mb={2} fontWeight="medium">
+                                    Registreringer ({step.groupedEntries.length})
+                                  </Text>
+                                  <HStack gap={2} wrap="wrap">
+                                    {step.groupedEntries.map((entry: ProgressEntry) => {
+                                      const displayData = getEntryDisplayData(entry);
+                                      
+                                      return (
+                                        <Box
+                                          key={`${entry.toolType}-${entry.id}-inline`}
+                                          position="relative"
+                                          display="inline-flex"
+                                          alignItems="center"
+                                          justifyContent="center"
+                                          w="32px"
+                                          h="32px"
+                                          bg="white"
+                                          borderRadius="full"
+                                          border="2px solid"
+                                          borderColor={displayData.color === 'navy' ? 'navy.200' : 
+                                                      displayData.color === 'sage' ? 'sage.200' : 'gray.200'}
+                                          cursor="pointer"
+                                          title={`${displayData.title} - ${formatDateTime(entry.createdAt)}`}
+                                          _hover={{
+                                            transform: 'scale(1.1)',
+                                            borderColor: displayData.color === 'navy' ? 'navy.400' : 
+                                                        displayData.color === 'sage' ? 'sage.400' : 'gray.400'
+                                          }}
+                                          transition="all 0.2s"
+                                        >
+                                          <Text fontSize="lg" lineHeight="1">
+                                            {displayData.icon}
+                                          </Text>
+                                        </Box>
+                                      );
+                                    })}
+                                  </HStack>
+                                </Box>
+                              )}
+
                               <HStack gap={4} fontSize="xs" color="gray.500" wrap="wrap">
                                 {/* Date Range Badge */}
                                 <Badge
@@ -331,7 +384,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                             )}
                           </HStack>
 
-                          {/* Grouped Entries */}
+                          {/* Detailed Entries View */}
                           {hasEntries && isExpanded && (
                             <Box
                               mt={4}
@@ -342,7 +395,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                               borderColor="cream.200"
                             >
                               <Text fontSize="sm" fontWeight="medium" color="navy.700" mb={3}>
-                                Registreringer i denne periode ({step.groupedEntries.length})
+                                Detaljeret oversigt ({step.groupedEntries.length} registreringer)
                               </Text>
                               
                               <VStack gap={3} align="stretch">
@@ -351,7 +404,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                                   
                                   return (
                                     <Box
-                                      key={`${entry.toolType}-${entry.id}`}
+                                      key={`${entry.toolType}-${entry.id}-detailed`}
                                       p={3}
                                       bg="white"
                                       borderRadius="md"
@@ -386,14 +439,6 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                                   );
                                 })}
                               </VStack>
-                            </Box>
-                          )}
-
-                          {hasEntries && !isExpanded && (
-                            <Box mt={3}>
-                              <Text fontSize="xs" color="gray.500">
-                                {step.groupedEntries.length} registreringer i denne periode - klik for at vise
-                              </Text>
                             </Box>
                           )}
                         </Box>
