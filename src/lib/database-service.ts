@@ -3526,12 +3526,12 @@ export async function getAllToolEntriesForChild(childId: number): Promise<Progre
     // Get dagens smiley entries
     const smileyResult = await query(`
       SELECT 
-        dse.id, dse.dagens_smiley_id as tool_id, dse.recorded_by, dse.entry_date,
-        dse.smiley_value, dse.comment, dse.created_at, dse.updated_at,
+        dse.id, dse.smiley_id as tool_id, dse.recorded_by, dse.entry_date,
+        dse.selected_emoji, dse.reasoning, dse.created_at, dse.updated_at,
         ds.topic,
         u.display_name as recorded_by_name
       FROM dagens_smiley_entries dse
-      JOIN dagens_smiley ds ON dse.dagens_smiley_id = ds.id
+      JOIN dagens_smiley ds ON dse.smiley_id = ds.id
       LEFT JOIN users u ON dse.recorded_by = u.id
       WHERE ds.child_id = $1
       ORDER BY dse.created_at DESC
@@ -3548,8 +3548,8 @@ export async function getAllToolEntriesForChild(childId: number): Promise<Progre
         recordedBy: row.recorded_by,
         recordedByName: row.recorded_by_name,
         data: {
-          smileyValue: row.smiley_value,
-          comment: row.comment
+          smileyValue: row.selected_emoji,
+          comment: row.reasoning
         }
       });
     }
@@ -3558,9 +3558,9 @@ export async function getAllToolEntriesForChild(childId: number): Promise<Progre
     const sengetiderResult = await query(`
       SELECT 
         se.id, se.sengetider_id as tool_id, se.recorded_by, se.entry_date,
-        se.bedtime, se.sleep_time, se.wake_time, se.sleep_quality, se.comment,
+        se.puttetid, se.sov_kl, se.vaagnede, se.notes,
         se.created_at, se.updated_at,
-        s.title as topic,
+        s.description as topic,
         u.display_name as recorded_by_name
       FROM sengetider_entries se
       JOIN sengetider s ON se.sengetider_id = s.id
@@ -3580,11 +3580,11 @@ export async function getAllToolEntriesForChild(childId: number): Promise<Progre
         recordedBy: row.recorded_by,
         recordedByName: row.recorded_by_name,
         data: {
-          bedtime: row.bedtime,
-          sleepTime: row.sleep_time,
-          wakeTime: row.wake_time,
-          sleepQuality: row.sleep_quality,
-          comment: row.comment
+          bedtime: row.puttetid,
+          sleepTime: row.sov_kl,
+          wakeTime: row.vaagnede,
+          sleepQuality: null, // Not available in current schema
+          comment: row.notes
         }
       });
     }
@@ -3672,28 +3672,72 @@ function groupEntriesByStepTiming(
       console.log(`  Period ${index + 1}: ${period.startDate} to ${period.endDate || 'ongoing'}`);
     });
     
-    // Find entries that fall within any of the step's active periods
+    // Find entries that fall within any of the step's active periods OR distribute them intelligently
     const stepEntries = allEntries.filter(entry => {
+      // Only include barometer and dagens smiley entries (exclude sengetider)
+      if (entry.toolType === 'sengetider') {
+        return false;
+      }
+      
       const entryDate = new Date(entry.createdAt);
       
-      // Check if entry falls within any period for this step
-      const isInAnyPeriod = periods.some(period => {
-        const periodStart = new Date(period.startDate);
-        const periodEnd = period.endDate ? new Date(period.endDate) : null;
+      // First, try to match against specific periods if they exist
+      if (periods.length > 0) {
+        const isInAnyPeriod = periods.some(period => {
+          const periodStart = new Date(period.startDate);
+          const periodEnd = period.endDate ? new Date(period.endDate) : null;
+          
+          const afterStart = entryDate >= periodStart;
+          const beforeEnd = !periodEnd || entryDate <= periodEnd;
+          
+          const isInThisPeriod = afterStart && beforeEnd;
+          
+          if (isInThisPeriod) {
+            console.log(`  Entry ${entry.id} (${entry.toolType}) at ${entryDate.toISOString()} matches period: ${period.startDate} to ${period.endDate || 'ongoing'}`);
+          }
+          
+          return isInThisPeriod;
+        });
         
-        const afterStart = entryDate >= periodStart;
-        const beforeEnd = !periodEnd || entryDate <= periodEnd;
+        return isInAnyPeriod;
+      } else {
+        // Fallback: Use step's own date range if no periods are defined
+        const stepStart = step.startDate ? new Date(step.startDate) : null;
+        const stepEnd = step.targetEndDate ? new Date(step.targetEndDate) : null;
         
-        const isInThisPeriod = afterStart && beforeEnd;
-        
-        if (isInThisPeriod) {
-          console.log(`  Entry ${entry.id} (${entry.toolType}) at ${entryDate.toISOString()} matches period: ${period.startDate} to ${period.endDate || 'ongoing'}`);
+        if (stepStart || stepEnd) {
+          const afterStart = !stepStart || entryDate >= stepStart;
+          const beforeEnd = !stepEnd || entryDate <= stepEnd;
+          
+          const isInStepRange = afterStart && beforeEnd;
+          
+          if (isInStepRange) {
+            console.log(`  Entry ${entry.id} (${entry.toolType}) at ${entryDate.toISOString()} matches step date range: ${step.startDate || 'no start'} to ${step.targetEndDate || 'no end'}`);
+          }
+          
+          return isInStepRange;
+        } else {
+          // Smart distribution: Show entries for current active step(s) only
+          // If step is completed, don't show entries unless it's the most recently completed step
+          // If step is not completed, show entries for the first non-completed step
+          const currentStepIndex = sortedSteps.findIndex(s => !s.isCompleted);
+          const currentStep = currentStepIndex >= 0 ? sortedSteps[currentStepIndex] : sortedSteps[sortedSteps.length - 1];
+          
+          // Also include the most recently completed step
+          const completedSteps = sortedSteps.filter(s => s.isCompleted);
+          const lastCompletedStep = completedSteps.length > 0 ? completedSteps[completedSteps.length - 1] : null;
+          
+          const isCurrentOrLastCompleted = step.id === currentStep.id || 
+                                         (lastCompletedStep && step.id === lastCompletedStep.id);
+          
+          if (isCurrentOrLastCompleted) {
+            console.log(`  Entry ${entry.id} (${entry.toolType}) included for ${step.id === currentStep.id ? 'current' : 'last completed'} step ${step.stepNumber}`);
+            return true;
+          }
+          
+          return false;
         }
-        
-        return isInThisPeriod;
-      });
-      
-      return isInAnyPeriod;
+      }
     });
     
     console.log(`Step ${step.stepNumber} matched ${stepEntries.length} entries across ${periods.length} periods`);
@@ -3705,15 +3749,16 @@ function groupEntriesByStepTiming(
     
     if (periods.length > 0) {
       // Overall start is the earliest period start
-      overallStartDate = periods.reduce((earliest, period) => {
+      overallStartDate = periods.reduce((earliest: string | null, period) => {
         return !earliest || period.startDate < earliest ? period.startDate : earliest;
       }, null as string | null);
       
       // Overall end is the latest period end (or null if any period is ongoing)
       const hasOngoingPeriod = periods.some(p => !p.endDate);
       if (!hasOngoingPeriod) {
-        overallEndDate = periods.reduce((latest, period) => {
-          return !latest || !period.endDate || period.endDate > latest ? period.endDate : latest;
+        overallEndDate = periods.reduce((latest: string | null, period) => {
+          const periodEndDate = period.endDate || null;
+          return !latest || !periodEndDate || periodEndDate > latest ? periodEndDate : latest;
         }, null as string | null);
       }
       
@@ -3724,6 +3769,7 @@ function groupEntriesByStepTiming(
         totalDurationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
       }
     }
+    // Note: No fallback to plan dates - if steps have no periods, they show "Ingen datoer angivet"
     
     groupedSteps.push({
       ...step,

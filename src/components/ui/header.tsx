@@ -57,6 +57,24 @@ export const Header = memo(function Header() {
       } else if (pathname?.startsWith('/users/')) {
         // User profile page (e.g., /users/esben-stephansen)
         crumbs.push({ label: user?.displayName || "Bruger", href: pathname });
+      } else if (pathname?.match(/^\/[^\/]+\/progress$/)) {
+        // Child progress page (e.g., /hanne/progress)
+        const slug = pathname.split('/')[1]; // Extract slug from /slug/progress
+        
+        try {
+          const response = await fetch(`/api/children/slug/${slug}`);
+          if (response.ok) {
+            const childData = await response.json();
+            crumbs.push({ label: "Børn", href: "/dashboard" });
+            crumbs.push({ label: childData.child.name, href: `/${slug}` });
+            crumbs.push({ label: "Fremdrift", href: pathname });
+          } else {
+            crumbs.push({ label: "Børn", href: "/dashboard" });
+          }
+        } catch (error) {
+          console.error('Error fetching child data for breadcrumb:', error);
+          crumbs.push({ label: "Børn", href: "/dashboard" });
+        }
       } else if (pathname?.match(/^\/[^\/]+$/)) {
         // Child profile page (e.g., /mads, /hilda)
         const slug = pathname.slice(1); // Remove leading slash
