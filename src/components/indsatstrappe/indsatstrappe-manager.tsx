@@ -247,8 +247,7 @@ export function IndsatsrappeManager({
                 Ingen aktiv indsatstrappe
               </Text>
               <Text color="fg.muted" fontSize="sm">
-                En indsatstrappe er en struktureret handlingsplan med trin, der viser vejen mod et mål.
-                Værktøjsregistreringer kan knyttes til de aktive trin for at give kontekst.
+                En indsatstrappe viser vejen mod et bestemt mål. Trappen består af trin, som gør det overskueligt for barnet at fuldføre.
               </Text>
               
               {isUserAdmin && (
@@ -261,7 +260,7 @@ export function IndsatsrappeManager({
                       mt={2}
                     >
                       <AddIcon />
-                      Opret første indsatstrappe
+                      Opret indsatstrappe
                     </Button>
                   }
                   childId={childId}
