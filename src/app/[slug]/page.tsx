@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useUser } from '@stackframe/stack';
 import {
   Box,
@@ -417,22 +418,39 @@ export default function ChildSlugPage() {
                 </Heading>
               </HStack>
               
-              {/* Add Tool Button in header */}
-              {isCurrentUserAdmin && (
-                <Button
-                  bg="#81b29a"
-                  color="white"
-                  size="md"
-                  _hover={{
-                    bg: "#6a9b82"
-                  }}
-                  onClick={() => {
-                    toolsManagerRef.current?.openAddDialog();
-                  }}
-                >
-                  Tilføj +
-                </Button>
-              )}
+              {/* Action buttons in header */}
+              <HStack gap={3}>
+                {/* Progress View Button */}
+                <Link href={`/${childData.child.slug}/progress`}>
+                  <Button
+                    bg="sage.500"
+                    color="white"
+                    size="md"
+                    _hover={{
+                      bg: "sage.600"
+                    }}
+                  >
+                    📊 Fremdrift
+                  </Button>
+                </Link>
+                
+                {/* Add Tool Button */}
+                {isCurrentUserAdmin && (
+                  <Button
+                    bg="#81b29a"
+                    color="white"
+                    size="md"
+                    _hover={{
+                      bg: "#6a9b82"
+                    }}
+                    onClick={() => {
+                      toolsManagerRef.current?.openAddDialog();
+                    }}
+                  >
+                    Tilføj +
+                  </Button>
+                )}
+              </HStack>
             </HStack>
             <Box className="w-20 h-1 bg-sunset-500 rounded-full"></Box>
           </VStack>

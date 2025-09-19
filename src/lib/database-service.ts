@@ -875,6 +875,35 @@ export async function isUserAdministratorForChild(userId: number, childId: numbe
   }
 }
 
+// Get user-child relation to check access
+export async function getUserChildRelation(userId: number, childId: number): Promise<UserChildRelation | null> {
+  try {
+    const result = await query(
+      'SELECT * FROM user_child_relations WHERE user_id = $1 AND child_id = $2',
+      [userId, childId]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      userId: row.user_id,
+      childId: row.child_id,
+      relation: row.relation,
+      customRelationName: row.custom_relation_name,
+      isAdministrator: row.is_administrator,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  } catch (error) {
+    console.error('Error fetching user-child relation:', error);
+    return null;
+  }
+}
+
 export async function deleteChild(childId: number, requestingUserId: number): Promise<boolean> {
   const client = await getClient();
   
@@ -3222,4 +3251,280 @@ export async function deleteIndsatsStep(id: number): Promise<boolean> {
     console.error('Error deleting indsats step:', error);
     return false;
   }
+}
+
+// PROGRESS VIEW FUNCTIONS
+// Get progress data for a child - includes all indsatstrappe plans, steps, and tool entries grouped by timing
+export async function getProgressDataForChild(
+  childId: number,
+  userId?: number
+): Promise<ProgressData | null> {
+  try {
+    // Get all indsatstrappe plans for this child
+    const plans = await getIndsatsrappeForChild(childId, userId);
+    
+    if (plans.length === 0) {
+      return null;
+    }
+
+    // Get all tool entries for this child with timing information
+    const allEntries = await getAllToolEntriesForChild(childId);
+    
+    // For each plan, get steps with their linked tool entries
+    const progressPlans: ProgressPlan[] = [];
+    
+    for (const plan of plans) {
+      const stepsWithEntries = await getStepsWithEntriesForPlan(plan.id);
+      
+      // Group remaining tool entries by timing relative to step periods
+      const groupedEntries = groupEntriesByStepTiming(stepsWithEntries, allEntries);
+      
+      progressPlans.push({
+        ...plan,
+        stepsWithEntries: groupedEntries,
+        totalEntries: allEntries.length
+      });
+    }
+    
+    return {
+      childId,
+      plans: progressPlans,
+      totalEntries: allEntries.length
+    };
+  } catch (error) {
+    console.error('Error fetching progress data:', error);
+    return null;
+  }
+}
+
+// Get all tool entries for a child across all tools
+export async function getAllToolEntriesForChild(childId: number): Promise<ProgressEntry[]> {
+  try {
+    const entries: ProgressEntry[] = [];
+    
+    // Get barometer entries
+    const barometerResult = await query(`
+      SELECT 
+        be.id, be.barometer_id as tool_id, be.recorded_by, be.entry_date, 
+        be.rating, be.comment, be.created_at, be.updated_at,
+        b.topic, b.display_type,
+        u.display_name as recorded_by_name
+      FROM barometer_entries be
+      JOIN barometers b ON be.barometer_id = b.id
+      LEFT JOIN users u ON be.recorded_by = u.id
+      WHERE b.child_id = $1
+      ORDER BY be.created_at DESC
+    `, [childId]);
+    
+    for (const row of barometerResult.rows) {
+      entries.push({
+        id: row.id,
+        toolId: row.tool_id,
+        toolType: 'barometer',
+        toolTopic: row.topic,
+        entryDate: row.entry_date,
+        createdAt: new Date(row.created_at).toISOString(),
+        recordedBy: row.recorded_by,
+        recordedByName: row.recorded_by_name,
+        data: {
+          rating: row.rating,
+          comment: row.comment,
+          displayType: row.display_type
+        }
+      });
+    }
+    
+    // Get dagens smiley entries
+    const smileyResult = await query(`
+      SELECT 
+        dse.id, dse.dagens_smiley_id as tool_id, dse.recorded_by, dse.entry_date,
+        dse.smiley_value, dse.comment, dse.created_at, dse.updated_at,
+        ds.topic,
+        u.display_name as recorded_by_name
+      FROM dagens_smiley_entries dse
+      JOIN dagens_smiley ds ON dse.dagens_smiley_id = ds.id
+      LEFT JOIN users u ON dse.recorded_by = u.id
+      WHERE ds.child_id = $1
+      ORDER BY dse.created_at DESC
+    `, [childId]);
+    
+    for (const row of smileyResult.rows) {
+      entries.push({
+        id: row.id,
+        toolId: row.tool_id,
+        toolType: 'dagens-smiley',
+        toolTopic: row.topic,
+        entryDate: row.entry_date,
+        createdAt: new Date(row.created_at).toISOString(),
+        recordedBy: row.recorded_by,
+        recordedByName: row.recorded_by_name,
+        data: {
+          smileyValue: row.smiley_value,
+          comment: row.comment
+        }
+      });
+    }
+    
+    // Get sengetider entries
+    const sengetiderResult = await query(`
+      SELECT 
+        se.id, se.sengetider_id as tool_id, se.recorded_by, se.entry_date,
+        se.bedtime, se.sleep_time, se.wake_time, se.sleep_quality, se.comment,
+        se.created_at, se.updated_at,
+        s.title as topic,
+        u.display_name as recorded_by_name
+      FROM sengetider_entries se
+      JOIN sengetider s ON se.sengetider_id = s.id
+      LEFT JOIN users u ON se.recorded_by = u.id
+      WHERE s.child_id = $1
+      ORDER BY se.created_at DESC
+    `, [childId]);
+    
+    for (const row of sengetiderResult.rows) {
+      entries.push({
+        id: row.id,
+        toolId: row.tool_id,
+        toolType: 'sengetider',
+        toolTopic: row.topic,
+        entryDate: row.entry_date,
+        createdAt: new Date(row.created_at).toISOString(),
+        recordedBy: row.recorded_by,
+        recordedByName: row.recorded_by_name,
+        data: {
+          bedtime: row.bedtime,
+          sleepTime: row.sleep_time,
+          wakeTime: row.wake_time,
+          sleepQuality: row.sleep_quality,
+          comment: row.comment
+        }
+      });
+    }
+    
+    // Sort all entries by creation date
+    entries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    return entries;
+  } catch (error) {
+    console.error('Error fetching all tool entries:', error);
+    return [];
+  }
+}
+
+// Get steps with their linked tool entries for a plan
+export async function getStepsWithEntriesForPlan(planId: number): Promise<IndsatsStepsWithEntries[]> {
+  try {
+    const steps = await getIndsatsStepsForPlan(planId);
+    const stepsWithEntries: IndsatsStepsWithEntries[] = [];
+    
+    for (const step of steps) {
+      // Get linked entries for this step
+      const linkedResult = await query(`
+        SELECT 
+          ite.id, ite.indsatstrappe_step_id, ite.barometer_entry_id,
+          ite.dagens_smiley_entry_id, ite.sengetider_entry_id, ite.notes,
+          ite.created_at
+        FROM indsatstrappe_tool_entries ite
+        WHERE ite.indsatstrappe_step_id = $1
+        ORDER BY ite.created_at DESC
+      `, [step.id]);
+      
+      const linkedEntries: IndsatstrappePlanEntry[] = linkedResult.rows.map(row => ({
+        id: row.id,
+        indsatsStepId: row.indsatstrappe_step_id,
+        barometerEntryId: row.barometer_entry_id,
+        dagensSmileyEntryId: row.dagens_smiley_entry_id,
+        sengetiderEntryId: row.sengetider_entry_id,
+        notes: row.notes,
+        createdAt: new Date(row.created_at).toISOString()
+      }));
+      
+      stepsWithEntries.push({
+        ...step,
+        linkedEntries,
+        entryCount: linkedEntries.length
+      });
+    }
+    
+    return stepsWithEntries;
+  } catch (error) {
+    console.error('Error fetching steps with entries:', error);
+    return [];
+  }
+}
+
+// Group tool entries by step timing - entries are grouped with the step that was active when they were created
+function groupEntriesByStepTiming(
+  steps: IndsatsStepsWithEntries[], 
+  allEntries: ProgressEntry[]
+): StepWithGroupedEntries[] {
+  const groupedSteps: StepWithGroupedEntries[] = [];
+  
+  // Sort steps by step number
+  const sortedSteps = [...steps].sort((a, b) => a.stepNumber - b.stepNumber);
+  
+  for (let i = 0; i < sortedSteps.length; i++) {
+    const step = sortedSteps[i];
+    const nextStep = sortedSteps[i + 1];
+    
+    // Determine the time period for this step
+    const stepStartDate = step.startDate ? new Date(step.startDate) : null;
+    const stepEndDate = step.completedAt ? new Date(step.completedAt) : 
+                       (nextStep?.startDate ? new Date(nextStep.startDate) : null);
+    
+    // Find entries that fall within this step's time period
+    const stepEntries = allEntries.filter(entry => {
+      const entryDate = new Date(entry.createdAt);
+      
+      // If no start date, include entries from the beginning
+      const afterStart = !stepStartDate || entryDate >= stepStartDate;
+      
+      // If no end date (current step), include entries up to now
+      const beforeEnd = !stepEndDate || entryDate < stepEndDate;
+      
+      return afterStart && beforeEnd;
+    });
+    
+    groupedSteps.push({
+      ...step,
+      groupedEntries: stepEntries,
+      timePerriod: {
+        startDate: stepStartDate?.toISOString() || null,
+        endDate: stepEndDate?.toISOString() || null
+      }
+    });
+  }
+  
+  return groupedSteps;
+}
+
+// Progress data interfaces
+export interface ProgressData {
+  childId: number;
+  plans: ProgressPlan[];
+  totalEntries: number;
+}
+
+export interface ProgressPlan extends IndsatstrappePlan {
+  stepsWithEntries: StepWithGroupedEntries[];
+  totalEntries: number;
+}
+
+export interface StepWithGroupedEntries extends IndsatsStepsWithEntries {
+  groupedEntries: ProgressEntry[];
+  timePerriod: {
+    startDate: string | null;
+    endDate: string | null;
+  };
+}
+
+export interface ProgressEntry {
+  id: number;
+  toolId: number;
+  toolType: 'barometer' | 'dagens-smiley' | 'sengetider';
+  toolTopic: string;
+  entryDate: string;
+  createdAt: string;
+  recordedBy: number;
+  recordedByName?: string;
+  data: Record<string, unknown>;
 }

@@ -83,6 +83,7 @@ export const queryKeys = {
   indsatsplan: (id: number) => ['indsatstrappe', id] as const,
   indsatsSteps: (planId: number) => ['indsatstrappe', planId, 'steps'] as const,
   activeIndsatsplan: (childId: string) => ['children', childId, 'indsatstrappe', 'active'] as const,
+  progress: (childId: string) => ['children', childId, 'progress'] as const,
   sengetider: (childId: string) => ['children', childId, 'sengetider'] as const,
   sengetiderTool: (id: number) => ['sengetider', id] as const,
   sengetiderEntries: (sengetiderId: number) => ['sengetider', sengetiderId, 'entries'] as const,
@@ -154,6 +155,14 @@ const api = {
     }
     const data = await response.json();
     return data.sengetider || [];
+  },
+
+  async fetchProgress(childId: string) {
+    const response = await fetch(`/api/children/${childId}/progress`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch progress data');
+    }
+    return response.json();
   },
 
   async fetchDagensSmiley(childId: string): Promise<DagensSmiley[]> {
@@ -1134,6 +1143,19 @@ export function useDeleteSengetiderEntry() {
         queryKey: queryKeys.sengetiderTool(variables.sengetiderId) 
       });
     },
+  });
+}
+
+// ====================================================================
+// PROGRESS VIEW HOOKS
+// ====================================================================
+
+export function useProgress(childId: string) {
+  return useQuery({
+    queryKey: queryKeys.progress(childId),
+    queryFn: () => api.fetchProgress(childId),
+    enabled: !!childId,
+    staleTime: 1000 * 60 * 2, // Consider data fresh for 2 minutes (shorter than other tools since this aggregates data)
   });
 }
 
