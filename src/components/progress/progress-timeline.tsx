@@ -31,8 +31,13 @@ interface ExpandedSteps {
   [stepId: number]: boolean;
 }
 
+interface ExpandedDescriptions {
+  [stepId: number]: boolean;
+}
+
 export function ProgressTimeline({ childId }: ProgressTimelineProps) {
   const [expandedSteps, setExpandedSteps] = useState<ExpandedSteps>({});
+  const [expandedDescriptions, setExpandedDescriptions] = useState<ExpandedDescriptions>({});
   
   // Use React Query hook instead of manual fetch
   const { data: progressData, isLoading: loading, error: queryError } = useProgress(childId.toString());
@@ -42,6 +47,13 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
 
   const toggleStepExpansion = (stepId: number) => {
     setExpandedSteps(prev => ({
+      ...prev,
+      [stepId]: !prev[stepId]
+    }));
+  };
+
+  const toggleDescriptionExpansion = (stepId: number) => {
+    setExpandedDescriptions(prev => ({
       ...prev,
       [stepId]: !prev[stepId]
     }));
@@ -73,7 +85,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     console.log('formatDateRange called with:', { startDate, endDate, durationDays });
     
     if (!startDate && !endDate) {
-      return 'Ingen datoer angivet';
+      return null;
     }
     
     const start = startDate ? formatDate(startDate) : 'Start ikke angivet';
@@ -96,7 +108,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     switch (entry.toolType) {
       case 'barometer':
         return {
-          icon: '📊',
+          icon: String(entry.data.rating || '?'),
           title: `${entry.toolTopic}: ${entry.data.rating}`,
           subtitle: String(entry.data.comment || 'Ingen kommentar'),
           color: 'navy'
@@ -242,7 +254,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                   )}
                   <HStack gap={1}>
                     <Icon as={FaClipboardList} />
-                    <Text>{plan.stepsWithEntries.reduce((sum, step) => sum + step.groupedEntries.length, 0)} registreringer</Text>
+                    <Text>{plan.totalEntries} registreringer</Text>
                   </HStack>
                 </HStack>
               </Box>
@@ -286,23 +298,46 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                                 )}
                               </HStack>
                               
-                              {step.description && (
-                                <Text color="gray.600" fontSize="sm">
-                                  {step.description}
-                                </Text>
-                              )}
-
-                              {step.målsætning && (
-                                <Box
-                                  bg="navy.50"
-                                  p={3}
-                                  borderRadius="md"
-                                  borderLeft="4px solid"
-                                  borderColor="navy.200"
-                                >
-                                  <Text fontSize="sm" color="navy.700" fontWeight="medium">
-                                    Målsætning: {step.målsætning}
-                                  </Text>
+                              {(step.description || step.målsætning) && (
+                                <Box>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => toggleDescriptionExpansion(step.id)}
+                                    fontSize="xs"
+                                    color="gray.500"
+                                    p={1}
+                                    h="auto"
+                                    fontWeight="normal"
+                                  >
+                                    {expandedDescriptions[step.id] ? 'Skjul detaljer' : 'Vis detaljer'}
+                                    <Icon as={expandedDescriptions[step.id] ? IoChevronUp : IoChevronDown} ml={1} />
+                                  </Button>
+                                  
+                                  {expandedDescriptions[step.id] && (
+                                    <VStack align="start" mt={2} gap={2}>
+                                      {step.description && (
+                                        <Text color="gray.600" fontSize="sm">
+                                          {step.description}
+                                        </Text>
+                                      )}
+                                      
+                                      {step.målsætning && (
+                                        <Box
+                                          bg="navy.50"
+                                          p={3}
+                                          borderRadius="md"
+                                          borderLeft="4px solid"
+                                          borderColor="navy.200"
+                                          w="full"
+                                        >
+                                          <Text fontSize="sm" color="navy.700" fontWeight="medium">
+                                            Målsætning: {step.målsætning}
+                                          </Text>
+                                        </Box>
+                                      )}
+                                    </VStack>
+                                  )}
                                 </Box>
                               )}
 
@@ -357,14 +392,16 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
 
                               <HStack gap={4} fontSize="xs" color="gray.500" wrap="wrap">
                                 {/* Date Range Badge */}
-                                <Badge
-                                  colorPalette={step.isCompleted ? 'sage' : 'navy'}
-                                  size="sm"
-                                  px={3}
-                                  py={1}
-                                >
-                                  📅 {formatDateRange(step.timePerriod.startDate, step.timePerriod.endDate, step.durationDays)}
-                                </Badge>
+                                {formatDateRange(step.timePerriod.startDate, step.timePerriod.endDate, step.durationDays) && (
+                                  <Badge
+                                    colorPalette={step.isCompleted ? 'sage' : 'navy'}
+                                    size="sm"
+                                    px={3}
+                                    py={1}
+                                  >
+                                    {formatDateRange(step.timePerriod.startDate, step.timePerriod.endDate, step.durationDays)}
+                                  </Badge>
+                                )}
                                 
                                 {step.completedAt && (
                                   <Text>Afsluttet: {formatDateTime(step.completedAt)}</Text>

@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useUser } from '@stackframe/stack';
+import { FaStairs } from 'react-icons/fa6';
 import {
   Box,
   Heading,
@@ -430,7 +431,8 @@ export default function ChildSlugPage() {
                       bg: "sage.600"
                     }}
                   >
-                    📊 Fremdrift
+                    <Icon as={FaStairs} mr={2} />
+                    Fremdrift
                   </Button>
                 </Link>
                 
