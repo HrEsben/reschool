@@ -16,6 +16,8 @@ import {
   MdStarBorder
 } from 'react-icons/md';
 import { GoNumber } from 'react-icons/go';
+import { Thermometer, Smile, Bed } from 'lucide-react';
+import { FaStairs } from "react-icons/fa6";
 
 // Define common icon sizes
 export const ICON_SIZES = {
@@ -247,6 +249,43 @@ export const EyeIcon: React.FC<CustomIconProps> = ({
   </Icon>
 );
 
+// Tool-specific icons that match the anchor menu
+export const BarometerIcon: React.FC<CustomIconProps> = ({ 
+  size = 'md', 
+  ...props 
+}) => (
+  <Icon boxSize={getIconSize(size)} {...props}>
+    <Thermometer size={getIconSize(size)} />
+  </Icon>
+);
+
+export const SmileyIcon: React.FC<CustomIconProps> = ({ 
+  size = 'md', 
+  ...props 
+}) => (
+  <Icon boxSize={getIconSize(size)} {...props}>
+    <Smile size={getIconSize(size)} />
+  </Icon>
+);
+
+export const BedtimeIcon: React.FC<CustomIconProps> = ({ 
+  size = 'md', 
+  ...props 
+}) => (
+  <Icon boxSize={getIconSize(size)} {...props}>
+    <Bed size={getIconSize(size)} />
+  </Icon>
+);
+
+export const StepsIcon: React.FC<CustomIconProps> = ({ 
+  size = 'md', 
+  ...props 
+}) => (
+  <Icon boxSize={getIconSize(size)} {...props}>
+    <FaStairs size={getIconSize(size)} />
+  </Icon>
+);
+
 // Export all icons as a single object for easy importing
 export const Icons = {
   Trash: TrashIcon,
@@ -268,6 +307,11 @@ export const Icons = {
   User: UserIcon,
   DragHandle: DragHandleIcon,
   Eye: EyeIcon,
+  // Tool-specific icons
+  Barometer: BarometerIcon,
+  Smiley: SmileyIcon,
+  Bedtime: BedtimeIcon,
+  Steps: StepsIcon,
 } as const;
 
 // Type for icon names

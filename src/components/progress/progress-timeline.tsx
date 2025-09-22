@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   VStack,
@@ -17,18 +17,17 @@ import {
   Timeline,
   Table,
   useBreakpointValue,
+  Select,
   Portal,
   createListCollection
 } from '@chakra-ui/react';
-import { 
-  Combobox 
-} from '@chakra-ui/react';
 import { IoChevronDown, IoChevronUp } from 'react-icons/io5';
 import { FaStairs, FaClock, FaClipboardList } from 'react-icons/fa6';
+import { Icons } from '@/components/ui/icons';
 import { format, parseISO, isValid, differenceInDays } from 'date-fns';
 import { da } from 'date-fns/locale';
 import { useProgress } from '@/lib/queries';
-import type { ProgressPlan, StepWithGroupedEntries, ProgressEntry } from '@/lib/database-service';
+import type { ProgressData, ProgressPlan, StepWithGroupedEntries, ProgressEntry } from '@/lib/database-service';
 
 interface ProgressTimelineProps {
   childId: number;
@@ -45,10 +44,29 @@ interface ExpandedDescriptions {
 export function ProgressTimeline({ childId }: ProgressTimelineProps) {
   const [expandedSteps, setExpandedSteps] = useState<ExpandedSteps>({});
   const [expandedDescriptions, setExpandedDescriptions] = useState<ExpandedDescriptions>({});
-  const [selectedTools, setSelectedTools] = useState<string[]>([]); // Changed to array for multiple selection
+  const [selectedTools, setSelectedTools] = useState<string[]>([]); // Will be populated after data loads
+  const [isInitialized, setIsInitialized] = useState(false); // Track if we've set default selections
   
   // Use React Query hook instead of manual fetch
   const { data: progressData, isLoading: loading, error: queryError } = useProgress(childId.toString());
+  
+  // Initialize all tools as selected when data loads
+  React.useEffect(() => {
+    if (progressData && progressData.plans && progressData.plans.length > 0 && !isInitialized) {
+      const allToolTitles = Array.from(new Set(
+        progressData.plans.flatMap((plan: ProgressPlan) =>
+          plan.stepsWithEntries.flatMap((step: StepWithGroupedEntries) => 
+            step.groupedEntries.map((entry: ProgressEntry) => {
+              const displayData = getEntryDisplayData(entry);
+              return displayData.title;
+            })
+          )
+        )
+      )) as string[];
+      setSelectedTools(allToolTitles);
+      setIsInitialized(true);
+    }
+  }, [progressData, isInitialized]);
   
   // Convert query error to string for display
   const error = queryError ? (queryError instanceof Error ? queryError.message : 'Der opstod en fejl') : null;
@@ -208,6 +226,16 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
 
     console.log('Matrix data:', { entriesByTitleAndDate, uniqueToolTitles, allDays, selectedTools });
 
+    // Helper function to get tool icon for activity rows
+    const getActivityRowIcon = (toolType: string) => {
+      switch (toolType) {
+        case 'barometer': return <Icons.Barometer size={4} color="gray.400" />;
+        case 'dagens-smiley': return <Icons.Smiley size={4} color="gray.400" />;
+        case 'sengetider': return <Icons.Bedtime size={4} color="gray.400" />;
+        default: return <Icons.Edit size={4} color="gray.400" />;
+      }
+    };
+
     if (allChartData.length === 0) {
       return (
         <Box h="400px" w="full" display="flex" alignItems="center" justifyContent="center">
@@ -223,81 +251,106 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
       );
     }
 
-    // Filter titles based on selected tools (empty array means show all)
-    const displayTitles = selectedTools.length === 0 
+    // Filter titles based on selected tools (when all are selected, show all)
+    const displayTitles = selectedTools.length === 0 || selectedTools.length === uniqueToolTitles.length
       ? uniqueToolTitles 
-      : uniqueToolTitles.filter(title => selectedTools.includes(titleToToolType[title]));
+      : uniqueToolTitles.filter(title => selectedTools.includes(title));
     
     const filteredData = displayTitles.reduce((acc, title) => {
       acc[title] = entriesByTitleAndDate[title] || {};
       return acc;
     }, {} as Record<string, Record<number, typeof allChartData>>);
 
-    // Get unique tool types for filter
-    const uniqueTools = Array.from(new Set(allChartData.map(entry => entry.toolType)));
+    // Create collection for select dropdown
+    const toolCollection = React.useMemo(() => {
+      return createListCollection({
+        items: uniqueToolTitles.map(title => {
+          const entryData = allChartData.find(entry => entry.title === title);
+          const getToolIcon = (toolType: string) => {
+            switch (toolType) {
+              case 'barometer': return <Icons.Barometer size={4} color="gray.400" />;
+              case 'dagens-smiley': return <Icons.Smiley size={4} color="gray.400" />;
+              case 'sengetider': return <Icons.Bedtime size={4} color="gray.400" />;
+              default: return <Icons.Edit size={4} color="gray.400" />;
+            }
+          };
+          return {
+            label: title,
+            value: title,
+            icon: getToolIcon(entryData?.toolType || ''),
+            toolType: entryData?.toolType || ''
+          };
+        }),
+        itemToString: (item) => item.label,
+        itemToValue: (item) => item.value,
+      });
+    }, [uniqueToolTitles, allChartData]);
 
-    // Create collection for Combobox
-    const toolCollection = createListCollection({
-      items: uniqueTools.map(tool => ({ label: tool, value: tool }))
-    });
-
-    const handleToolSelectionChange = (details: { value: string[] }) => {
-      setSelectedTools(details.value);
-    };
 
     return (
-      <Box h="400px" w="full" p={4} bg="gray.50" borderRadius="md">
+      <Box w="full" p={4} bg="gray.50" borderRadius="md">
         {/* Header with filter */}
         <HStack justify="space-between" mb={4} align="start">
           <Text fontSize="lg" fontWeight="bold">
             Aktivitetsmatrix ({allChartData.length} indtastninger)
           </Text>
           
-          <Box minWidth="300px">
-            <Combobox.Root
+          <Box minWidth="300px" maxWidth="400px">
+            <Text fontSize="sm" color="gray.600" mb={2}>
+              Filter aktiviteter:
+            </Text>
+            <Select.Root
               collection={toolCollection}
-              value={selectedTools}
-              onValueChange={handleToolSelectionChange}
               multiple
-              closeOnSelect={false}
-              placeholder="Vælg værktøjer at filtrere..."
+              value={selectedTools}
+              onValueChange={(details) => setSelectedTools(details.value)}
               size="sm"
+              positioning={{ sameWidth: true }}
             >
-              <Combobox.Label fontSize="sm" color="gray.600" mb={1}>
-                Filter værktøjer:
-              </Combobox.Label>
-              <Combobox.Control>
-                <Combobox.Input placeholder={
-                  selectedTools.length === 0 
-                    ? "Alle værktøjer vises" 
-                    : `${selectedTools.length} værktøj(er) valgt`
-                } />
-                <Combobox.IndicatorGroup>
-                  <Combobox.ClearTrigger />
-                  <Combobox.Trigger />
-                </Combobox.IndicatorGroup>
-              </Combobox.Control>
+              <Select.Label srOnly>Vælg aktiviteter</Select.Label>
+              <Select.Control>
+                <Select.Trigger>
+                  <Select.ValueText placeholder="Vælg aktiviteter">
+                    {selectedTools.length === 0 
+                      ? "Ingen aktiviteter valgt" 
+                      : selectedTools.length === uniqueToolTitles.length
+                      ? "Alle aktiviteter"
+                      : "Flere aktiviteter"
+                    }
+                  </Select.ValueText>
+                </Select.Trigger>
+                <Select.IndicatorGroup>
+                  <Select.Indicator />
+                </Select.IndicatorGroup>
+              </Select.Control>
               <Portal>
-                <Combobox.Positioner>
-                  <Combobox.Content>
-                    <Combobox.Empty>Ingen værktøjer fundet</Combobox.Empty>
-                    {toolCollection.items.map((item) => (
-                      <Combobox.Item item={item} key={item.value}>
-                        {item.label}
-                        <Combobox.ItemIndicator />
-                      </Combobox.Item>
+                <Select.Positioner>
+                  <Select.Content>
+                    {toolCollection.items.map((tool) => (
+                      <Select.Item key={tool.value} item={tool}>
+                        <HStack gap={2} w="full">
+                          <Box flexShrink={0} bg="transparent">
+                            {tool.icon}
+                          </Box>
+                          <Text fontSize="sm" fontWeight="medium" lineClamp={1} flex={1} minW={0}>
+                            {tool.label}
+                          </Text>
+                        </HStack>
+                        <Select.ItemIndicator />
+                      </Select.Item>
                     ))}
-                  </Combobox.Content>
-                </Combobox.Positioner>
+                  </Select.Content>
+                </Select.Positioner>
               </Portal>
-            </Combobox.Root>
+              <Select.HiddenSelect />
+            </Select.Root>
           </Box>
         </HStack>
         
         <Table.ScrollArea 
           borderWidth="1px" 
           borderColor="border.default" 
-          h="320px"
+          h="520px"
           borderRadius="lg"
           bg="bg.canvas"
         >
@@ -318,8 +371,22 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
             {/* Header with step spans */}
             <Table.Header>
               {/* Step spans row */}
-              <Table.Row bg="white">
-                <Table.ColumnHeader textAlign="center" bg="bg.subtle" borderColor="border.default">
+              <Table.Row 
+                bg="white" 
+                position="sticky" 
+                top={0} 
+                zIndex={30}
+                borderBottom="2px solid"
+                borderColor="sage.200"
+              >
+                <Table.ColumnHeader 
+                  textAlign="center" 
+                  bg="bg.subtle" 
+                  borderColor="border.default"
+                  position="sticky"
+                  top={0}
+                  zIndex={31}
+                >
                   <Text fontSize="sm" fontWeight="600" color="navy.800">
                     Aktivitet
                   </Text>
@@ -366,6 +433,9 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                         bg={bgColor}
                         borderColor="border.default"
                         px={2}
+                        position="sticky"
+                        top={0}
+                        zIndex={30}
                         _hover={{ bg: stepColors[(stepIndex + 3) % stepColors.length] }}
                         transition="all 0.2s"
                       >
@@ -391,23 +461,18 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                     px={4} 
                     py={3}
                     borderColor="border.default"
+                    position="sticky"
+                    left={0}
+                    zIndex={20}
                     _hover={{ bg: "sage.50" }}
                     transition="all 0.2s"
                   >
-                    <VStack gap={1} alignItems="flex-start">
+                    <HStack gap={1} alignItems="center">
+                      {getActivityRowIcon(titleToToolType[title])}
                       <Text fontSize="sm" fontWeight="600" color="navy.800" lineHeight="1.2">
                         {title}
                       </Text>
-                      <Badge
-                        colorPalette="navy"
-                        size="xs"
-                        variant="subtle"
-                        borderRadius="full"
-                        px={2}
-                      >
-                        {titleToToolType[title]}
-                      </Badge>
-                    </VStack>
+                    </HStack>
                   </Table.Cell>
                   
                   {/* Data cells for each day */}
@@ -471,7 +536,13 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                 transition="all 0.2s"
               >
                 {/* Empty cell for activity column */}
-                <Table.Cell bg="bg.subtle" borderColor="border.default" />
+                <Table.Cell 
+                  bg="bg.subtle" 
+                  borderColor="border.default" 
+                  position="sticky" 
+                  left={0} 
+                  zIndex={25}
+                />
                 
                 {/* Date cells */}
                 {allDays.map((dayNumber) => {
@@ -743,7 +814,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
       case 'barometer':
         return {
           icon: String(entry.data.rating || '?'),
-          title: `${entry.toolTopic}: ${entry.data.rating}`,
+          title: entry.toolTopic,
           subtitle: String(entry.data.comment || 'Ingen kommentar'),
           color: 'navy'
         };
