@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Box, Button, Text, VStack, HStack, Badge, Card } from '@chakra-ui/react';
+import { Box, Button, Text, Stack, HStack, Badge } from '@chakra-ui/react';
 import { useServiceWorker } from '@/hooks/use-service-worker';
 
 interface CacheInfo {
@@ -13,6 +13,7 @@ interface CacheInfo {
 export function CacheDebugger() {
   const [cacheInfo, setCacheInfo] = useState<CacheInfo[]>([]);
   const [isVisible, setIsVisible] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const [swInfo, setSwInfo] = useState<{
     active: boolean;
     installing: boolean;
@@ -21,6 +22,11 @@ export function CacheDebugger() {
     updateViaCache: string;
   } | null>(null);
   const { isSupported, isRegistered, clearCache, checkForUpdates } = useServiceWorker();
+
+  // Only render on client side to avoid hydration issues
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Check for cache information
   const loadCacheInfo = async () => {
@@ -101,175 +107,113 @@ export function CacheDebugger() {
   };
 
   // Only show in development or when manually enabled
-  if (typeof window === 'undefined' || (process.env.NODE_ENV === 'production' && !window.localStorage.getItem('debug-cache'))) {
+  if (!isMounted || (process.env.NODE_ENV === 'production' && !localStorage.getItem('debug-cache'))) {
     return null;
   }
 
-  return (
-    <>
-      {/* Debug Toggle Button */}
-      <Box
-        position="fixed"
-        bottom="20px"
-        right="20px"
+  if (!isVisible) {
+    return (
+      <Box 
+        position="fixed" 
+        bottom="4" 
+        right="4" 
         zIndex={9999}
       >
-        <Button
-          size="sm"
-          colorScheme="orange"
-          onClick={() => setIsVisible(!isVisible)}
+        <Button 
+          size="sm" 
+          onClick={() => setIsVisible(true)}
+          colorPalette="teal"
         >
-          🐛 Cache Debug
+          🔧 Debug
         </Button>
       </Box>
+    );
+  }
 
-      {/* Debug Panel */}
-      {isVisible && (
-        <Box
-          position="fixed"
-          top="20px"
-          right="20px"
-          width="400px"
-          maxHeight="80vh"
-          overflowY="auto"
-          zIndex={9998}
-          bg="white"
-          border="1px solid #e2e8f0"
-          borderRadius="lg"
-          shadow="xl"
-          p={4}
-        >
-          <VStack align="stretch" gap={4}>
-            <HStack justify="space-between">
-              <Text fontWeight="bold" fontSize="lg">Cache Debugger</Text>
-              <Button size="xs" onClick={() => setIsVisible(false)}>✕</Button>
+  return (
+    <Box 
+      position="fixed" 
+      bottom="4" 
+      right="4" 
+      width="400px"
+      maxHeight="600px"
+      zIndex={9999}
+      overflow="auto"
+    >
+      <Box p={4} bg="white" boxShadow="xl" border="1px" borderColor="gray.200" borderRadius="md">
+        <Stack gap={3}>
+          <HStack justify="space-between">
+            <Text fontSize="lg" fontWeight="bold">Cache Debugger</Text>
+            <Button size="xs" onClick={() => setIsVisible(false)}>×</Button>
+          </HStack>
+          
+          {/* Service Worker Status */}
+          <Box>
+            <Text fontWeight="semibold" mb={2}>Service Worker Status</Text>
+            <HStack wrap="wrap" gap={2}>
+              <Badge colorPalette={isSupported ? "green" : "red"}>
+                {isSupported ? "Supported" : "Not Supported"}
+              </Badge>
+              <Badge colorPalette={isRegistered ? "green" : "red"}>
+                {isRegistered ? "Registered" : "Not Registered"}
+              </Badge>
+              {swInfo && (
+                <>
+                  <Badge colorPalette={swInfo.active ? "green" : "gray"}>
+                    {swInfo.active ? "Active" : "Inactive"}
+                  </Badge>
+                  {swInfo.waiting && <Badge colorPalette="yellow">Update Available</Badge>}
+                </>
+              )}
             </HStack>
+          </Box>
 
-            {/* Service Worker Info */}
-            <Card.Root size="sm">
-              <Card.Header>
-                <Text fontWeight="semibold">Service Worker</Text>
-              </Card.Header>
-              <Card.Body>
-                <VStack align="stretch" gap={2}>
-                  <HStack justify="space-between">
-                    <Text fontSize="sm">Supported:</Text>
-                    <Badge colorScheme={isSupported ? 'green' : 'red'}>
-                      {isSupported ? 'Yes' : 'No'}
-                    </Badge>
-                  </HStack>
-                  <HStack justify="space-between">
-                    <Text fontSize="sm">Registered:</Text>
-                    <Badge colorScheme={isRegistered ? 'green' : 'red'}>
-                      {isRegistered ? 'Yes' : 'No'}
-                    </Badge>
-                  </HStack>
-                  {swInfo && (
-                    <>
-                      <HStack justify="space-between">
-                        <Text fontSize="sm">Active:</Text>
-                        <Badge colorScheme={swInfo.active ? 'green' : 'orange'}>
-                          {swInfo.active ? 'Yes' : 'No'}
-                        </Badge>
-                      </HStack>
-                      <HStack justify="space-between">
-                        <Text fontSize="sm">Installing:</Text>
-                        <Badge colorScheme={swInfo.installing ? 'blue' : 'gray'}>
-                          {swInfo.installing ? 'Yes' : 'No'}
-                        </Badge>
-                      </HStack>
-                    </>
-                  )}
-                </VStack>
-              </Card.Body>
-            </Card.Root>
-
-            {/* Cache Info */}
-            <Card.Root size="sm">
-              <Card.Header>
-                <Text fontWeight="semibold">Browser Caches ({cacheInfo.length})</Text>
-              </Card.Header>
-              <Card.Body>
-                {cacheInfo.length === 0 ? (
-                  <Text fontSize="sm" color="gray.500">No caches found</Text>
-                ) : (
-                  <VStack align="stretch" gap={2}>
-                    {cacheInfo.map((cache, index) => (
-                      <Box key={index} p={2} bg="gray.50" borderRadius="md">
-                        <HStack justify="space-between" mb={1}>
-                          <Text fontSize="sm" fontWeight="medium">{cache.name}</Text>
-                          <Badge size="sm">{cache.size} items</Badge>
-                        </HStack>
-                        {cache.urls.length > 0 && (
-                          <Text fontSize="xs" color="gray.600" 
-                                style={{ 
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
-                                }}>
-                            {cache.urls[0]}
-                            {cache.urls.length > 1 && ` +${cache.urls.length - 1} more`}
+          {/* Cache Information */}
+          <Box>
+            <Text fontWeight="semibold" mb={2}>Cache Information</Text>
+            {cacheInfo.length === 0 ? (
+              <Text fontSize="sm" color="gray.600">No caches found</Text>
+            ) : (
+              <Stack gap={2}>
+                {cacheInfo.map((cache) => (
+                  <Box key={cache.name} p={2} bg="gray.50" borderRadius="md">
+                    <HStack justify="space-between" mb={1}>
+                      <Text fontSize="sm" fontWeight="medium">{cache.name}</Text>
+                      <Badge>{cache.size} items</Badge>
+                    </HStack>
+                    {cache.urls.length > 0 && (
+                      <Stack gap={1}>
+                        {cache.urls.map((url, index) => (
+                          <Text key={index} fontSize="xs" color="gray.600" truncate>
+                            {url}
                           </Text>
-                        )}
-                      </Box>
-                    ))}
-                  </VStack>
-                )}
-              </Card.Body>
-            </Card.Root>
+                        ))}
+                      </Stack>
+                    )}
+                  </Box>
+                ))}
+              </Stack>
+            )}
+          </Box>
 
-            {/* Actions */}
-            <VStack gap={2}>
-              <Button
-                size="sm"
-                colorScheme="blue"
-                width="full"
-                onClick={() => {
-                  loadCacheInfo();
-                  loadSwInfo();
-                }}
-              >
-                🔄 Refresh Info
-              </Button>
-              
-              <Button
-                size="sm"
-                colorScheme="orange"
-                width="full"
-                onClick={checkForUpdates}
-              >
-                🔍 Check for Updates
-              </Button>
-              
-              <Button
-                size="sm"
-                colorScheme="red"
-                width="full"
-                onClick={handleClearAllCaches}
-              >
-                🗑️ Clear All Caches
-              </Button>
-              
-              <Button
-                size="sm"
-                colorScheme="purple"
-                width="full"
-                onClick={handleHardRefresh}
-              >
-                🚀 Hard Refresh
-              </Button>
-            </VStack>
-
-            {/* Debug Info */}
-            <Box p={3} bg="gray.50" borderRadius="md" fontSize="xs" fontFamily="mono">
-              <Text>User Agent: {navigator.userAgent.slice(0, 50)}...</Text>
-              <Text>Online: {navigator.onLine ? 'Yes' : 'No'}</Text>
-              <Text>Timestamp: {new Date().toISOString()}</Text>
-            </Box>
-          </VStack>
-        </Box>
-      )}
-    </>
+          {/* Actions */}
+          <Stack gap={2}>
+            <Button size="sm" onClick={loadCacheInfo} width="full">
+              Refresh Cache Info
+            </Button>
+            <Button size="sm" onClick={checkForUpdates} width="full" colorPalette="blue">
+              Check for Updates
+            </Button>
+            <Button size="sm" onClick={handleClearAllCaches} width="full" colorPalette="orange">
+              Clear All Caches
+            </Button>
+            <Button size="sm" onClick={handleHardRefresh} width="full" colorPalette="red">
+              Hard Refresh
+            </Button>
+          </Stack>
+        </Stack>
+      </Box>
+    </Box>
   );
 }
 

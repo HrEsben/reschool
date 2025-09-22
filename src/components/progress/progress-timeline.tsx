@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   VStack,
   HStack,
+  Stack,
   Text,
   Heading,
   Badge,
@@ -28,7 +29,7 @@ import { Thermometer, Smile, Bed, Edit3 } from 'lucide-react';
 import { format, parseISO, isValid, differenceInDays } from 'date-fns';
 import { da } from 'date-fns/locale';
 import { useProgress } from '@/lib/queries';
-import type { ProgressData, ProgressPlan, StepWithGroupedEntries, ProgressEntry } from '@/lib/database-service';
+import type { ProgressPlan, StepWithGroupedEntries, ProgressEntry } from '@/lib/database-service';
 
 interface ProgressTimelineProps {
   childId: number;
@@ -259,6 +260,67 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
       return acc;
     }, {} as Record<string, Record<number, typeof allChartData>>);
 
+    // Group consecutive empty days into condensed columns
+    const processedDays = (() => {
+      const result: Array<{ type: 'day' | 'condensed', day?: number, condensedDays?: number[], dateRange?: string }> = [];
+      let emptyStreak: number[] = [];
+      
+      const hasDataForDay = (day: number) => {
+        return displayTitles.some(title => filteredData[title] && filteredData[title][day] && filteredData[title][day].length > 0);
+      };
+      
+      allDays.forEach((day, index) => {
+        const hasData = hasDataForDay(day);
+        
+        if (!hasData) {
+          emptyStreak.push(day);
+        } else {
+          // If we have an empty streak of 2 or more days, condense them
+          if (emptyStreak.length >= 2) {
+            const baseDate = plan.startDate ? new Date(plan.startDate) : new Date();
+            const startDate = new Date(baseDate);
+            startDate.setDate(startDate.getDate() + (emptyStreak[0] - 1));
+            const endDate = new Date(baseDate);
+            endDate.setDate(endDate.getDate() + (emptyStreak[emptyStreak.length - 1] - 1));
+            
+            result.push({
+              type: 'condensed',
+              condensedDays: [...emptyStreak],
+              dateRange: `${format(startDate, 'dd/MM', { locale: da })} - ${format(endDate, 'dd/MM', { locale: da })}`
+            });
+          } else {
+            // Add individual empty days if streak is too short
+            emptyStreak.forEach(emptyDay => {
+              result.push({ type: 'day', day: emptyDay });
+            });
+          }
+          emptyStreak = [];
+          result.push({ type: 'day', day });
+        }
+        
+        // Handle remaining empty streak at the end
+        if (index === allDays.length - 1 && emptyStreak.length >= 2) {
+          const baseDate = plan.startDate ? new Date(plan.startDate) : new Date();
+          const startDate = new Date(baseDate);
+          startDate.setDate(startDate.getDate() + (emptyStreak[0] - 1));
+          const endDate = new Date(baseDate);
+          endDate.setDate(endDate.getDate() + (emptyStreak[emptyStreak.length - 1] - 1));
+          
+          result.push({
+            type: 'condensed',
+            condensedDays: [...emptyStreak],
+            dateRange: `${format(startDate, 'dd/MM', { locale: da })} - ${format(endDate, 'dd/MM', { locale: da })}`
+          });
+        } else if (index === allDays.length - 1 && emptyStreak.length > 0) {
+          emptyStreak.forEach(emptyDay => {
+            result.push({ type: 'day', day: emptyDay });
+          });
+        }
+      });
+      
+      return result;
+    })();
+
     // Filter plan steps based on selected steps
     const filteredPlan = {
       ...plan,
@@ -280,9 +342,9 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
 
     // Create collection for steps filter
     const stepsCollection = createListCollection({
-      items: uniqueStepTitles.map((title: string, index: number) => ({
-        label: title,
-        value: title,
+      items: plan.stepsWithEntries.map((step) => ({
+        label: step.title,
+        value: step.title,
         icon: <Box 
           w={4} h={4} 
           borderRadius="full" 
@@ -294,7 +356,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
           alignItems="center" 
           justifyContent="center"
         >
-          {index + 1}
+          {step.stepNumber}
         </Box>
       }))
     });
@@ -419,12 +481,21 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
             stickyHeader 
             showColumnBorder
             variant="outline"
+            colorPalette="gray"
+            css={{
+              "& td, & th": {
+                borderColor: "var(--chakra-colors-gray-200) !important"
+              }
+            }}
           >
             {/* Column definitions */}
             <Table.ColumnGroup>
               <Table.Column htmlWidth="200px" />
-              {allDays.map((dayNumber) => (
-                <Table.Column key={dayNumber} htmlWidth="40px" />
+              {processedDays.map((item, index) => (
+                <Table.Column 
+                  key={item.type === 'day' ? item.day : `condensed-${index}`} 
+                  htmlWidth={item.type === 'condensed' ? "40px" : "40px"} 
+                />
               ))}
             </Table.ColumnGroup>
             
@@ -438,6 +509,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                 zIndex={30}
                 borderBottom="2px solid"
                 borderColor="sage.200"
+                h="60px"
               >
                 <Table.ColumnHeader 
                   textAlign="center" 
@@ -470,7 +542,20 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                       ? differenceInDays(stepEnd, planStartDate) + 1
                       : Math.min(allDays.length, startDay + 30);
                     
-                    const spanDays = Math.max(1, endDay - startDay + 1);
+                    // Calculate span based on processed days
+                    let spanCount = 0;
+                    processedDays.forEach(item => {
+                      if (item.type === 'day' && item.day! >= startDay && item.day! <= endDay) {
+                        spanCount++;
+                      } else if (item.type === 'condensed') {
+                        const condensedInRange = item.condensedDays!.filter(day => day >= startDay && day <= endDay);
+                        if (condensedInRange.length > 0) {
+                          spanCount++; // Condensed column counts as 1 span regardless of how many days it represents
+                        }
+                      }
+                    });
+                    
+                    if (spanCount === 0) return;
                     
                     // Color coding using site's palette
                     const stepColors = [
@@ -488,7 +573,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                     stepCells.push(
                       <Table.ColumnHeader 
                         key={step.id} 
-                        colSpan={spanDays}
+                        colSpan={spanCount}
                         textAlign="center"
                         bg={bgColor}
                         borderColor="border.default"
@@ -536,7 +621,31 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                   </Table.Cell>
                   
                   {/* Data cells for each day */}
-                  {allDays.map((dayNumber) => {
+                  {processedDays.map((item, index) => {
+                    if (item.type === 'condensed') {
+                      // Condensed column - show subtle indication
+                      return (
+                        <Table.Cell 
+                          key={`condensed-${index}`}
+                          textAlign="center"
+                          bg="gray.50"
+                          borderColor="border.default"
+                          px={1}
+                          py={2}
+                          position="relative"
+                          borderLeft="2px dashed"
+                          borderRight="2px dashed"
+                          borderLeftColor="gray.300"
+                          borderRightColor="gray.300"
+                          title={`Ingen data: ${item.dateRange}`}
+                        >
+                          <Text fontSize="2xs" color="gray.300">⋯</Text>
+                        </Table.Cell>
+                      );
+                    }
+                    
+                    // Regular day column
+                    const dayNumber = item.day!;
                     const entries = filteredData[title][dayNumber] || [];
                     
                     return (
@@ -594,6 +703,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                 zIndex={20}
                 _hover={{ bg: "sage.50" }}
                 transition="all 0.2s"
+                h="50px"
               >
                 {/* Empty cell for activity column */}
                 <Table.Cell 
@@ -605,7 +715,35 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                 />
                 
                 {/* Date cells */}
-                {allDays.map((dayNumber) => {
+                {processedDays.map((item, index) => {
+                  if (item.type === 'condensed') {
+                    return (
+                      <Table.Cell 
+                        key={`condensed-dates-${index}`}
+                        textAlign="center"
+                        bg="gray.50"
+                        borderColor="border.default"
+                        px={0.5}
+                        py={1}
+                        borderLeft="2px dashed"
+                        borderRight="2px dashed"
+                        borderLeftColor="gray.300"
+                        borderRightColor="gray.300"
+                        title={`Kondenseret periode: ${item.dateRange}`}
+                      >
+                        <Stack gap={0}>
+                          <Text fontSize="2xs" fontWeight="normal" color="gray.400" lineHeight="1">
+                            ⋯
+                          </Text>
+                          <Text fontSize="2xs" fontWeight="normal" color="gray.400" lineHeight="1">
+                            {item.dateRange}
+                          </Text>
+                        </Stack>
+                      </Table.Cell>
+                    );
+                  }
+                  
+                  const dayNumber = item.day!;
                   const baseDate = plan.startDate ? new Date(plan.startDate) : new Date();
                   const currentDate = new Date(baseDate);
                   currentDate.setDate(currentDate.getDate() + (dayNumber - 1));
@@ -619,7 +757,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                       px={1}
                       py={2}
                     >
-                      <Text fontSize="xs" fontWeight="600" color="navy.700">
+                      <Text fontSize="xs" fontWeight="normal" color="navy.700">
                         {format(currentDate, 'dd/MM', { locale: da })}
                       </Text>
                     </Table.Cell>
