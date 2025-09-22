@@ -13,7 +13,6 @@ interface CacheInfo {
 export function CacheDebugger() {
   const [cacheInfo, setCacheInfo] = useState<CacheInfo[]>([]);
   const [isVisible, setIsVisible] = useState(false);
-  const [shouldShow, setShouldShow] = useState(false);
   const [swInfo, setSwInfo] = useState<{
     active: boolean;
     installing: boolean;
@@ -22,18 +21,6 @@ export function CacheDebugger() {
     updateViaCache: string;
   } | null>(null);
   const { isSupported, isRegistered, clearCache, checkForUpdates } = useServiceWorker();
-
-  // Use useEffect to handle client-side only logic
-  useEffect(() => {
-    const isDev = process.env.NODE_ENV === 'development';
-    const isManuallyEnabled = window.localStorage.getItem('debug-cache');
-    setShouldShow(isDev || !!isManuallyEnabled);
-    
-    if (isDev || !!isManuallyEnabled) {
-      loadCacheInfo();
-      loadSwInfo();
-    }
-  }, []);
 
   // Check for cache information
   const loadCacheInfo = async () => {
@@ -114,7 +101,7 @@ export function CacheDebugger() {
   };
 
   // Only show in development or when manually enabled
-  if (!shouldShow) {
+  if (typeof window === 'undefined' || (process.env.NODE_ENV === 'production' && !window.localStorage.getItem('debug-cache'))) {
     return null;
   }
 

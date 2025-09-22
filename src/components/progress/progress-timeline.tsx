@@ -24,6 +24,7 @@ import {
 import { IoChevronDown, IoChevronUp } from 'react-icons/io5';
 import { FaStairs, FaClock, FaClipboardList } from 'react-icons/fa6';
 import { Icons } from '@/components/ui/icons';
+import { Thermometer, Smile, Bed, Edit3 } from 'lucide-react';
 import { format, parseISO, isValid, differenceInDays } from 'date-fns';
 import { da } from 'date-fns/locale';
 import { useProgress } from '@/lib/queries';
@@ -45,12 +46,13 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
   const [expandedSteps, setExpandedSteps] = useState<ExpandedSteps>({});
   const [expandedDescriptions, setExpandedDescriptions] = useState<ExpandedDescriptions>({});
   const [selectedTools, setSelectedTools] = useState<string[]>([]); // Will be populated after data loads
+  const [selectedSteps, setSelectedSteps] = useState<string[]>([]); // Will be populated after data loads
   const [isInitialized, setIsInitialized] = useState(false); // Track if we've set default selections
   
   // Use React Query hook instead of manual fetch
   const { data: progressData, isLoading: loading, error: queryError } = useProgress(childId.toString());
   
-  // Initialize all tools as selected when data loads
+  // Initialize all tools and steps as selected when data loads
   React.useEffect(() => {
     if (progressData && progressData.plans && progressData.plans.length > 0 && !isInitialized) {
       const allToolTitles = Array.from(new Set(
@@ -63,7 +65,15 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
           )
         )
       )) as string[];
+      
+      const allStepTitles = Array.from(new Set(
+        progressData.plans.flatMap((plan: ProgressPlan) =>
+          plan.stepsWithEntries.map((step: StepWithGroupedEntries) => step.title)
+        )
+      )) as string[];
+      
       setSelectedTools(allToolTitles);
+      setSelectedSteps(allStepTitles);
       setIsInitialized(true);
     }
   }, [progressData, isInitialized]);
@@ -108,8 +118,6 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
   };
   
   const formatDateRange = (startDate: string | null, endDate: string | null, durationDays?: number | null) => {
-    console.log('formatDateRange called with:', { startDate, endDate, durationDays });
-    
     if (!startDate && !endDate) {
       return null;
     }
@@ -144,28 +152,12 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     }> = [];
     const baseDate = plan.startDate ? new Date(plan.startDate) : new Date();
     
-    // Debug: Log the plan data
-    console.log('Plan data:', plan);
-    console.log('Base date:', baseDate);
-    console.log('Steps with entries:', plan.stepsWithEntries);
-    
     plan.stepsWithEntries.forEach((step, stepIndex) => {
-      console.log(`Step ${stepIndex}:`, step);
-      console.log(`Step grouped entries:`, step.groupedEntries);
       
       step.groupedEntries.forEach((entry) => {
         const entryDate = new Date(entry.createdAt);
         const daysSinceStart = differenceInDays(entryDate, baseDate);
         const displayData = getEntryDisplayData(entry);
-        
-        // Debug: Log each entry being processed
-        console.log('Processing entry:', {
-          entry,
-          entryDate,
-          daysSinceStart,
-          stepIndex: stepIndex + 1,
-          displayData
-        });
         
         chartData.push({
           x: daysSinceStart,
@@ -185,10 +177,6 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
       });
     });
     
-    // Debug: Log the final chart data
-    console.log('Final chart data:', chartData);
-    console.log('Chart data length:', chartData.length);
-    
     return chartData;
   };
 
@@ -198,6 +186,9 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     
     // Get unique tool titles for rows (group by title instead of toolType)
     const uniqueToolTitles = Array.from(new Set(allChartData.map(entry => entry.title)));
+    
+    // Get unique step titles for steps filter
+    const uniqueStepTitles = Array.from(new Set(plan.stepsWithEntries.map(step => step.title)));
 
     // Group entries by tool title and date
     const entriesByTitleAndDate = allChartData.reduce((acc, entry) => {
@@ -224,8 +215,6 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     const maxDay = Math.max(...allChartData.map(entry => entry.x + 1), 30);
     const allDays = Array.from({ length: maxDay }, (_, i) => i + 1); // [1, 2, 3, ..., maxDay]
 
-    console.log('Matrix data:', { entriesByTitleAndDate, uniqueToolTitles, allDays, selectedTools });
-
     // Helper function to get tool icon for activity rows
     const getActivityRowIcon = (toolType: string) => {
       switch (toolType) {
@@ -236,12 +225,21 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
       }
     };
 
-    if (allChartData.length === 0) {
+    // Helper function to get tool icon for select dropdown
+    const getToolIcon = (title: string) => {
+      const toolType = allChartData.find(item => item.title === title)?.toolType;
+      switch (toolType) {
+        case 'barometer': return <Icon as={Thermometer} size="xs" color="gray.400" />;
+        case 'dagens-smiley': return <Icon as={Smile} size="xs" color="gray.400" />;
+        case 'sengetider': return <Icon as={Bed} size="xs" color="gray.400" />;
+        default: return <Icon as={Edit3} size="xs" color="gray.400" />;
+      }
+    };    if (allChartData.length === 0) {
       return (
         <Box h="400px" w="full" display="flex" alignItems="center" justifyContent="center">
           <VStack gap={2}>
             <Text color="gray.500" fontSize="lg">
-              Ingen data at vise i matrixen
+              Ingen data at vise i oversigten
             </Text>
             <Text color="gray.400" fontSize="sm">
               Der er endnu ikke registreret nogen data for denne plan
@@ -261,96 +259,158 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
       return acc;
     }, {} as Record<string, Record<number, typeof allChartData>>);
 
-    // Create collection for select dropdown
-    const toolCollection = React.useMemo(() => {
-      return createListCollection({
-        items: uniqueToolTitles.map(title => {
-          const entryData = allChartData.find(entry => entry.title === title);
-          const getToolIcon = (toolType: string) => {
-            switch (toolType) {
-              case 'barometer': return <Icons.Barometer size={4} color="gray.400" />;
-              case 'dagens-smiley': return <Icons.Smiley size={4} color="gray.400" />;
-              case 'sengetider': return <Icons.Bedtime size={4} color="gray.400" />;
-              default: return <Icons.Edit size={4} color="gray.400" />;
-            }
-          };
-          return {
-            label: title,
-            value: title,
-            icon: getToolIcon(entryData?.toolType || ''),
-            toolType: entryData?.toolType || ''
-          };
-        }),
-        itemToString: (item) => item.label,
-        itemToValue: (item) => item.value,
-      });
-    }, [uniqueToolTitles, allChartData]);
+    // Filter plan steps based on selected steps
+    const filteredPlan = {
+      ...plan,
+      stepsWithEntries: plan.stepsWithEntries.filter(step => 
+        selectedSteps.length === 0 || 
+        selectedSteps.length === uniqueStepTitles.length ||
+        selectedSteps.includes(step.title)
+      )
+    };
 
+    // Create collection for the multiselect
+    const toolCollection = createListCollection({
+      items: uniqueToolTitles.map(title => ({
+        label: title,
+        value: title,
+        icon: getToolIcon(title)
+      }))
+    });
+
+    // Create collection for steps filter
+    const stepsCollection = createListCollection({
+      items: uniqueStepTitles.map((title: string, index: number) => ({
+        label: title,
+        value: title,
+        icon: <Box 
+          w={4} h={4} 
+          borderRadius="full" 
+          bg="gray.400" 
+          color="white" 
+          fontSize="10px" 
+          fontWeight="bold" 
+          display="flex" 
+          alignItems="center" 
+          justifyContent="center"
+        >
+          {index + 1}
+        </Box>
+      }))
+    });
 
     return (
       <Box w="full" p={4} bg="gray.50" borderRadius="md">
-        {/* Header with filter */}
+        {/* Header with filters */}
         <HStack justify="space-between" mb={4} align="start">
           <Text fontSize="lg" fontWeight="bold">
-            Aktivitetsmatrix ({allChartData.length} indtastninger)
+            Overblik ({allChartData.length} indtastninger)
           </Text>
           
-          <Box minWidth="300px" maxWidth="400px">
-            <Text fontSize="sm" color="gray.600" mb={2}>
-              Filter aktiviteter:
-            </Text>
-            <Select.Root
-              collection={toolCollection}
-              multiple
-              value={selectedTools}
-              onValueChange={(details) => setSelectedTools(details.value)}
-              size="sm"
-              positioning={{ sameWidth: true }}
-            >
-              <Select.Label srOnly>Vælg aktiviteter</Select.Label>
-              <Select.Control>
-                <Select.Trigger>
-                  <Select.ValueText placeholder="Vælg aktiviteter">
-                    {selectedTools.length === 0 
-                      ? "Ingen aktiviteter valgt" 
-                      : selectedTools.length === uniqueToolTitles.length
-                      ? "Alle aktiviteter"
-                      : "Flere aktiviteter"
-                    }
-                  </Select.ValueText>
-                </Select.Trigger>
-                <Select.IndicatorGroup>
-                  <Select.Indicator />
-                </Select.IndicatorGroup>
-              </Select.Control>
-              <Portal>
-                <Select.Positioner>
-                  <Select.Content>
-                    {toolCollection.items.map((tool) => (
-                      <Select.Item key={tool.value} item={tool}>
-                        <HStack gap={2} w="full">
-                          <Box flexShrink={0} bg="transparent">
-                            {tool.icon}
-                          </Box>
-                          <Text fontSize="sm" fontWeight="medium" lineClamp={1} flex={1} minW={0}>
-                            {tool.label}
-                          </Text>
-                        </HStack>
-                        <Select.ItemIndicator />
-                      </Select.Item>
-                    ))}
-                  </Select.Content>
-                </Select.Positioner>
-              </Portal>
-              <Select.HiddenSelect />
-            </Select.Root>
-          </Box>
+          <HStack gap={3} align="start">
+            {/* Tools filter */}
+            <Box minWidth="250px" maxWidth="300px">
+              <Select.Root
+                collection={toolCollection}
+                multiple
+                value={selectedTools}
+                onValueChange={(details) => setSelectedTools(details.value)}
+                size="sm"
+                positioning={{ sameWidth: true }}
+              >
+                <Select.Label srOnly>Vælg værktøjer</Select.Label>
+                <Select.Control>
+                  <Select.Trigger>
+                    <Select.ValueText placeholder="Vælg værktøjer">
+                      {selectedTools.length === 0 
+                        ? "Ingen værktøjer valgt" 
+                        : selectedTools.length === uniqueToolTitles.length
+                        ? "Alle værktøjer"
+                        : "Flere værktøjer"
+                      }
+                    </Select.ValueText>
+                  </Select.Trigger>
+                  <Select.IndicatorGroup>
+                    <Select.Indicator />
+                  </Select.IndicatorGroup>
+                </Select.Control>
+                <Portal>
+                  <Select.Positioner>
+                    <Select.Content>
+                      {toolCollection.items.map((tool) => (
+                        <Select.Item key={tool.value} item={tool}>
+                          <HStack gap={2} w="full" alignItems="center">
+                            <Box flexShrink={0} bg="transparent" w={3} h={3} display="flex" alignItems="center" justifyContent="center">
+                              {tool.icon}
+                            </Box>
+                            <Text fontSize="sm" fontWeight="medium" lineClamp={1} flex={1} minW={0}>
+                              {tool.label}
+                            </Text>
+                          </HStack>
+                          <Select.ItemIndicator />
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Portal>
+                <Select.HiddenSelect />
+              </Select.Root>
+            </Box>
+
+            {/* Steps filter */}
+            <Box minWidth="250px" maxWidth="300px">
+              <Select.Root
+                collection={stepsCollection}
+                multiple
+                value={selectedSteps}
+                onValueChange={(details) => setSelectedSteps(details.value)}
+                size="sm"
+                positioning={{ sameWidth: true }}
+              >
+                <Select.Label srOnly>Vælg trin</Select.Label>
+                <Select.Control>
+                  <Select.Trigger>
+                    <Select.ValueText placeholder="Vælg trin">
+                      {selectedSteps.length === 0 
+                        ? <HStack gap={1}><FaStairs size={14} color="gray.500" /><Text>Ingen trin valgt</Text></HStack>
+                        : selectedSteps.length === uniqueStepTitles.length
+                        ? <HStack gap={1}><FaStairs size={14} color="gray.500" /><Text>Alle trin</Text></HStack>
+                        : <HStack gap={1}><FaStairs size={14} color="gray.500" /><Text>Flere trin</Text></HStack>
+                      }
+                    </Select.ValueText>
+                  </Select.Trigger>
+                  <Select.IndicatorGroup>
+                    <Select.Indicator />
+                  </Select.IndicatorGroup>
+                </Select.Control>
+                <Portal>
+                  <Select.Positioner>
+                    <Select.Content>
+                      {stepsCollection.items.map((step) => (
+                        <Select.Item key={step.value} item={step}>
+                          <HStack gap={2} w="full">
+                            <Box flexShrink={0} bg="transparent">
+                              {step.icon}
+                            </Box>
+                            <Text fontSize="sm" fontWeight="medium" lineClamp={1} flex={1} minW={0}>
+                              {step.label}
+                            </Text>
+                          </HStack>
+                          <Select.ItemIndicator />
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Portal>
+                <Select.HiddenSelect />
+              </Select.Root>
+            </Box>
+          </HStack>
         </HStack>
         
         <Table.ScrollArea 
           borderWidth="1px" 
           borderColor="border.default" 
-          h="520px"
           borderRadius="lg"
           bg="bg.canvas"
         >
@@ -388,14 +448,14 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                   zIndex={31}
                 >
                   <Text fontSize="sm" fontWeight="600" color="navy.800">
-                    Aktivitet
+                    Værktøj
                   </Text>
                 </Table.ColumnHeader>
                 {(() => {
                   // Calculate step spans and render merged cells
                   const stepCells: React.ReactElement[] = [];
                   
-                  plan.stepsWithEntries.forEach((step, stepIndex) => {
+                  filteredPlan.stepsWithEntries.forEach((step, stepIndex) => {
                     const stepStartDate = step.timePerriod?.startDate;
                     const stepEndDate = step.timePerriod?.endDate;
                     
@@ -982,8 +1042,6 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                   const isExpanded = expandedSteps[step.id];
                   const hasEntries = step.groupedEntries.length > 0;
                   const isCurrentStep = index === (plan.currentStepIndex || 0);
-
-                  console.log(`Step ${step.stepNumber} timePerriod:`, step.timePerriod);
 
                   return (
                     <Timeline.Item key={step.id}>
