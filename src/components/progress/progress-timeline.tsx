@@ -20,7 +20,8 @@ import {
   useBreakpointValue,
   Select,
   Portal,
-  createListCollection
+  createListCollection,
+  Container
 } from '@chakra-ui/react';
 import { IoChevronDown, IoChevronUp } from 'react-icons/io5';
 import { FaStairs, FaClock, FaClipboardList } from 'react-icons/fa6';
@@ -52,6 +53,13 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
   
   // Use React Query hook instead of manual fetch
   const { data: progressData, isLoading: loading, error: queryError } = useProgress(childId.toString());
+  
+  // Breakpoint values for responsive design
+  const isMdAndUp = useBreakpointValue({ base: false, md: true }) ?? false;
+  const isSmallScreen = !isMdAndUp;
+  const responsiveColumnWidth = useBreakpointValue({ base: "120px", md: "200px" }) ?? "120px";
+  const responsiveDayColumnWidth = useBreakpointValue({ base: "30px", md: "40px" }) ?? "30px";
+  const responsiveFontSize = useBreakpointValue({ base: "xs", md: "sm" }) ?? "xs";
   
   // Initialize all tools and steps as selected when data loads
   React.useEffect(() => {
@@ -374,16 +382,16 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     });
 
     return (
-      <Box w="full" p={4} bg="gray.50" borderRadius="md">
+      <Box w="full" p={{ base: 2, md: 4 }} bg="gray.50" borderRadius="md">
         {/* Header with filters */}
-        <HStack justify="space-between" mb={4} align="start">
+        <VStack gap={4} mb={4} align="stretch">
           <Text fontSize="lg" fontWeight="bold">
             Overblik ({allChartData.length} indtastninger)
           </Text>
           
-          <HStack gap={3} align="start">
+          <Stack direction={{ base: "column", md: "row" }} gap={3} align="stretch">
             {/* Tools filter */}
-            <Box minWidth="250px" maxWidth="300px">
+            <Box flex={1} minW={{ base: "auto", md: "250px" }} maxW={{ base: "none", md: "300px" }}>
               <Select.Root
                 collection={toolCollection}
                 multiple
@@ -432,7 +440,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
             </Box>
 
             {/* Steps filter */}
-            <Box minWidth="250px" maxWidth="300px">
+            <Box flex={1} minW={{ base: "auto", md: "250px" }} maxW={{ base: "none", md: "300px" }}>
               <Select.Root
                 collection={stepsCollection}
                 multiple
@@ -479,14 +487,15 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                 <Select.HiddenSelect />
               </Select.Root>
             </Box>
-          </HStack>
-        </HStack>
+          </Stack>
+        </VStack>
         
         <Table.ScrollArea 
           borderWidth="1px" 
           borderColor="border.default" 
           borderRadius="lg"
           bg="bg.canvas"
+          maxH={{ base: "50vh", md: "70vh" }}
         >
           <Table.Root 
             size="sm" 
@@ -502,11 +511,11 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
           >
             {/* Column definitions */}
             <Table.ColumnGroup>
-              <Table.Column htmlWidth="200px" />
+              <Table.Column htmlWidth={responsiveColumnWidth} />
               {processedDays.map((item, index) => (
                 <Table.Column 
                   key={item.type === 'day' ? item.day : `condensed-${index}`} 
-                  htmlWidth={item.type === 'condensed' ? "40px" : "40px"} 
+                  htmlWidth={responsiveDayColumnWidth} 
                 />
               ))}
             </Table.ColumnGroup>
@@ -615,8 +624,8 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                   {/* Activity title cell */}
                   <Table.Cell 
                     bg="bg.subtle" 
-                    px={4} 
-                    py={3}
+                    px={{ base: 2, md: 4 }} 
+                    py={{ base: 2, md: 3 }}
                     borderColor="border.default"
                     position="sticky"
                     left={0}
@@ -625,8 +634,8 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                     transition="all 0.2s"
                   >
                     <HStack gap={1} alignItems="center">
-                      {getActivityRowIcon(titleToToolType[title])}
-                      <Text fontSize="sm" fontWeight="600" color="navy.800" lineHeight="1.2">
+                      {isMdAndUp && getActivityRowIcon(titleToToolType[title])}
+                      <Text fontSize={responsiveFontSize} fontWeight="600" color="navy.800" lineHeight="1.2" lineClamp={2}>
                         {title}
                       </Text>
                     </HStack>
@@ -666,8 +675,8 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                         textAlign="center"
                         bg={entries.length > 0 ? "bg.canvas" : "bg.muted"}
                         borderColor="border.default"
-                        px={1}
-                        py={2}
+                        px={{ base: 0.5, md: 1 }}
+                        py={{ base: 1, md: 2 }}
                         position="relative"
                         _hover={{ 
                           bg: entries.length > 0 ? "sage.50" : "bg.subtle"
@@ -820,8 +829,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
   };
 
   // Dated Timeline Component
-  const DatedTimeline = ({ step }: { step: StepWithGroupedEntries }) => {
-    const isHorizontal = useBreakpointValue({ base: false, md: true });
+  const DatedTimeline = ({ step, isHorizontal }: { step: StepWithGroupedEntries; isHorizontal: boolean }) => {
     const dateRange = generateDateRange(step.timePerriod.startDate, step.timePerriod.endDate);
     const entriesByDate = groupEntriesByDate(step.groupedEntries);
     
@@ -1096,30 +1104,8 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
   }
 
   return (
-    <VStack gap={8} align="stretch" w="full">
-      {/* Summary */}
-      <Card.Root bg="cream.50" borderColor="cream.200">
-        <Card.Body>
-          <HStack justify="space-between" align="center" wrap="wrap">
-            <VStack align="start" gap={1}>
-              <Text fontSize="sm" color="gray.600" fontWeight="medium">
-                Samlet aktivitet
-              </Text>
-              <Text fontSize="2xl" fontWeight="bold" color="navy.700">
-                {progressData.totalEntries} registreringer
-              </Text>
-            </VStack>
-            <VStack align="end" gap={1}>
-              <Text fontSize="sm" color="gray.600" fontWeight="medium">
-                Aktive planer
-              </Text>
-              <Text fontSize="2xl" fontWeight="bold" color="sage.700">
-                {progressData.plans.filter((plan: ProgressPlan) => plan.isActive).length}
-              </Text>
-            </VStack>
-          </HStack>
-        </Card.Body>
-      </Card.Root>
+    <Container maxW="8xl" px={{ base: 2, md: 4 }}>
+      <VStack gap={{ base: 6, md: 8 }} align="stretch" w="full">
 
       {/* Progress Plans */}
       {progressData.plans.map((plan: ProgressPlan) => (
@@ -1128,9 +1114,9 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
             <VStack gap={6} align="stretch">
               {/* Plan Header */}
               <Box>
-                <HStack justify="space-between" align="start" mb={3}>
+                <Stack direction={{ base: "column", lg: "row" }} justify="space-between" align={{ base: "stretch", lg: "start" }} gap={3} mb={3}>
                   <VStack align="start" gap={1} flex={1}>
-                    <HStack gap={3} align="center">
+                    <Stack direction={{ base: "column", sm: "row" }} gap={3} align={{ base: "start", sm: "center" }} wrap="wrap">
                       <Icon as={FaStairs} color={plan.isActive ? 'sage.500' : 'gray.400'} />
                       <Heading size="lg" color="navy.700">
                         {plan.title}
@@ -1141,7 +1127,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                       >
                         {plan.isActive ? 'Aktiv' : 'Inaktiv'}
                       </Badge>
-                    </HStack>
+                    </Stack>
                     {plan.description && (
                       <Text color="gray.600" fontSize="sm">
                         {plan.description}
@@ -1156,9 +1142,9 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                       {plan.completedSteps}/{plan.totalSteps} trin
                     </Text>
                   </VStack>
-                </HStack>
+                </Stack>
 
-                <HStack gap={4} fontSize="sm" color="gray.600">
+                <Stack direction={{ base: "column", sm: "row" }} gap={{ base: 2, sm: 4 }} fontSize="sm" color="gray.600" wrap="wrap">
                   <HStack gap={1}>
                     <Icon as={FaClock} />
                     <Text>Start: {formatDate(plan.startDate)}</Text>
@@ -1173,7 +1159,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                     <Icon as={FaClipboardList} />
                     <Text>{plan.totalEntries} registreringer</Text>
                   </HStack>
-                </HStack>
+                </Stack>
               </Box>
 
               <Separator />
@@ -1200,9 +1186,9 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                       <Timeline.Content>
                         <Box>
                           {/* Step Header */}
-                          <HStack justify="space-between" align="start" mb={3}>
+                          <Stack direction={{ base: "column", lg: "row" }} justify="space-between" align={{ base: "stretch", lg: "start" }} gap={3} mb={3}>
                             <VStack align="start" gap={2} flex={1}>
-                              <HStack gap={3} align="center" wrap="wrap">
+                              <Stack direction={{ base: "column", sm: "row" }} gap={3} align={{ base: "start", sm: "center" }} wrap="wrap">
                                 <Badge
                                   colorPalette={step.isCompleted ? 'sage' : isCurrentStep ? 'navy' : 'gray'}
                                   size="sm"
@@ -1217,7 +1203,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                                     {step.groupedEntries.length} registreringer
                                   </Badge>
                                 )}
-                              </HStack>
+                              </Stack>
                               
                               {(step.description || step.målsætning) && (
                                 <Box>
@@ -1311,7 +1297,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                                 </Box>
                               )}
 
-                              <HStack gap={4} fontSize="xs" color="gray.500" wrap="wrap">
+                              <Stack direction={{ base: "column", sm: "row" }} gap={{ base: 2, sm: 4 }} fontSize="xs" color="gray.500" wrap="wrap">
                                 {/* Date Range Badge */}
                                 {formatDateRange(step.timePerriod.startDate, step.timePerriod.endDate, step.durationDays) && (
                                   <Badge
@@ -1327,20 +1313,35 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                                 {step.completedAt && (
                                   <Text>Afsluttet: {formatDateTime(step.completedAt)}</Text>
                                 )}
-                              </HStack>
+                              </Stack>
                             </VStack>
 
-                            {hasEntries && (
+                            {isMdAndUp && hasEntries && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleStepExpansion(step.id)}
+                                >
+                                  {isExpanded ? 'Skjul' : 'Vis'} registreringer
+                                  <Icon as={isExpanded ? IoChevronUp : IoChevronDown} ml={2} />
+                                </Button>
+                              )}
+                          </Stack>
+
+                          
+                          {/* Mobile expand button */}
+                          {isSmallScreen && hasEntries && (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => toggleStepExpansion(step.id)}
+                                w="full"
+                                justifyContent="center"
                               >
                                 {isExpanded ? 'Skjul' : 'Vis'} registreringer
                                 <Icon as={isExpanded ? IoChevronUp : IoChevronDown} ml={2} />
                               </Button>
                             )}
-                          </HStack>
 
                           {/* Dated Timeline View */}
                           {hasEntries && isExpanded && (
@@ -1352,7 +1353,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                               border="1px solid"
                               borderColor="cream.200"
                             >
-                              <DatedTimeline step={step} />
+                              <DatedTimeline step={step} isHorizontal={isMdAndUp} />
                             </Box>
                           )}
                         </Box>
@@ -1365,6 +1366,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
           </Card.Body>
         </Card.Root>
       ))}
-    </VStack>
+      </VStack>
+    </Container>
   );
 }
