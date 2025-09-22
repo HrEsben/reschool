@@ -744,10 +744,13 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                       >
                         <Stack gap={0}>
                           <Text fontSize="2xs" fontWeight="normal" color="gray.400" lineHeight="1">
+                            {item.dateRange?.split(' - ')[0]}
+                          </Text>
+                          <Text fontSize="2xs" fontWeight="normal" color="gray.400" lineHeight="1">
                             ⋯
                           </Text>
                           <Text fontSize="2xs" fontWeight="normal" color="gray.400" lineHeight="1">
-                            {item.dateRange}
+                            {item.dateRange?.split(' - ')[1]}
                           </Text>
                         </Stack>
                       </Table.Cell>
