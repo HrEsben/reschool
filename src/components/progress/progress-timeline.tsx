@@ -14,11 +14,18 @@ import {
   Card,
   Separator,
   Button,
-  Timeline
+  Timeline,
+  Table,
+  useBreakpointValue,
+  Portal,
+  createListCollection
+} from '@chakra-ui/react';
+import { 
+  Combobox 
 } from '@chakra-ui/react';
 import { IoChevronDown, IoChevronUp } from 'react-icons/io5';
 import { FaStairs, FaClock, FaClipboardList } from 'react-icons/fa6';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, differenceInDays } from 'date-fns';
 import { da } from 'date-fns/locale';
 import { useProgress } from '@/lib/queries';
 import type { ProgressPlan, StepWithGroupedEntries, ProgressEntry } from '@/lib/database-service';
@@ -38,6 +45,7 @@ interface ExpandedDescriptions {
 export function ProgressTimeline({ childId }: ProgressTimelineProps) {
   const [expandedSteps, setExpandedSteps] = useState<ExpandedSteps>({});
   const [expandedDescriptions, setExpandedDescriptions] = useState<ExpandedDescriptions>({});
+  const [selectedTools, setSelectedTools] = useState<string[]>([]); // Changed to array for multiple selection
   
   // Use React Query hook instead of manual fetch
   const { data: progressData, isLoading: loading, error: queryError } = useProgress(childId.toString());
@@ -97,6 +105,632 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     }
     
     return `${start} - ${end}`;
+  };
+
+  // Transform entries data for scatter chart
+  const transformEntriesForChart = (plan: ProgressPlan) => {
+    const chartData: Array<{
+      x: number;
+      y: number;
+      stepTitle: string;
+      stepId: number;
+      icon: string;
+      title: string;
+      subtitle: string;
+      createdAt: string;
+      toolType: string;
+      entryId: number;
+      recordedByName: string;
+      date: string;
+      time: string;
+    }> = [];
+    const baseDate = plan.startDate ? new Date(plan.startDate) : new Date();
+    
+    // Debug: Log the plan data
+    console.log('Plan data:', plan);
+    console.log('Base date:', baseDate);
+    console.log('Steps with entries:', plan.stepsWithEntries);
+    
+    plan.stepsWithEntries.forEach((step, stepIndex) => {
+      console.log(`Step ${stepIndex}:`, step);
+      console.log(`Step grouped entries:`, step.groupedEntries);
+      
+      step.groupedEntries.forEach((entry) => {
+        const entryDate = new Date(entry.createdAt);
+        const daysSinceStart = differenceInDays(entryDate, baseDate);
+        const displayData = getEntryDisplayData(entry);
+        
+        // Debug: Log each entry being processed
+        console.log('Processing entry:', {
+          entry,
+          entryDate,
+          daysSinceStart,
+          stepIndex: stepIndex + 1,
+          displayData
+        });
+        
+        chartData.push({
+          x: daysSinceStart,
+          y: stepIndex + 1,
+          stepTitle: step.title,
+          stepId: step.id,
+          icon: displayData.icon,
+          title: displayData.title,
+          subtitle: displayData.subtitle,
+          createdAt: entry.createdAt,
+          toolType: entry.toolType,
+          entryId: entry.id,
+          recordedByName: entry.recordedByName || 'Ukendt',
+          date: format(entryDate, 'dd. MMM yyyy', { locale: da }),
+          time: format(entryDate, 'HH:mm'),
+        });
+      });
+    });
+    
+    // Debug: Log the final chart data
+    console.log('Final chart data:', chartData);
+    console.log('Chart data length:', chartData.length);
+    
+    return chartData;
+  };
+
+  // Create a custom timeline chart component
+  const ProgressTimelineChart = ({ plan }: { plan: ProgressPlan }) => {
+    const allChartData = transformEntriesForChart(plan);
+    
+    // Get unique tool titles for rows (group by title instead of toolType)
+    const uniqueToolTitles = Array.from(new Set(allChartData.map(entry => entry.title)));
+
+    // Group entries by tool title and date
+    const entriesByTitleAndDate = allChartData.reduce((acc, entry) => {
+      const titleKey = entry.title;
+      const dateKey = entry.x + 1; // Start at day 1 instead of day 0
+      
+      if (!acc[titleKey]) {
+        acc[titleKey] = {};
+      }
+      if (!acc[titleKey][dateKey]) {
+        acc[titleKey][dateKey] = [];
+      }
+      acc[titleKey][dateKey].push(entry);
+      return acc;
+    }, {} as Record<string, Record<number, typeof allChartData>>);
+
+    // Create a map of title to toolType for descriptions
+    const titleToToolType = allChartData.reduce((acc, entry) => {
+      acc[entry.title] = entry.toolType;
+      return acc;
+    }, {} as Record<string, string>);
+
+    // Calculate the full timespan - from day 1 to the latest day with data (or at least 30 days)
+    const maxDay = Math.max(...allChartData.map(entry => entry.x + 1), 30);
+    const allDays = Array.from({ length: maxDay }, (_, i) => i + 1); // [1, 2, 3, ..., maxDay]
+
+    console.log('Matrix data:', { entriesByTitleAndDate, uniqueToolTitles, allDays, selectedTools });
+
+    if (allChartData.length === 0) {
+      return (
+        <Box h="400px" w="full" display="flex" alignItems="center" justifyContent="center">
+          <VStack gap={2}>
+            <Text color="gray.500" fontSize="lg">
+              Ingen data at vise i matrixen
+            </Text>
+            <Text color="gray.400" fontSize="sm">
+              Der er endnu ikke registreret nogen data for denne plan
+            </Text>
+          </VStack>
+        </Box>
+      );
+    }
+
+    // Filter titles based on selected tools (empty array means show all)
+    const displayTitles = selectedTools.length === 0 
+      ? uniqueToolTitles 
+      : uniqueToolTitles.filter(title => selectedTools.includes(titleToToolType[title]));
+    
+    const filteredData = displayTitles.reduce((acc, title) => {
+      acc[title] = entriesByTitleAndDate[title] || {};
+      return acc;
+    }, {} as Record<string, Record<number, typeof allChartData>>);
+
+    // Get unique tool types for filter
+    const uniqueTools = Array.from(new Set(allChartData.map(entry => entry.toolType)));
+
+    // Create collection for Combobox
+    const toolCollection = createListCollection({
+      items: uniqueTools.map(tool => ({ label: tool, value: tool }))
+    });
+
+    const handleToolSelectionChange = (details: { value: string[] }) => {
+      setSelectedTools(details.value);
+    };
+
+    return (
+      <Box h="400px" w="full" p={4} bg="gray.50" borderRadius="md">
+        {/* Header with filter */}
+        <HStack justify="space-between" mb={4} align="start">
+          <Text fontSize="lg" fontWeight="bold">
+            Aktivitetsmatrix ({allChartData.length} indtastninger)
+          </Text>
+          
+          <Box minWidth="300px">
+            <Combobox.Root
+              collection={toolCollection}
+              value={selectedTools}
+              onValueChange={handleToolSelectionChange}
+              multiple
+              closeOnSelect={false}
+              placeholder="Vælg værktøjer at filtrere..."
+              size="sm"
+            >
+              <Combobox.Label fontSize="sm" color="gray.600" mb={1}>
+                Filter værktøjer:
+              </Combobox.Label>
+              <Combobox.Control>
+                <Combobox.Input placeholder={
+                  selectedTools.length === 0 
+                    ? "Alle værktøjer vises" 
+                    : `${selectedTools.length} værktøj(er) valgt`
+                } />
+                <Combobox.IndicatorGroup>
+                  <Combobox.ClearTrigger />
+                  <Combobox.Trigger />
+                </Combobox.IndicatorGroup>
+              </Combobox.Control>
+              <Portal>
+                <Combobox.Positioner>
+                  <Combobox.Content>
+                    <Combobox.Empty>Ingen værktøjer fundet</Combobox.Empty>
+                    {toolCollection.items.map((item) => (
+                      <Combobox.Item item={item} key={item.value}>
+                        {item.label}
+                        <Combobox.ItemIndicator />
+                      </Combobox.Item>
+                    ))}
+                  </Combobox.Content>
+                </Combobox.Positioner>
+              </Portal>
+            </Combobox.Root>
+          </Box>
+        </HStack>
+        
+        <Table.ScrollArea 
+          borderWidth="1px" 
+          borderColor="border.default" 
+          h="320px"
+          borderRadius="lg"
+          bg="bg.canvas"
+        >
+          <Table.Root 
+            size="sm" 
+            stickyHeader 
+            showColumnBorder
+            variant="outline"
+          >
+            {/* Column definitions */}
+            <Table.ColumnGroup>
+              <Table.Column htmlWidth="200px" />
+              {allDays.map((dayNumber) => (
+                <Table.Column key={dayNumber} htmlWidth="40px" />
+              ))}
+            </Table.ColumnGroup>
+            
+            {/* Header with step spans */}
+            <Table.Header>
+              {/* Step spans row */}
+              <Table.Row bg="white">
+                <Table.ColumnHeader textAlign="center" bg="bg.subtle" borderColor="border.default">
+                  <Text fontSize="sm" fontWeight="600" color="navy.800">
+                    Aktivitet
+                  </Text>
+                </Table.ColumnHeader>
+                {(() => {
+                  // Calculate step spans and render merged cells
+                  const stepCells: React.ReactElement[] = [];
+                  
+                  plan.stepsWithEntries.forEach((step, stepIndex) => {
+                    const stepStartDate = step.timePerriod?.startDate;
+                    const stepEndDate = step.timePerriod?.endDate;
+                    
+                    if (!stepStartDate) return;
+                    
+                    const planStartDate = plan.startDate ? new Date(plan.startDate) : new Date();
+                    const stepStart = new Date(stepStartDate);
+                    const stepEnd = stepEndDate ? new Date(stepEndDate) : new Date();
+                    
+                    const startDay = Math.max(1, differenceInDays(stepStart, planStartDate) + 1);
+                    const endDay = stepEndDate 
+                      ? differenceInDays(stepEnd, planStartDate) + 1
+                      : Math.min(allDays.length, startDay + 30);
+                    
+                    const spanDays = Math.max(1, endDay - startDay + 1);
+                    
+                    // Color coding using site's palette
+                    const stepColors = [
+                      'sage.200',    // Step 1 - primary brand color
+                      'navy.200',    // Step 2 - secondary brand color
+                      'golden.200',  // Step 3 - accent color
+                      'coral.200',   // Step 4 - coral accent
+                      'cream.200',   // Step 5 - cream accent
+                      'sage.300',    // Step 6 - darker sage
+                      'navy.300',    // Step 7 - darker navy
+                    ];
+                    
+                    const bgColor = stepColors[stepIndex % stepColors.length];
+                    
+                    stepCells.push(
+                      <Table.ColumnHeader 
+                        key={step.id} 
+                        colSpan={spanDays}
+                        textAlign="center"
+                        bg={bgColor}
+                        borderColor="border.default"
+                        px={2}
+                        _hover={{ bg: stepColors[(stepIndex + 3) % stepColors.length] }}
+                        transition="all 0.2s"
+                      >
+                        <Text fontSize="xs" fontWeight="600" color="navy.800" lineHeight="1.2">
+                          Trin {stepIndex + 1}: {step.title}
+                        </Text>
+                      </Table.ColumnHeader>
+                    );
+                  });
+                  
+                  return stepCells;
+                })()}
+              </Table.Row>
+            </Table.Header>
+            
+            {/* Body with activity rows */}
+            <Table.Body>
+              {displayTitles.map((title) => (
+                <Table.Row key={title}>
+                  {/* Activity title cell */}
+                  <Table.Cell 
+                    bg="bg.subtle" 
+                    px={4} 
+                    py={3}
+                    borderColor="border.default"
+                    _hover={{ bg: "sage.50" }}
+                    transition="all 0.2s"
+                  >
+                    <VStack gap={1} alignItems="flex-start">
+                      <Text fontSize="sm" fontWeight="600" color="navy.800" lineHeight="1.2">
+                        {title}
+                      </Text>
+                      <Badge
+                        colorPalette="navy"
+                        size="xs"
+                        variant="subtle"
+                        borderRadius="full"
+                        px={2}
+                      >
+                        {titleToToolType[title]}
+                      </Badge>
+                    </VStack>
+                  </Table.Cell>
+                  
+                  {/* Data cells for each day */}
+                  {allDays.map((dayNumber) => {
+                    const entries = filteredData[title][dayNumber] || [];
+                    
+                    return (
+                      <Table.Cell 
+                        key={dayNumber}
+                        textAlign="center"
+                        bg={entries.length > 0 ? "bg.canvas" : "bg.muted"}
+                        borderColor="border.default"
+                        px={1}
+                        py={2}
+                        position="relative"
+                        _hover={{ 
+                          bg: entries.length > 0 ? "sage.50" : "bg.subtle",
+                          transform: entries.length > 0 ? "scale(1.02)" : "none"
+                        }}
+                        transition="all 0.2s"
+                        cursor={entries.length > 0 ? "pointer" : "default"}
+                      >
+                        {entries.length === 0 ? (
+                          <Text fontSize="xs" color="gray.300">·</Text>
+                        ) : entries.length === 1 ? (
+                          <Box
+                            fontSize="lg" 
+                            _hover={{ transform: "scale(1.3)" }}
+                            transition="all 0.2s"
+                            title={`${entries[0].stepTitle}: ${entries[0].title} - ${entries[0].subtitle} (${entries[0].time})`}
+                          >
+                            {entries[0].icon}
+                          </Box>
+                        ) : (
+                          <VStack gap={0} title={`${entries.length} registreringer`}>
+                            <Text fontSize="sm" fontWeight="600" color="sage.600">
+                              {entries.length}
+                            </Text>
+                            <Text fontSize="xs" color="navy.500">
+                              {entries[0].icon}
+                            </Text>
+                          </VStack>
+                        )}
+                      </Table.Cell>
+                    );
+                  })}
+                </Table.Row>
+              ))}
+            </Table.Body>
+            
+            {/* Footer with dates - sticky at bottom */}
+            <Table.Footer>
+              <Table.Row 
+                position="sticky" 
+                bottom={0} 
+                bg="bg.subtle" 
+                borderTop="2px solid"
+                borderColor="sage.200"
+                zIndex={20}
+                _hover={{ bg: "sage.50" }}
+                transition="all 0.2s"
+              >
+                {/* Empty cell for activity column */}
+                <Table.Cell bg="bg.subtle" borderColor="border.default" />
+                
+                {/* Date cells */}
+                {allDays.map((dayNumber) => {
+                  const baseDate = plan.startDate ? new Date(plan.startDate) : new Date();
+                  const currentDate = new Date(baseDate);
+                  currentDate.setDate(currentDate.getDate() + (dayNumber - 1));
+                  
+                  return (
+                    <Table.Cell 
+                      key={dayNumber}
+                      textAlign="center"
+                      bg="bg.subtle"
+                      borderColor="border.default"
+                      px={1}
+                      py={2}
+                    >
+                      <Text fontSize="xs" fontWeight="600" color="navy.700">
+                        {format(currentDate, 'dd/MM', { locale: da })}
+                      </Text>
+                    </Table.Cell>
+                  );
+                })}
+              </Table.Row>
+            </Table.Footer>
+          </Table.Root>
+        </Table.ScrollArea>
+      </Box>
+    );
+  };
+
+  // Helper function to generate date range for a step
+  const generateDateRange = (startDate: string | null, endDate: string | null): Date[] => {
+    if (!startDate) return [];
+    
+    const start = new Date(startDate);
+    const end = endDate ? new Date(endDate) : new Date();
+    const dates: Date[] = [];
+    
+    const current = new Date(start);
+    while (current <= end) {
+      dates.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return dates;
+  };
+
+  // Helper function to group entries by date
+  const groupEntriesByDate = (entries: ProgressEntry[]): { [dateKey: string]: ProgressEntry[] } => {
+    const grouped: { [dateKey: string]: ProgressEntry[] } = {};
+    
+    entries.forEach(entry => {
+      const entryDate = new Date(entry.createdAt);
+      const dateKey = format(entryDate, 'yyyy-MM-dd');
+      
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey].push(entry);
+    });
+    
+    return grouped;
+  };
+
+  // Dated Timeline Component
+  const DatedTimeline = ({ step }: { step: StepWithGroupedEntries }) => {
+    const isHorizontal = useBreakpointValue({ base: false, md: true });
+    const dateRange = generateDateRange(step.timePerriod.startDate, step.timePerriod.endDate);
+    const entriesByDate = groupEntriesByDate(step.groupedEntries);
+    
+    if (dateRange.length === 0) {
+      // Fallback to simple entry list if no date range
+      return (
+        <VStack gap={3} align="stretch">
+          {step.groupedEntries.map((entry: ProgressEntry) => {
+            const displayData = getEntryDisplayData(entry);
+            
+            return (
+              <Box
+                key={`${entry.toolType}-${entry.id}-simple`}
+                p={3}
+                bg="white"
+                borderRadius="md"
+                border="1px solid"
+                borderColor="cream.300"
+              >
+                <Flex align="center" gap={3} wrap="wrap">
+                  <Text fontSize="lg">{displayData.icon}</Text>
+                  <VStack align="start" gap={0} flex={1}>
+                    <Text fontSize="sm" fontWeight="medium" color="navy.700">
+                      {displayData.title}
+                    </Text>
+                    <Text fontSize="xs" color="gray.600">
+                      {displayData.subtitle}
+                    </Text>
+                  </VStack>
+                  <VStack align="end" gap={0}>
+                    <Text fontSize="xs" color="gray.500">
+                      {formatDateTime(entry.createdAt)}
+                    </Text>
+                    {entry.recordedByName && (
+                      <Badge colorPalette="sage" size="xs">
+                        {entry.recordedByName}
+                      </Badge>
+                    )}
+                  </VStack>
+                </Flex>
+              </Box>
+            );
+          })}
+        </VStack>
+      );
+    }
+
+    return (
+      <Box w="full">
+        <Text fontSize="sm" fontWeight="medium" color="navy.700" mb={4}>
+          Tidsbaseret registreringsoversigt
+        </Text>
+        
+        {isHorizontal ? (
+          // Horizontal timeline for larger screens
+          <Box overflowX="auto" pb={4}>
+            <HStack gap={4} align="start" minW="fit-content">
+              {dateRange.map(date => {
+                const dateKey = format(date, 'yyyy-MM-dd');
+                const entriesForDate = entriesByDate[dateKey] || [];
+                const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+                
+                return (
+                  <VStack
+                    key={dateKey}
+                    gap={2}
+                    align="center"
+                    minW="120px"
+                    p={3}
+                    bg={entriesForDate.length > 0 ? "sage.50" : "gray.50"}
+                    borderRadius="md"
+                    border="2px solid"
+                    borderColor={isToday ? "sage.300" : entriesForDate.length > 0 ? "sage.200" : "gray.200"}
+                  >
+                    <VStack gap={0} align="center">
+                      <Text fontSize="xs" color="gray.600" fontWeight="medium">
+                        {format(date, 'EEE', { locale: da })}
+                      </Text>
+                      <Text fontSize="sm" fontWeight="bold" color={isToday ? "sage.700" : "gray.900"}>
+                        {format(date, 'd. MMM', { locale: da })}
+                      </Text>
+                    </VStack>
+                    
+                    {entriesForDate.length > 0 && (
+                      <VStack gap={1} align="center" w="full">
+                        {entriesForDate.map(entry => {
+                          const displayData = getEntryDisplayData(entry);
+                          return (
+                            <Box
+                              key={`${entry.toolType}-${entry.id}-timeline`}
+                              p={2}
+                              bg="white"
+                              borderRadius="sm"
+                              border="1px solid"
+                              borderColor="sage.300"
+                              w="full"
+                              textAlign="center"
+                            >
+                              <Text fontSize="md" mb={1}>{displayData.icon}</Text>
+                              <Text fontSize="xs" color="navy.700" fontWeight="medium" lineClamp={2}>
+                                {entry.toolTopic}
+                              </Text>
+                              {entry.recordedByName && (
+                                <Badge colorPalette="sage" size="xs" mt={1}>
+                                  {entry.recordedByName}
+                                </Badge>
+                              )}
+                            </Box>
+                          );
+                        })}
+                      </VStack>
+                    )}
+                    
+                    {entriesForDate.length === 0 && (
+                      <Text fontSize="xs" color="gray.400">
+                        Ingen
+                      </Text>
+                    )}
+                  </VStack>
+                );
+              })}
+            </HStack>
+          </Box>
+        ) : (
+          // Vertical timeline for smaller screens
+          <VStack gap={3} align="stretch">
+            {dateRange.map(date => {
+              const dateKey = format(date, 'yyyy-MM-dd');
+              const entriesForDate = entriesByDate[dateKey] || [];
+              const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+              
+              if (entriesForDate.length === 0) return null;
+              
+              return (
+                <Box
+                  key={dateKey}
+                  p={3}
+                  bg="sage.50"
+                  borderRadius="md"
+                  border="1px solid"
+                  borderColor={isToday ? "sage.300" : "sage.200"}
+                >
+                  <HStack mb={3}>
+                    <Text fontSize="sm" fontWeight="bold" color={isToday ? "sage.700" : "gray.900"}>
+                      {format(date, 'EEEE d. MMMM', { locale: da })}
+                    </Text>
+                    {isToday && (
+                      <Badge colorPalette="sage" size="xs">
+                        I dag
+                      </Badge>
+                    )}
+                  </HStack>
+                  
+                  <VStack gap={2} align="stretch">
+                    {entriesForDate.map(entry => {
+                      const displayData = getEntryDisplayData(entry);
+                      return (
+                        <Box
+                          key={`${entry.toolType}-${entry.id}-vertical`}
+                          p={2}
+                          bg="white"
+                          borderRadius="sm"
+                          border="1px solid"
+                          borderColor="sage.300"
+                        >
+                          <Flex align="center" gap={3}>
+                            <Text fontSize="lg">{displayData.icon}</Text>
+                            <VStack align="start" gap={0} flex={1}>
+                              <Text fontSize="sm" fontWeight="medium" color="navy.700">
+                                {displayData.title}
+                              </Text>
+                              <Text fontSize="xs" color="gray.600">
+                                {displayData.subtitle}
+                              </Text>
+                            </VStack>
+                            {entry.recordedByName && (
+                              <Badge colorPalette="sage" size="xs">
+                                {entry.recordedByName}
+                              </Badge>
+                            )}
+                          </Flex>
+                        </Box>
+                      );
+                    })}
+                  </VStack>
+                </Box>
+              );
+            })}
+          </VStack>
+        )}
+      </Box>
+    );
   };
 
   const getEntryDisplayData = (entry: ProgressEntry): {
@@ -261,6 +895,16 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
 
               <Separator />
 
+              {/* Scatter Chart Timeline */}
+              <Box mb={8}>
+                <Text fontSize="lg" fontWeight="medium" color="navy.700" mb={4}>
+                  Registreringer over tid (graf)
+                </Text>
+                <ProgressTimelineChart plan={plan} />
+              </Box>
+
+              <Separator />
+
               {/* Timeline */}
               <Timeline.Root variant="outline">
                 {plan.stepsWithEntries.map((step: StepWithGroupedEntries, index: number) => {
@@ -421,7 +1065,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                             )}
                           </HStack>
 
-                          {/* Detailed Entries View */}
+                          {/* Dated Timeline View */}
                           {hasEntries && isExpanded && (
                             <Box
                               mt={4}
@@ -431,51 +1075,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                               border="1px solid"
                               borderColor="cream.200"
                             >
-                              <Text fontSize="sm" fontWeight="medium" color="navy.700" mb={3}>
-                                Detaljeret oversigt ({step.groupedEntries.length} registreringer)
-                              </Text>
-                              
-                              <VStack gap={3} align="stretch">
-                                {step.groupedEntries.map((entry: ProgressEntry) => {
-                                  const displayData = getEntryDisplayData(entry);
-                                  
-                                  return (
-                                    <Box
-                                      key={`${entry.toolType}-${entry.id}-detailed`}
-                                      p={3}
-                                      bg="white"
-                                      borderRadius="md"
-                                      border="1px solid"
-                                      borderColor="cream.300"
-                                    >
-                                      <Flex align="center" gap={3} wrap="wrap">
-                                        <Text fontSize="lg">{displayData.icon}</Text>
-                                        <VStack align="start" gap={0} flex={1}>
-                                          <Text fontSize="sm" fontWeight="medium" color="navy.700">
-                                            {displayData.title}
-                                          </Text>
-                                          <Text fontSize="xs" color="gray.600">
-                                            {displayData.subtitle}
-                                          </Text>
-                                        </VStack>
-                                        <VStack align="end" gap={0}>
-                                          <Text fontSize="xs" color="gray.500">
-                                            {formatDateTime(entry.createdAt)}
-                                          </Text>
-                                          {entry.recordedByName && (
-                                            <Badge
-                                              colorPalette="sage"
-                                              size="xs"
-                                            >
-                                              {entry.recordedByName}
-                                            </Badge>
-                                          )}
-                                        </VStack>
-                                      </Flex>
-                                    </Box>
-                                  );
-                                })}
-                              </VStack>
+                              <DatedTimeline step={step} />
                             </Box>
                           )}
                         </Box>
