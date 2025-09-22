@@ -103,9 +103,6 @@ export default function ProgressPage() {
                             <Heading size="xl">
                 Overblik for {child.name}
               </Heading>
-              <Text color="gray.600">
-                Oversigt over indsatstrappe-forløb og værktøjsdata
-              </Text>
             </VStack>
           </HStack>
 

@@ -1178,19 +1178,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
               {/* Overview Table */}
               <ProgressTimelineChart plan={plan} />
 
-              <Separator />
-
-              {/* Scatter Chart Timeline */}
-              <Box mb={8}>
-                <Text fontSize="lg" fontWeight="medium" color="navy.700" mb={4}>
-                  Registreringer over tid (graf)
-                </Text>
-                {/* Chart component will go here - for now showing placeholder */}
-                <Box h="400px" w="full" display="flex" alignItems="center" justifyContent="center" bg="gray.50" borderRadius="md">
-                  <Text color="gray.500">Graf kommer her</Text>
-                </Box>
-              </Box>
-
+             
               <Separator />
 
               {/* Timeline */}
