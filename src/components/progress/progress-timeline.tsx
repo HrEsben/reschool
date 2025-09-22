@@ -185,14 +185,26 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
   const ProgressTimelineChart = ({ plan }: { plan: ProgressPlan }) => {
     const allChartData = transformEntriesForChart(plan);
     
-    // Get unique tool titles for rows (group by title instead of toolType)
-    const uniqueToolTitles = Array.from(new Set(allChartData.map(entry => entry.title)));
-    
-    // Get unique step titles for steps filter
+    // Get unique step titles for steps filter - define this first since it's used in filtering
     const uniqueStepTitles = Array.from(new Set(plan.stepsWithEntries.map(step => step.title)));
+    
+    // Filter chart data to only include entries from selected steps
+    const stepFilteredData = allChartData.filter(entry => {
+      if (selectedSteps.length === 0 || selectedSteps.length === uniqueStepTitles.length) {
+        return true; // Show all if no filter or all selected
+      }
+      // Find which step this entry belongs to
+      const entryStep = plan.stepsWithEntries.find(step => 
+        step.groupedEntries.some(e => e.id === entry.entryId)
+      );
+      return entryStep ? selectedSteps.includes(entryStep.title) : false;
+    });
 
-    // Group entries by tool title and date
-    const entriesByTitleAndDate = allChartData.reduce((acc, entry) => {
+    // Get unique tool titles for rows (group by title instead of toolType) - from filtered data
+    const uniqueToolTitles = Array.from(new Set(stepFilteredData.map(entry => entry.title)));
+
+    // Group entries by tool title and date - using filtered data
+    const entriesByTitleAndDate = stepFilteredData.reduce((acc, entry) => {
       const titleKey = entry.title;
       const dateKey = entry.x + 1; // Start at day 1 instead of day 0
       
@@ -585,7 +597,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                         transition="all 0.2s"
                       >
                         <Text fontSize="xs" fontWeight="600" color="navy.800" lineHeight="1.2">
-                          Trin {stepIndex + 1}: {step.title}
+                          Trin {step.stepNumber}: {step.title}
                         </Text>
                       </Table.ColumnHeader>
                     );
