@@ -646,7 +646,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                           py={2}
                           position="relative"
                           borderLeft="2px dashed"
-                          borderRight="2px dashed"
+                          borderRight={index === processedDays.length - 1 ? "none" : "2px dashed"}
                           borderLeftColor="gray.300"
                           borderRightColor="gray.300"
                           title={`Ingen data: ${item.dateRange}`}
@@ -670,8 +670,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                         py={2}
                         position="relative"
                         _hover={{ 
-                          bg: entries.length > 0 ? "sage.50" : "bg.subtle",
-                          transform: entries.length > 0 ? "scale(1.02)" : "none"
+                          bg: entries.length > 0 ? "sage.50" : "bg.subtle"
                         }}
                         transition="all 0.2s"
                         cursor={entries.length > 0 ? "pointer" : "default"}
@@ -738,7 +737,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                         px={0.5}
                         py={1}
                         borderLeft="2px dashed"
-                        borderRight="2px dashed"
+                        borderRight={index === processedDays.length - 1 ? "none" : "2px dashed"}
                         borderLeftColor="gray.300"
                         borderRightColor="gray.300"
                         title={`Kondenseret periode: ${item.dateRange}`}
@@ -1085,7 +1084,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
               Ingen indsatstrappe fundet
             </Text>
             <Text color="gray.500" fontSize="sm" textAlign="center">
-              Opret en indsatstrappe for at se fremdriftsvisningen
+              Opret en indsatstrappe for at se overblikket
             </Text>
           </VStack>
         </Card.Body>
@@ -1148,7 +1147,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                   </VStack>
                   <VStack align="end" gap={1}>
                     <Text fontSize="xs" color="gray.500">
-                      Fremdrift
+                      Overblik
                     </Text>
                     <Text fontSize="sm" fontWeight="medium" color="navy.700">
                       {plan.completedSteps}/{plan.totalSteps} trin
@@ -1176,12 +1175,20 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
 
               <Separator />
 
+              {/* Overview Table */}
+              <ProgressTimelineChart plan={plan} />
+
+              <Separator />
+
               {/* Scatter Chart Timeline */}
               <Box mb={8}>
                 <Text fontSize="lg" fontWeight="medium" color="navy.700" mb={4}>
                   Registreringer over tid (graf)
                 </Text>
-                <ProgressTimelineChart plan={plan} />
+                {/* Chart component will go here - for now showing placeholder */}
+                <Box h="400px" w="full" display="flex" alignItems="center" justifyContent="center" bg="gray.50" borderRadius="md">
+                  <Text color="gray.500">Graf kommer her</Text>
+                </Box>
               </Box>
 
               <Separator />

@@ -100,8 +100,8 @@ export default function ProgressPage() {
                   Tilbage til {child.name}
                 </Button>
               </Link>
-              <Heading size="xl">
-                Fremdrift for {child.name}
+                            <Heading size="xl">
+                Overblik for {child.name}
               </Heading>
               <Text color="gray.600">
                 Oversigt over indsatstrappe-forløb og værktøjsdata

@@ -432,7 +432,7 @@ export default function ChildSlugPage() {
                     }}
                   >
                     <Icon as={FaStairs} mr={2} />
-                    Fremdrift
+                    Overblik
                   </Button>
                 </Link>
                 

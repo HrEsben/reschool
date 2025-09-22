@@ -67,7 +67,7 @@ export const Header = memo(function Header() {
             const childData = await response.json();
             crumbs.push({ label: "Børn", href: "/dashboard" });
             crumbs.push({ label: childData.child.name, href: `/${slug}` });
-            crumbs.push({ label: "Fremdrift", href: pathname });
+            crumbs.push({ label: "Overblik", href: pathname });
           } else {
             crumbs.push({ label: "Børn", href: "/dashboard" });
           }
