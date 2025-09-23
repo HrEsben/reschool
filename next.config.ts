@@ -4,8 +4,6 @@ const nextConfig: NextConfig = {
   // Optimize compilation performance
   experimental: {
     optimizePackageImports: ["@chakra-ui/react", "@tanstack/react-query", "react-icons", "date-fns"],
-    // Help with Fast Refresh issues
-    forceSwcTransforms: true,
   },
 
   // Enable Turbopack for faster builds (Next.js 15+) with HMR fixes

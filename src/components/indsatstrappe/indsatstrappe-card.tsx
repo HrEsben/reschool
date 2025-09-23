@@ -14,7 +14,7 @@ import {
   Accordion,
   IconButton
 } from '@chakra-ui/react';
-import { CheckIcon, AddIcon } from '@/components/ui/icons';
+import { AddIcon } from '@/components/ui/icons';
 import { MdEdit } from 'react-icons/md';
 import { IndsatstrappePlan } from '@/lib/database-service';
 import { EditStepDialog } from './edit-step-dialog';
@@ -346,22 +346,6 @@ export function IndsatsrappeCard({
                             >
                               {step.title}
                             </Text>
-                            {isCompleted && (
-                              <Icon color="green.600" size="sm">
-                                <CheckIcon />
-                              </Icon>
-                            )}
-                            {isCurrentStep && !isCompleted && (
-                              <Badge 
-                                colorPalette="sage" 
-                                variant="subtle" 
-                                size="xs"
-                                px={2}
-                                borderRadius="full"
-                              >
-                                Aktiv
-                              </Badge>
-                            )}
                           </HStack>
                           <Accordion.ItemIndicator ml={2} />
                         </Accordion.ItemTrigger>
@@ -425,10 +409,20 @@ export function IndsatsrappeCard({
                               </VStack>
                             )}
                             
-                            {step.isCompleted && step.completedAt && (
+                            {step.isCompleted && step.activePeriods && step.activePeriods.length > 0 && (
                               <Text fontSize="sm" color="green.600" fontWeight="medium">
-                                Fuldført {formatDate(step.completedAt)}
-                                {step.completedByName && ` af ${step.completedByName}`}
+                                {(() => {
+                                  // Find the latest end date from all active periods
+                                  const endDates = step.activePeriods
+                                    .filter(period => period.endDate)
+                                    .map(period => period.endDate!)
+                                    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+                                  
+                                  const latestEndDate = endDates[0];
+                                  const latestPeriod = step.activePeriods.find(period => period.endDate === latestEndDate);
+                                  
+                                  return `Fuldført ${formatDate(latestEndDate)}${latestPeriod?.deactivatedByName ? ` af ${latestPeriod.deactivatedByName}` : ''}`;
+                                })()}
                               </Text>
                             )}
                           </VStack>
@@ -477,6 +471,8 @@ export function IndsatsrappeCard({
           step={editingStep}
           planId={plan.id}
           childId={plan.childId.toString()}
+          planStartDate={plan.startDate}
+          otherSteps={plan.steps.filter(s => s.id !== editingStep.id)}
           isOpen={!!editingStep}
           setIsOpen={(isOpen) => {
             if (!isOpen) setEditingStep(null);

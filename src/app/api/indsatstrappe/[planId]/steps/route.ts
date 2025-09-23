@@ -69,11 +69,13 @@ export async function POST(
     const { 
       title, 
       description, 
-      målsætning 
+      målsætning,
+      stepStartDate
     }: {
       title: string;
       description?: string;
       målsætning?: string;
+      stepStartDate?: string; // Optional start date for the step period
     } = body;
 
     // Validate required fields
@@ -93,7 +95,9 @@ export async function POST(
       planId,
       title.trim(),
       description?.trim(),
-      målsætning?.trim()
+      målsætning?.trim(),
+      dbUser.id,
+      stepStartDate
     );
 
     return NextResponse.json(newStep, { status: 201 });

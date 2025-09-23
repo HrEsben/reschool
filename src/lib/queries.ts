@@ -6,7 +6,8 @@ import {
   Indsatstrappe,
   IndsatstrappePlan,
   IndsatsSteps,
-  IndsatstrappePlanEntry
+  IndsatstrappePlanEntry,
+  IndsatsStepPeriod
 } from '@/lib/database-service';
 
 // Types (matching your existing interfaces)
@@ -866,6 +867,7 @@ const indsatsrappeApi = {
     title: string;
     description?: string;
     målsætning?: string;
+    stepStartDate?: string; // Optional start date for the step period
   }): Promise<IndsatsSteps> {
     const response = await fetch(`/api/indsatstrappe/${planId}/steps`, {
       method: 'POST',
@@ -876,6 +878,38 @@ const indsatsrappeApi = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to add step');
+    }
+    return response.json();
+  },
+
+  // Step period management
+  async getStepPeriods(planId: number, stepId: number): Promise<IndsatsStepPeriod[]> {
+    const response = await fetch(`/api/indsatstrappe/${planId}/steps/${stepId}/periods`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch step periods');
+    }
+    return response.json();
+  },
+
+  async createStepPeriod(
+    planId: number, 
+    stepId: number, 
+    data: { 
+      startDate?: string; 
+      endDate?: string; 
+      isCustomPeriod?: boolean 
+    }
+  ): Promise<IndsatsStepPeriod> {
+    const response = await fetch(`/api/indsatstrappe/${planId}/steps/${stepId}/periods`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create step period');
     }
     return response.json();
   },
@@ -910,6 +944,8 @@ const indsatsrappeApi = {
     title: string;
     description?: string;
     målsætning?: string;
+    startDate?: string;
+    targetEndDate?: string;
   }): Promise<IndsatsSteps> {
     const response = await fetch(`/api/indsatstrappe/steps/${stepId}`, {
       method: 'PUT',
@@ -1333,5 +1369,47 @@ export function useIndsatsSteps(planId: number) {
     queryFn: () => indsatsrappeApi.fetchSteps(planId),
     enabled: !!planId,
     staleTime: 1000 * 60 * 3, // Consider data fresh for 3 minutes
+  });
+}
+
+// ====================================================================
+// STEP PERIODS HOOKS
+// ====================================================================
+
+export function useStepPeriods(planId: number, stepId: number) {
+  return useQuery({
+    queryKey: ['stepPeriods', planId, stepId],
+    queryFn: () => indsatsrappeApi.getStepPeriods(planId, stepId),
+    enabled: !!planId && !!stepId,
+    staleTime: 1000 * 60 * 2, // Consider data fresh for 2 minutes
+  });
+}
+
+export function useCreateStepPeriod() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (data: { 
+      planId: number; 
+      stepId: number; 
+      startDate?: string; 
+      endDate?: string; 
+      isCustomPeriod?: boolean 
+    }) => 
+      indsatsrappeApi.createStepPeriod(data.planId, data.stepId, data),
+    onSuccess: (_, variables) => {
+      // Invalidate and refetch step periods
+      queryClient.invalidateQueries({ 
+        queryKey: ['stepPeriods', variables.planId, variables.stepId] 
+      });
+      // Also invalidate the overview to refresh registration counts
+      queryClient.invalidateQueries({ 
+        queryKey: ['indsatsrappeOverview', variables.planId] 
+      });
+      // And invalidate the plan data to refresh step statuses
+      queryClient.invalidateQueries({ 
+        queryKey: ['indsatstrappe', variables.planId] 
+      });
+    }
   });
 }

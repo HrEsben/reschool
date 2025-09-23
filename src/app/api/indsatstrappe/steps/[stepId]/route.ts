@@ -70,15 +70,16 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { title, description, målsætning } = body;
+    const { title, description, målsætning, startDate, targetEndDate } = body;
 
     // Validate that at least one field is provided
-    if (title === undefined && description === undefined && målsætning === undefined) {
+    if (title === undefined && description === undefined && målsætning === undefined && 
+        startDate === undefined && targetEndDate === undefined) {
       return NextResponse.json({ error: 'At least one field must be provided' }, { status: 400 });
     }
 
     // Update the step
-    const updated = await updateIndsatsStep(stepId, { title, description, målsætning });
+    const updated = await updateIndsatsStep(stepId, { title, description, målsætning, startDate, targetEndDate });
 
     if (!updated) {
       return NextResponse.json({ error: 'Step not found or no changes made' }, { status: 404 });

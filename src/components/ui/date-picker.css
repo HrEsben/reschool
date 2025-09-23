@@ -1,0 +1,225 @@
+/* Custom styles for React DatePicker integration with ReSchool design system */
+
+.reschool-datepicker-wrapper {
+  width: 100%;
+}
+
+.reschool-datepicker-popper {
+  z-index: 1500;
+}
+
+.reschool-datepicker-calendar {
+  font-family: inherit;
+  border-radius: 12px;
+  border: 1px solid #e6dccd; /* cream.300 */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  background: white;
+  padding: 16px;
+}
+
+/* Header styles */
+.react-datepicker__header {
+  background: #f6f8f6; /* sage.25 */
+  border-bottom: 1px solid #e8f0e8; /* sage.50 */
+  border-radius: 12px 12px 0 0;
+  padding: 12px 16px;
+}
+
+.react-datepicker__current-month {
+  font-size: 16px;
+  font-weight: 600;
+  color: #00419b; /* navy.500 */
+  margin-bottom: 8px;
+}
+
+/* Navigation buttons */
+.react-datepicker__navigation {
+  background: none;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  position: absolute;
+  top: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.react-datepicker__navigation:hover {
+  background: #d1e2d1; /* sage.100 */
+}
+
+.react-datepicker__navigation--previous {
+  left: 16px;
+}
+
+.react-datepicker__navigation--next {
+  right: 16px;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: #196e19; /* sage.500 */
+  border-width: 2px 2px 0 0;
+  width: 6px;
+  height: 6px;
+}
+
+/* Day names header */
+.react-datepicker__day-names {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.react-datepicker__day-name {
+  color: #668dc3; /* navy.300 */
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Calendar body */
+.react-datepicker__month {
+  margin: 0;
+}
+
+.react-datepicker__week {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+/* Day cells */
+.react-datepicker__day {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin: 0;
+  color: #333;
+  border: 1px solid transparent;
+}
+
+.react-datepicker__day:hover {
+  background: #e8f0e8; /* sage.50 */
+  border-color: #a3c5a3; /* sage.200 */
+}
+
+/* Selected day */
+.react-datepicker__day--selected {
+  background: #196e19 !important; /* sage.500 */
+  color: white !important;
+  border-color: #145814 !important; /* sage.600 */
+}
+
+.react-datepicker__day--selected:hover {
+  background: #145814 !important; /* sage.600 */
+}
+
+/* Today */
+.react-datepicker__day--today {
+  background: #fdf8e8; /* golden.50 */
+  border-color: #f3d575; /* golden.300 */
+  color: #8d6f0f; /* golden.700 */
+  font-weight: 600;
+}
+
+/* Disabled days */
+.react-datepicker__day--disabled {
+  color: #ccc !important;
+  cursor: not-allowed !important;
+  background: #f9f9f9 !important;
+}
+
+.react-datepicker__day--disabled:hover {
+  background: #f9f9f9 !important;
+  border-color: transparent !important;
+}
+
+/* Excluded days (occupied by other steps) */
+.react-datepicker__day--excluded {
+  background: #fdeae6 !important; /* coral.50 */
+  color: #ef5733 !important; /* coral.400 */
+  cursor: not-allowed !important;
+  position: relative;
+}
+
+.react-datepicker__day--excluded:hover {
+  background: #fbd5cc !important; /* coral.100 */
+  border-color: #f38166 !important; /* coral.300 */
+}
+
+/* Custom conflict warning styling */
+.reschool-day-conflict {
+  background: #fdeae6 !important; /* coral.50 */
+  color: #ef5733 !important; /* coral.400 */
+  border-color: #f38166 !important; /* coral.300 */
+  position: relative;
+}
+
+.reschool-day-conflict::after {
+  display: none;
+}
+
+.reschool-day-conflict:hover {
+  background: #fbd5cc !important; /* coral.100 */
+}
+
+/* Outside month days */
+.react-datepicker__day--outside-month {
+  color: #ccc;
+}
+
+/* Keyboard focus */
+.react-datepicker__day--keyboard-selected {
+  background: #e6ecf5; /* navy.50 */
+  border-color: #99b3d7; /* navy.200 */
+}
+
+/* Time picker (if needed in future) */
+.react-datepicker__time-container {
+  border-left: 1px solid #e6dccd; /* cream.300 */
+}
+
+.react-datepicker__time-list-item--selected {
+  background: #196e19; /* sage.500 */
+  color: white;
+}
+
+.react-datepicker__time-list-item:hover {
+  background: #e8f0e8; /* sage.50 */
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .reschool-datepicker-calendar {
+    padding: 12px;
+  }
+  
+  .react-datepicker__day {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+  
+  .react-datepicker__day-name {
+    width: 28px;
+    height: 28px;
+    font-size: 10px;
+  }
+}

@@ -205,8 +205,8 @@ export interface IndsatsSteps {
   title: string;
   description?: string;
   målsætning?: string; // Text describing when/how the goal is achieved
-  startDate?: string; // DATE format YYYY-MM-DD
-  targetEndDate?: string; // DATE format YYYY-MM-DD
+  startDate?: string; // ISO datetime when the step is planned to start
+  targetEndDate?: string; // ISO datetime when the step is planned to end
   isCompleted: boolean;
   completedAt?: string;
   completedBy?: number;
@@ -2895,8 +2895,8 @@ export async function getIndsatsStepsForPlan(planId: number): Promise<IndsatsSte
       title: row.title,
       description: row.description,
       målsætning: row.målsætning,
-      startDate: row.start_date,
-      targetEndDate: row.target_end_date,
+      startDate: row.start_date ? new Date(row.start_date).toISOString() : undefined,
+      targetEndDate: row.target_end_date ? new Date(row.target_end_date).toISOString() : undefined,
       isCompleted: row.is_completed,
       completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : undefined,
       completedBy: row.completed_by,
@@ -3041,6 +3041,41 @@ export async function createStepPeriod(
   }
 }
 
+// Create a custom step period with specific start and end dates (for backdating)
+export async function createCustomStepPeriod(
+  stepId: number,
+  activatedBy: number,
+  startDate: Date,
+  endDate?: Date
+): Promise<IndsatsStepPeriod | null> {
+  try {
+    const result = await query(`
+      INSERT INTO indsatstrappe_step_periods (step_id, start_date, end_date, activated_by, deactivated_by)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [stepId, startDate, endDate || null, activatedBy, endDate ? activatedBy : null]);
+    
+    if (result.rows.length === 0) {
+      return null;
+    }
+    
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      stepId: row.step_id,
+      startDate: new Date(row.start_date).toISOString(),
+      endDate: row.end_date ? new Date(row.end_date).toISOString() : undefined,
+      activatedBy: row.activated_by,
+      deactivatedBy: row.deactivated_by,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString()
+    };
+  } catch (error) {
+    console.error('Error creating custom step period:', error);
+    return null;
+  }
+}
+
 // End the current active period for a step
 export async function endStepPeriod(
   stepId: number,
@@ -3081,18 +3116,35 @@ export async function addIndsatsStep(
   planId: number,
   title: string,
   description?: string,
-  målsætning?: string
+  målsætning?: string,
+  createdBy?: number,
+  stepStartDate?: string // Optional start date for the step period (for backdating)
 ): Promise<IndsatsSteps> {
+  const client = await getClient();
+  
   try {
-    // Get the next step number
-    const maxStepResult = await query(
-      'SELECT COALESCE(MAX(step_number), 0) as max_step FROM indsatstrappe_steps WHERE indsatstrappe_id = $1',
-      [planId]
-    );
+    await client.query('BEGIN');
+
+    // Get the next step number and plan information
+    const [maxStepResult, planResult] = await Promise.all([
+      client.query(
+        'SELECT COALESCE(MAX(step_number), 0) as max_step FROM indsatstrappe_steps WHERE indsatstrappe_id = $1',
+        [planId]
+      ),
+      client.query(
+        'SELECT start_date, created_by FROM indsatstrappe WHERE id = $1',
+        [planId]
+      )
+    ]);
     
     const nextStepNumber = (maxStepResult.rows[0]?.max_step || 0) + 1;
+    const plan = planResult.rows[0];
+    
+    if (!plan) {
+      throw new Error('Indsatstrappe plan not found');
+    }
 
-    const result = await query(
+    const result = await client.query(
       `INSERT INTO indsatstrappe_steps (indsatstrappe_id, step_number, title, description, målsætning, updated_at)
        VALUES ($1, $2, $3, $4, $5, NOW())
        RETURNING *`,
@@ -3100,6 +3152,19 @@ export async function addIndsatsStep(
     );
 
     const row = result.rows[0];
+    
+    // If this is the first step, automatically create a step period starting from the plan's start date
+    if (nextStepNumber === 1 && createdBy) {
+      const periodStartDate = stepStartDate ? new Date(stepStartDate) : new Date(plan.start_date);
+      
+      await client.query(`
+        INSERT INTO indsatstrappe_step_periods (step_id, start_date, activated_by)
+        VALUES ($1, $2, $3)
+      `, [row.id, periodStartDate, createdBy]);
+    }
+
+    await client.query('COMMIT');
+
     return {
       id: row.id,
       indsatstrapeId: row.indsatstrappe_id,
@@ -3107,8 +3172,8 @@ export async function addIndsatsStep(
       title: row.title,
       description: row.description,
       målsætning: row.målsætning,
-      startDate: row.start_date,
-      targetEndDate: row.target_end_date,
+      startDate: row.start_date ? new Date(row.start_date).toISOString() : undefined,
+      targetEndDate: row.target_end_date ? new Date(row.target_end_date).toISOString() : undefined,
       isCompleted: row.is_completed,
       completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : undefined,
       completedBy: row.completed_by,
@@ -3116,8 +3181,11 @@ export async function addIndsatsStep(
       updatedAt: new Date(row.updated_at).toISOString()
     };
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error adding indsats step:', error);
     throw error;
+  } finally {
+    client.release();
   }
 }
 
@@ -3150,8 +3218,8 @@ export async function completeIndsatsStep(
       title: row.title,
       description: row.description,
       målsætning: row.målsætning,
-      startDate: row.start_date,
-      targetEndDate: row.target_end_date,
+      startDate: row.start_date ? new Date(row.start_date).toISOString() : undefined,
+      targetEndDate: row.target_end_date ? new Date(row.target_end_date).toISOString() : undefined,
       isCompleted: row.is_completed,
       completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : undefined,
       completedBy: row.completed_by,
@@ -3193,8 +3261,8 @@ export async function markIndsatsStepIncomplete(
       title: row.title,
       description: row.description,
       målsætning: row.målsætning,
-      startDate: row.start_date,
-      targetEndDate: row.target_end_date,
+      startDate: row.start_date ? new Date(row.start_date).toISOString() : undefined,
+      targetEndDate: row.target_end_date ? new Date(row.target_end_date).toISOString() : undefined,
       isCompleted: row.is_completed,
       completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : undefined,
       completedBy: row.completed_by,
@@ -3393,7 +3461,13 @@ export async function deleteIndsatstrappe(id: number): Promise<boolean> {
 // Update indsatstrappe step
 export async function updateIndsatsStep(
   id: number, 
-  updates: { title?: string; description?: string; målsætning?: string }
+  updates: { 
+    title?: string; 
+    description?: string; 
+    målsætning?: string;
+    startDate?: string;
+    targetEndDate?: string;
+  }
 ): Promise<boolean> {
   try {
     const fields = [];
@@ -3411,6 +3485,14 @@ export async function updateIndsatsStep(
     if (updates.målsætning !== undefined) {
       fields.push(`målsætning = $${++paramCount}`);
       values.push(updates.målsætning);
+    }
+    if (updates.startDate !== undefined) {
+      fields.push(`start_date = $${++paramCount}`);
+      values.push(updates.startDate);
+    }
+    if (updates.targetEndDate !== undefined) {
+      fields.push(`target_end_date = $${++paramCount}`);
+      values.push(updates.targetEndDate);
     }
 
     if (fields.length === 0) {
@@ -3496,7 +3578,7 @@ export async function getAllToolEntriesForChild(childId: number): Promise<Progre
       SELECT 
         be.id, be.barometer_id as tool_id, be.recorded_by, be.entry_date, 
         be.rating, be.comment, be.created_at, be.updated_at,
-        b.topic, b.display_type,
+        b.topic, b.display_type, b.smiley_type,
         u.display_name as recorded_by_name
       FROM barometer_entries be
       JOIN barometers b ON be.barometer_id = b.id
@@ -3518,7 +3600,8 @@ export async function getAllToolEntriesForChild(childId: number): Promise<Progre
         data: {
           rating: row.rating,
           comment: row.comment,
-          displayType: row.display_type
+          displayType: row.display_type,
+          smileyType: row.smiley_type
         }
       });
     }
@@ -3662,136 +3745,257 @@ function groupEntriesByStepTiming(
   // Track which entries have been assigned to avoid duplicates
   const assignedEntries = new Set<string>();
   
-  // First pass: assign entries to steps with specific periods (most precise)
-  for (const step of sortedSteps) {
-    const periods = step.activePeriods || [];
-    
-    const stepEntries = allEntries.filter(entry => {
-      // Skip if entry already assigned
-      const entryKey = `${entry.id}-${entry.toolType}`;
-      if (assignedEntries.has(entryKey)) return false;
+  // Check if any steps have periods at all (for modern data)
+  const hasAnyPeriods = sortedSteps.some(step => step.activePeriods && step.activePeriods.length > 0);
+  
+  if (hasAnyPeriods) {
+    // Modern approach: use period-based assignment for steps that have periods
+    for (const step of sortedSteps) {
+      const periods = step.activePeriods || [];
       
-      // Only include barometer and dagens smiley entries (exclude sengetider)
-      if (entry.toolType === 'sengetider') return false;
-      
-      const entryDate = new Date(entry.createdAt);
-      
-      // Check if this entry falls within any of this step's periods
-      if (periods.length > 0) {
-        const isInThisPeriod = periods.some(period => {
-          const periodStart = new Date(period.startDate);
-          const periodEnd = period.endDate ? new Date(period.endDate) : null;
-          
-          const afterStart = entryDate >= periodStart;
-          const beforeEnd = !periodEnd || entryDate <= periodEnd;
-          
-          return afterStart && beforeEnd;
-        });
+      const stepEntries = allEntries.filter(entry => {
+        // Skip if entry already assigned
+        const entryKey = `${entry.id}-${entry.toolType}`;
+        if (assignedEntries.has(entryKey)) return false;
         
-        if (isInThisPeriod) {
-          assignedEntries.add(entryKey);
-          console.log(`  Entry ${entry.id} (${entry.toolType}) assigned to step ${step.stepNumber} via period matching`);
-          return true;
+        // Only include barometer and dagens smiley entries (exclude sengetider)
+        if (entry.toolType === 'sengetider') return false;
+        
+        const entryDate = new Date(entry.createdAt);
+        
+        // Check if this entry falls within any of this step's periods
+        if (periods.length > 0) {
+          const isInThisPeriod = periods.some(period => {
+            const periodStart = new Date(period.startDate);
+            const periodEnd = period.endDate ? new Date(period.endDate) : null;
+            
+            const afterStart = entryDate >= periodStart;
+            const beforeEnd = !periodEnd || entryDate <= periodEnd;
+            
+            return afterStart && beforeEnd;
+          });
+          
+          if (isInThisPeriod) {
+            assignedEntries.add(entryKey);
+            console.log(`  Entry ${entry.id} (${entry.toolType}) assigned to step ${step.stepNumber} via period matching`);
+            return true;
+          }
+        }
+        
+        return false;
+      });
+      
+      console.log(`Step ${step.stepNumber} matched ${stepEntries.length} entries via periods`);
+      
+      // Calculate time range and duration for this step
+      let overallStartDate: string | null = null;
+      let overallEndDate: string | null = null;
+      let totalDurationDays: number | null = null;
+      
+      if (periods.length > 0) {
+        // Overall start is the earliest period start
+        overallStartDate = periods.reduce((earliest: string | null, period) => {
+          return !earliest || period.startDate < earliest ? period.startDate : earliest;
+        }, null as string | null);
+        
+        // Overall end is the latest period end (or null if any period is ongoing)
+        const hasOngoingPeriod = periods.some(p => !p.endDate);
+        if (!hasOngoingPeriod) {
+          overallEndDate = periods.reduce((latest: string | null, period) => {
+            const periodEndDate = period.endDate || null;
+            return !latest || !periodEndDate || periodEndDate > latest ? periodEndDate : latest;
+          }, null as string | null);
+        }
+        
+        // Calculate total duration across all periods
+        if (overallStartDate) {
+          const startDate = new Date(overallStartDate);
+          const endDate = overallEndDate ? new Date(overallEndDate) : new Date();
+          totalDurationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
         }
       }
       
-      return false;
-    });
-    
-    console.log(`Step ${step.stepNumber} matched ${stepEntries.length} entries via periods`);
-    
-    // Calculate time range and duration for this step
-    let overallStartDate: string | null = null;
-    let overallEndDate: string | null = null;
-    let totalDurationDays: number | null = null;
-    
-    if (periods.length > 0) {
-      // Overall start is the earliest period start
-      overallStartDate = periods.reduce((earliest: string | null, period) => {
-        return !earliest || period.startDate < earliest ? period.startDate : earliest;
-      }, null as string | null);
-      
-      // Overall end is the latest period end (or null if any period is ongoing)
-      const hasOngoingPeriod = periods.some(p => !p.endDate);
-      if (!hasOngoingPeriod) {
-        overallEndDate = periods.reduce((latest: string | null, period) => {
-          const periodEndDate = period.endDate || null;
-          return !latest || !periodEndDate || periodEndDate > latest ? periodEndDate : latest;
-        }, null as string | null);
+      // Fallback to step's own dates if no periods exist
+      if (!overallStartDate && !overallEndDate) {
+        overallStartDate = step.startDate || null;
+        overallEndDate = step.targetEndDate || null;
+        
+        // Calculate duration if we have step dates
+        if (overallStartDate) {
+          const startDate = new Date(overallStartDate);
+          const endDate = overallEndDate ? new Date(overallEndDate) : new Date();
+          totalDurationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        }
       }
-      
-      // Calculate total duration across all periods
-      if (overallStartDate) {
-        const startDate = new Date(overallStartDate);
-        const endDate = overallEndDate ? new Date(overallEndDate) : new Date();
-        totalDurationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      }
-    }
-    
-    // Fallback to step's own dates if no periods exist
-    if (!overallStartDate && !overallEndDate) {
-      overallStartDate = step.startDate || null;
-      overallEndDate = step.targetEndDate || null;
-      
-      // Calculate duration if we have step dates
-      if (overallStartDate) {
-        const startDate = new Date(overallStartDate);
-        const endDate = overallEndDate ? new Date(overallEndDate) : new Date();
-        totalDurationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      }
-    }
 
-    groupedSteps.push({
-      ...step,
-      groupedEntries: stepEntries,
-      timePerriod: {
-        startDate: overallStartDate,
-        endDate: overallEndDate
-      },
-      durationDays: totalDurationDays
+      groupedSteps.push({
+        ...step,
+        groupedEntries: stepEntries,
+        timePerriod: {
+          startDate: overallStartDate,
+          endDate: overallEndDate
+        },
+        durationDays: totalDurationDays
+      });
+    }
+    
+    // Handle unassigned entries for period-enabled data
+    const unassignedEntries = allEntries.filter(entry => {
+      const entryKey = `${entry.id}-${entry.toolType}`;
+      return !assignedEntries.has(entryKey) && entry.toolType !== 'sengetider';
     });
-  }
-  
-  // Second pass: distribute remaining unassigned entries chronologically
-  const unassignedEntries = allEntries.filter(entry => {
-    const entryKey = `${entry.id}-${entry.toolType}`;
-    return !assignedEntries.has(entryKey) && entry.toolType !== 'sengetider';
-  });
-  
-  if (unassignedEntries.length > 0) {
-    console.log(`Distributing ${unassignedEntries.length} unassigned entries chronologically`);
+    
+    if (unassignedEntries.length > 0) {
+      console.log(`Found ${unassignedEntries.length} unassigned entries - checking for valid step assignments`);
+      
+      // Only assign unassigned entries to steps that have actually been active (have periods)
+      const activeSteps = groupedSteps.filter(step => 
+        step.activePeriods && step.activePeriods.length > 0
+      );
+      
+      if (activeSteps.length > 0) {
+        // For each unassigned entry, try to find the most appropriate active step
+        for (const entry of unassignedEntries) {
+          const entryDate = new Date(entry.createdAt);
+          let assignedToStep = false;
+          let bestStep: typeof activeSteps[0] | null = null;
+          let bestDistance = Infinity;
+          
+          // Try to assign to the step that was active closest to the entry date
+          for (const step of activeSteps) {
+            const periods = step.activePeriods || [];
+            
+            for (const period of periods) {
+              const periodStart = new Date(period.startDate);
+              const periodEnd = period.endDate ? new Date(period.endDate) : new Date();
+              
+              // Check if entry is within the period
+              if (entryDate >= periodStart && entryDate <= periodEnd) {
+                step.groupedEntries.push(entry);
+                assignedToStep = true;
+                console.log(`Entry ${entry.id} assigned to step ${step.stepNumber} (within active period)`);
+                break;
+              }
+              
+              // Calculate distance to this period
+              let distance: number;
+              if (entryDate < periodStart) {
+                distance = Math.ceil((periodStart.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
+              } else {
+                distance = Math.ceil((entryDate.getTime() - periodEnd.getTime()) / (1000 * 60 * 60 * 24));
+              }
+              
+              if (distance < bestDistance) {
+                bestDistance = distance;
+                bestStep = step;
+              }
+            }
+            
+            if (assignedToStep) break;
+          }
+          
+          // If not assigned within any period but we found a close step, assign it
+          if (!assignedToStep && bestStep && bestDistance <= 30) { // Allow up to 30 days distance
+            bestStep.groupedEntries.push(entry);
+            console.log(`Entry ${entry.id} assigned to step ${bestStep.stepNumber} (${bestDistance} days from period)`);
+          } else if (!assignedToStep) {
+            console.log(`Entry ${entry.id} (${entry.toolType}) could not be assigned to any active step - skipping`);
+          }
+        }
+      } else {
+        // Fallback: if no active steps with periods, assign to any step for backward compatibility
+        console.log(`No active steps found - using fallback assignment for ${unassignedEntries.length} entries`);
+        
+        if (groupedSteps.length > 0) {
+          // Assign all unassigned entries to the first step as a fallback
+          const firstStep = groupedSteps[0];
+          firstStep.groupedEntries = [...firstStep.groupedEntries, ...unassignedEntries];
+          console.log(`All ${unassignedEntries.length} unassigned entries assigned to step ${firstStep.stepNumber} as fallback`);
+        }
+      }
+    }
+  } else {
+    // Legacy approach: no periods exist, use step dates or chronological distribution
+    console.log('No step periods found - using legacy chronological assignment');
+    
+    // Filter to only barometer and smiley entries
+    const validEntries = allEntries.filter(entry => entry.toolType !== 'sengetider');
     
     // Sort entries by creation date
-    const sortedUnassignedEntries = unassignedEntries.sort((a, b) => 
+    const sortedEntries = validEntries.sort((a, b) => 
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
     
-    // Find steps that don't have periods or have no entries yet
-    const stepsForDistribution = groupedSteps.filter(step => 
-      !step.activePeriods || step.activePeriods.length === 0 || step.groupedEntries.length === 0
+    // Only assign entries to steps that have been started (have start_date or are step 1)
+    const activeSteps = sortedSteps.filter(step => 
+      step.stepNumber === 1 || step.startDate !== null
     );
     
-    if (stepsForDistribution.length > 0) {
-      const entriesPerStep = Math.ceil(sortedUnassignedEntries.length / stepsForDistribution.length);
+    console.log(`Found ${activeSteps.length} active steps (with start dates or step 1)`);
+    
+    // Distribute entries across active steps based on timing
+    for (const step of activeSteps) {
+      let stepEntries: ProgressEntry[] = [];
       
-      for (let i = 0; i < stepsForDistribution.length; i++) {
-        const step = stepsForDistribution[i];
-        const startIndex = i * entriesPerStep;
-        const endIndex = Math.min(startIndex + entriesPerStep, sortedUnassignedEntries.length);
-        const entriesToAdd = sortedUnassignedEntries.slice(startIndex, endIndex);
+      if (step.startDate) {
+        // Assign entries that fall within or after the step's start date
+        const stepStart = new Date(step.startDate);
+        const stepEnd = step.targetEndDate ? new Date(step.targetEndDate) : new Date(); // Use current date if no end date
         
-        // Add to existing entries (from period matching)
-        step.groupedEntries = [...step.groupedEntries, ...entriesToAdd];
+        stepEntries = sortedEntries.filter(entry => {
+          const entryDate = new Date(entry.createdAt);
+          return entryDate >= stepStart && entryDate <= stepEnd;
+        });
         
-        console.log(`Step ${step.stepNumber} received ${entriesToAdd.length} chronologically distributed entries`);
+        console.log(`Step ${step.stepNumber} (${step.title}) assigned ${stepEntries.length} entries via date range`);
+      } else if (step.stepNumber === 1) {
+        // Step 1 without dates gets entries before any other step's start date
+        const nextStepStart = sortedSteps.find(s => s.stepNumber > 1 && s.startDate)?.startDate;
+        
+        if (nextStepStart) {
+          const nextStart = new Date(nextStepStart);
+          stepEntries = sortedEntries.filter(entry => {
+            const entryDate = new Date(entry.createdAt);
+            return entryDate < nextStart;
+          });
+        } else {
+          // If no other steps have dates, step 1 gets all entries
+          stepEntries = [...sortedEntries];
+        }
+        
+        console.log(`Step ${step.stepNumber} (step 1 fallback) assigned ${stepEntries.length} entries`);
       }
-    } else {
-      // If all steps have periods, assign remaining entries to the last active step
-      const lastStep = groupedSteps[groupedSteps.length - 1];
-      if (lastStep) {
-        lastStep.groupedEntries = [...lastStep.groupedEntries, ...sortedUnassignedEntries];
-        console.log(`All ${sortedUnassignedEntries.length} unassigned entries added to last step ${lastStep.stepNumber}`);
-      }
+      
+      groupedSteps.push({
+        ...step,
+        groupedEntries: stepEntries,
+        timePerriod: {
+          startDate: step.startDate || null,
+          endDate: step.targetEndDate || null
+        },
+        durationDays: step.startDate && step.targetEndDate ? 
+          Math.ceil((new Date(step.targetEndDate).getTime() - new Date(step.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 
+          null
+      });
+    }
+    
+    // Add inactive steps with no entries
+    const inactiveSteps = sortedSteps.filter(step => 
+      step.stepNumber !== 1 && step.startDate === null
+    );
+    
+    for (const step of inactiveSteps) {
+      console.log(`Step ${step.stepNumber} (${step.title}) marked as inactive - no entries assigned`);
+      
+      groupedSteps.push({
+        ...step,
+        groupedEntries: [], // No entries for inactive steps
+        timePerriod: {
+          startDate: null,
+          endDate: null
+        },
+        durationDays: null
+      });
     }
   }
   

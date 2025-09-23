@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   VStack,
@@ -26,7 +26,9 @@ import {
 import { IoChevronDown, IoChevronUp } from 'react-icons/io5';
 import { FaStairs, FaClock, FaClipboardList } from 'react-icons/fa6';
 import { Icons } from '@/components/ui/icons';
+import { OpenMojiEmoji } from '@/components/ui/openmoji-emoji';
 import { Thermometer, Smile, Bed, Edit3 } from 'lucide-react';
+import { Tooltip } from '@/components/ui/tooltip';
 import { format, parseISO, isValid, differenceInDays } from 'date-fns';
 import { da } from 'date-fns/locale';
 import { useProgress } from '@/lib/queries';
@@ -43,6 +45,59 @@ interface ExpandedSteps {
 interface ExpandedDescriptions {
   [stepId: number]: boolean;
 }
+
+// Enhanced Tooltip component using Chakra UI's built-in Tooltip
+interface EnhancedTooltipProps {
+  content: React.ReactNode;
+  children: React.ReactNode;
+}
+
+const EnhancedTooltip = ({ content, children }: EnhancedTooltipProps) => {
+  return (
+    <Tooltip
+      content={content}
+      openDelay={300}
+      closeDelay={150}
+      showArrow={true}
+      positioning={{ 
+        placement: "top",
+        gutter: 8,
+        offset: { mainAxis: 6 }
+      }}
+      contentProps={{
+        css: {
+          "--tooltip-bg": "var(--chakra-colors-bg-panel)",
+          "--tooltip-border-color": "var(--chakra-colors-border-subtle)",
+        },
+        color: "fg",
+        fontSize: "sm",
+        fontWeight: "500",
+        borderRadius: "lg",
+        px: 4,
+        py: 3,
+        maxW: "320px",
+        minW: "200px",
+        boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+        border: "1px solid",
+        borderColor: "border.subtle",
+        whiteSpace: "pre-line" as const,
+        lineHeight: "1.5"
+      }}
+    >
+      <Box
+        cursor="pointer"
+        position="relative"
+        display="inline-block"
+        _hover={{
+          transform: "scale(1.05)",
+          transition: "transform 0.2s ease"
+        }}
+      >
+        {children}
+      </Box>
+    </Tooltip>
+  );
+};
 
 export function ProgressTimeline({ childId }: ProgressTimelineProps) {
   const [expandedSteps, setExpandedSteps] = useState<ExpandedSteps>({});
@@ -164,16 +219,75 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     plan.stepsWithEntries.forEach((step, stepIndex) => {
       
       step.groupedEntries.forEach((entry) => {
-        const entryDate = new Date(entry.createdAt);
-        const daysSinceStart = differenceInDays(entryDate, baseDate);
+        const entryDate = new Date(entry.entryDate);
+        // Normalize both dates to avoid timezone issues
+        const normalizedEntryDate = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+        const normalizedBaseDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+        
+        const daysSinceStart = differenceInDays(normalizedEntryDate, normalizedBaseDate);
         const displayData = getEntryDisplayData(entry);
+        
+        // For chart data, we need string representation of icons
+        let iconString = '';
+        if (typeof displayData.icon === 'string') {
+          iconString = displayData.icon;
+        } else {
+          // For ReactNode icons, extract the emoji from the entry data directly
+          switch (entry.toolType) {
+            case 'barometer':
+              const rating = Number(entry.data.rating) || 0;
+              const displayType = String(entry.data.displayType) || 'numbers';
+              const smileyType = String(entry.data.smileyType) || 'emojis';
+              
+              if (displayType === 'percentage') {
+                const percentage = Math.round(((rating - 1) / (5 - 1)) * 100);
+                iconString = `${percentage}%`;
+              } else if (displayType === 'numbers') {
+                iconString = String(rating);
+              } else if (displayType === 'smileys') {
+                const range = 5 - 1;
+                const position = (rating - 1) / range;
+                const currentSmileyType = smileyType || 'emojis';
+                
+                if (currentSmileyType === 'emojis') {
+                  if (position <= 0.2) iconString = '😢';
+                  else if (position <= 0.4) iconString = '😟';
+                  else if (position <= 0.6) iconString = '😐';
+                  else if (position <= 0.8) iconString = '😊';
+                  else iconString = '😄';
+                } else if (currentSmileyType === 'simple') {
+                  if (position <= 0.2) iconString = '☹️';
+                  else if (position <= 0.4) iconString = '😕';
+                  else if (position <= 0.6) iconString = '😐';
+                  else if (position <= 0.8) iconString = '🙂';
+                  else iconString = '😊';
+                } else if (currentSmileyType === 'subtle') {
+                  if (position <= 0.2) iconString = '😞';
+                  else if (position <= 0.4) iconString = '😐';
+                  else if (position <= 0.6) iconString = '😌';
+                  else if (position <= 0.8) iconString = '😊';
+                  else iconString = '😁';
+                }
+              }
+              break;
+            case 'dagens-smiley':
+              iconString = String(entry.data.smileyValue || '😐');
+              break;
+            case 'sengetider':
+              iconString = '🛏️';
+              break;
+            default:
+              iconString = '📝';
+              break;
+          }
+        }
         
         chartData.push({
           x: daysSinceStart,
           y: stepIndex + 1,
           stepTitle: step.title,
           stepId: step.id,
-          icon: displayData.icon,
+          icon: iconString,
           title: displayData.title,
           subtitle: displayData.subtitle,
           createdAt: entry.createdAt,
@@ -232,9 +346,17 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
       return acc;
     }, {} as Record<string, string>);
 
-    // Calculate the full timespan - from day 1 to the latest day with data (or at least 30 days)
-    const maxDay = Math.max(...allChartData.map(entry => entry.x + 1), 30);
-    const allDays = Array.from({ length: maxDay }, (_, i) => i + 1); // [1, 2, 3, ..., maxDay]
+    // Calculate the date range - only show days with data, and never beyond today
+    const daysWithData = allChartData.map(entry => entry.x + 1);
+    const today = new Date();
+    const planStartDate = plan.startDate ? new Date(plan.startDate) : new Date();
+    const daysSinceStart = Math.floor((today.getTime() - planStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Only include days that either have data or are not in the future
+    const maxDay = daysWithData.length > 0 ? Math.max(...daysWithData) : daysSinceStart;
+    const cappedMaxDay = Math.min(maxDay, daysSinceStart); // Don't show future dates
+    
+    const allDays = Array.from({ length: cappedMaxDay }, (_, i) => i + 1); // [1, 2, 3, ..., cappedMaxDay]
 
     // Helper function to get tool icon for activity rows
     const getActivityRowIcon = (toolType: string) => {
@@ -286,6 +408,20 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
       let emptyStreak: number[] = [];
       
       const hasDataForDay = (day: number) => {
+        // Calculate the actual date for this day
+        const baseDate = plan.startDate ? new Date(plan.startDate) : new Date();
+        const currentDate = new Date(baseDate);
+        currentDate.setDate(currentDate.getDate() + (day - 1));
+        
+        // Don't condense future dates - they should always be shown individually
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        currentDate.setHours(0, 0, 0, 0);
+        
+        if (currentDate >= today) {
+          return true; // Treat future dates as having "data" to prevent condensation
+        }
+        
         return displayTitles.some(title => filteredData[title] && filteredData[title][day] && filteredData[title][day].length > 0);
       };
       
@@ -500,14 +636,8 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
           <Table.Root 
             size="sm" 
             stickyHeader 
-            showColumnBorder
             variant="outline"
             colorPalette="gray"
-            css={{
-              "& td, & th": {
-                borderColor: "var(--chakra-colors-gray-200) !important"
-              }
-            }}
           >
             {/* Column definitions */}
             <Table.ColumnGroup>
@@ -558,9 +688,14 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                     const stepStart = new Date(stepStartDate);
                     const stepEnd = stepEndDate ? new Date(stepEndDate) : new Date();
                     
-                    const startDay = Math.max(1, differenceInDays(stepStart, planStartDate) + 1);
+                    // Normalize dates to avoid timezone issues
+                    const normalizedPlanStart = new Date(planStartDate.getFullYear(), planStartDate.getMonth(), planStartDate.getDate());
+                    const normalizedStepStart = new Date(stepStart.getFullYear(), stepStart.getMonth(), stepStart.getDate());
+                    const normalizedStepEnd = new Date(stepEnd.getFullYear(), stepEnd.getMonth(), stepEnd.getDate());
+                    
+                    const startDay = Math.max(1, differenceInDays(normalizedStepStart, normalizedPlanStart) + 1);
                     const endDay = stepEndDate 
-                      ? differenceInDays(stepEnd, planStartDate) + 1
+                      ? differenceInDays(normalizedStepEnd, normalizedPlanStart) + 1
                       : Math.min(allDays.length, startDay + 30);
                     
                     // Calculate span based on processed days
@@ -679,31 +814,59 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                         py={{ base: 1, md: 2 }}
                         position="relative"
                         _hover={{ 
-                          bg: entries.length > 0 ? "sage.50" : "bg.subtle"
+                          bg: entries.length > 0 ? "gray.50" : "bg.subtle",
+                          boxShadow: entries.length > 0 ? "0 2px 4px rgba(0, 0, 0, 0.1)" : "none",
+                          borderColor: entries.length > 0 ? "gray.300" : "border.default"
                         }}
-                        transition="all 0.2s"
+                        transition="all 0.2s ease"
                         cursor={entries.length > 0 ? "pointer" : "default"}
                       >
                         {entries.length === 0 ? (
                           <Text fontSize="xs" color="gray.300">·</Text>
                         ) : entries.length === 1 ? (
-                          <Box
-                            fontSize="lg" 
-                            _hover={{ transform: "scale(1.3)" }}
-                            transition="all 0.2s"
-                            title={`${entries[0].stepTitle}: ${entries[0].title} - ${entries[0].subtitle} (${entries[0].time})`}
+                          <EnhancedTooltip 
+                            content={formatTooltipContent(entries)}
                           >
-                            {entries[0].icon}
-                          </Box>
+                            <Box
+                              fontSize="xl"
+                              _hover={{ 
+                                transform: "scale(1.2)",
+                                filter: "brightness(1.1)"
+                              }}
+                              transition="all 0.2s ease"
+                              position="relative"
+                              zIndex={1}
+                            >
+                              {getEmojiIcon(entries[0].icon, 24)}
+                            </Box>
+                          </EnhancedTooltip>
                         ) : (
-                          <VStack gap={0} title={`${entries.length} registreringer`}>
-                            <Text fontSize="sm" fontWeight="600" color="sage.600">
-                              {entries.length}
-                            </Text>
-                            <Text fontSize="xs" color="navy.500">
-                              {entries[0].icon}
-                            </Text>
-                          </VStack>
+                          <EnhancedTooltip 
+                            content={formatTooltipContent(entries)}
+                          >
+                            <VStack gap={0}>
+                              <Text 
+                                fontSize="sm" 
+                                fontWeight="600" 
+                                color="gray.600"
+                                _groupHover={{ color: "gray.700" }}
+                                transition="color 0.2s ease"
+                              >
+                                {entries.length}
+                              </Text>
+                              <Box 
+                                fontSize="sm" 
+                                color="blue.500"
+                                _groupHover={{ 
+                                  transform: "scale(1.1)",
+                                  filter: "brightness(1.1)"
+                                }}
+                                transition="all 0.2s ease"
+                              >
+                                {getEmojiIcon(entries[0].icon, 18)}
+                              </Box>
+                            </VStack>
+                          </EnhancedTooltip>
                         )}
                       </Table.Cell>
                     );
@@ -816,8 +979,10 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     const grouped: { [dateKey: string]: ProgressEntry[] } = {};
     
     entries.forEach(entry => {
-      const entryDate = new Date(entry.createdAt);
-      const dateKey = format(entryDate, 'yyyy-MM-dd');
+      const entryDate = new Date(entry.entryDate);
+      // Normalize date to avoid timezone issues
+      const normalizedEntryDate = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+      const dateKey = format(normalizedEntryDate, 'yyyy-MM-dd');
       
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
@@ -830,8 +995,36 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
 
   // Dated Timeline Component
   const DatedTimeline = ({ step, isHorizontal }: { step: StepWithGroupedEntries; isHorizontal: boolean }) => {
-    const dateRange = generateDateRange(step.timePerriod.startDate, step.timePerriod.endDate);
     const entriesByDate = groupEntriesByDate(step.groupedEntries);
+    
+    // Generate date range based on actual entries, not the full step period
+    const entryDates = Object.keys(entriesByDate).map(dateKey => new Date(dateKey)).sort((a, b) => a.getTime() - b.getTime());
+    
+    let dateRange: Date[] = [];
+    if (entryDates.length > 0) {
+      const firstEntryDate = entryDates[0];
+      const lastEntryDate = entryDates[entryDates.length - 1];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Normalize to start of day
+      
+      // Don't show dates beyond today
+      const effectiveLastDate = lastEntryDate > today ? today : lastEntryDate;
+      
+      console.log(`DatedTimeline: Step ${step.title}, Entries from ${format(firstEntryDate, 'dd/MM')} to ${format(effectiveLastDate, 'dd/MM')}`);
+      
+      // Generate range from first entry to last entry (only dates with entries)
+      const current = new Date(firstEntryDate);
+      while (current <= effectiveLastDate) {
+        const dateKey = format(current, 'yyyy-MM-dd');
+        // Only include dates that have entries
+        if (entriesByDate[dateKey]) {
+          dateRange.push(new Date(current));
+        }
+        current.setDate(current.getDate() + 1);
+      }
+    }
+    
+    console.log(`DatedTimeline: Showing ${dateRange.length} dates for step ${step.title}`);
     
     if (dateRange.length === 0) {
       // Fallback to simple entry list if no date range
@@ -850,7 +1043,9 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                 borderColor="cream.300"
               >
                 <Flex align="center" gap={3} wrap="wrap">
-                  <Text fontSize="lg">{displayData.icon}</Text>
+                  <Box fontSize="xl">
+                    {displayData.icon}
+                  </Box>
                   <VStack align="start" gap={0} flex={1}>
                     <Text fontSize="sm" fontWeight="medium" color="navy.700">
                       {displayData.title}
@@ -928,7 +1123,9 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                               w="full"
                               textAlign="center"
                             >
-                              <Text fontSize="md" mb={1}>{displayData.icon}</Text>
+                              <Box fontSize="lg" mb={1}>
+                                {displayData.icon}
+                              </Box>
                               <Text fontSize="xs" color="navy.700" fontWeight="medium" lineClamp={2}>
                                 {entry.toolTopic}
                               </Text>
@@ -996,7 +1193,9 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                           borderColor="sage.300"
                         >
                           <Flex align="center" gap={3}>
-                            <Text fontSize="lg">{displayData.icon}</Text>
+                            <Box fontSize="xl">
+                              {displayData.icon}
+                            </Box>
                             <VStack align="start" gap={0} flex={1}>
                               <Text fontSize="sm" fontWeight="medium" color="navy.700">
                                 {displayData.title}
@@ -1024,41 +1223,185 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     );
   };
 
+  // Helper function to get OpenMoji component for any emoji
+  const getEmojiIcon = (content: string, size = 20) => {
+    // Check if content is an emoji (simple check for common emoji patterns)
+    const isEmoji = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|😐|😊|😄|😢|😟|🛏️|📝|☹️|😕|🙂|😞|😌|😁/u.test(content);
+    
+    if (isEmoji) {
+      return (
+        <OpenMojiEmoji 
+          unicode={content || '😐'} 
+          size={size}
+          style={{ display: 'inline-block' }}
+        />
+      );
+    }
+    
+    // Return as text if not an emoji
+    return <Text>{content}</Text>;
+  };
+
+  // Helper function specifically for dagens smiley (backwards compatibility)
+  const getDagensSmileyIcon = (smileyValue: string, size = 20) => {
+    return getEmojiIcon(smileyValue, size);
+  };
+
+  // Helper function to get barometer display value based on display type
+  const getBarometerDisplayValue = (rating: number, displayType: string, smileyType?: string, scaleMin = 1, scaleMax = 5): React.ReactNode => {
+    if (displayType === 'percentage') {
+      const percentage = Math.round(((rating - scaleMin) / (scaleMax - scaleMin)) * 100);
+      return `${percentage}%`;
+    }
+    
+    if (displayType === 'numbers') {
+      return String(rating);
+    }
+    
+    if (displayType === 'smileys') {
+      const range = scaleMax - scaleMin;
+      const position = (rating - scaleMin) / range;
+      const currentSmileyType = smileyType || 'emojis';
+      
+      let emoji = '😐'; // default
+      
+      if (currentSmileyType === 'emojis') {
+        // Traditional emojis for younger children
+        if (position <= 0.2) emoji = '😢';
+        else if (position <= 0.4) emoji = '😟';
+        else if (position <= 0.6) emoji = '😐';
+        else if (position <= 0.8) emoji = '😊';
+        else emoji = '😄';
+      } else if (currentSmileyType === 'simple') {
+        // Simple text representations for table display
+        if (position <= 0.2) emoji = '☹️';
+        else if (position <= 0.4) emoji = '😕';
+        else if (position <= 0.6) emoji = '😐';
+        else if (position <= 0.8) emoji = '🙂';
+        else emoji = '😊';
+      } else if (currentSmileyType === 'subtle') {
+        // More mature representations
+        if (position <= 0.2) emoji = '😞';
+        else if (position <= 0.4) emoji = '😐';
+        else if (position <= 0.6) emoji = '😌';
+        else if (position <= 0.8) emoji = '😊';
+        else emoji = '😁';
+      }
+      
+      // Return OpenMoji component for emoji display
+      return (
+        <OpenMojiEmoji 
+          unicode={emoji} 
+          size={20}
+          style={{ display: 'inline-block' }}
+        />
+      );
+    }
+    
+    // Fallback to rating number
+    return String(rating);
+  };
+
   const getEntryDisplayData = (entry: ProgressEntry): {
-    icon: string;
+    icon: React.ReactNode;
     title: string;
     subtitle: string;
     color: string;
   } => {
     switch (entry.toolType) {
       case 'barometer':
+        const rating = Number(entry.data.rating) || 0;
+        const displayType = String(entry.data.displayType) || 'numbers';
+        const smileyType = String(entry.data.smileyType) || 'emojis';
+        
         return {
-          icon: String(entry.data.rating || '?'),
+          icon: getBarometerDisplayValue(rating, displayType, smileyType),
           title: entry.toolTopic,
           subtitle: String(entry.data.comment || 'Ingen kommentar'),
           color: 'navy'
         };
       case 'dagens-smiley':
         return {
-          icon: String(entry.data.smileyValue || '😐'),
+          icon: getEmojiIcon(String(entry.data.smileyValue || '😐')),
           title: entry.toolTopic,
           subtitle: String(entry.data.comment || 'Ingen kommentar'),
           color: 'sage'
         };
       case 'sengetider':
         return {
-          icon: '🛏️',
+          icon: getEmojiIcon('🛏️'),
           title: `${entry.toolTopic}`,
           subtitle: `Sengetid: ${String(entry.data.bedtime || 'Ikke angivet')}`,
           color: 'golden'
         };
       default:
         return {
-          icon: '📝',
+          icon: getEmojiIcon('📝'),
           title: entry.toolTopic,
           subtitle: 'Data registreret',
           color: 'gray'
         };
+    }
+  };
+
+  // Helper function to format tooltip content for table cells
+  const formatTooltipContent = (entries: Array<{
+    x: number;
+    y: number;
+    stepTitle: string;
+    stepId: number;
+    icon: string;
+    title: string;
+    subtitle: string;
+    createdAt: string;
+    toolType: string;
+    entryId: number;
+    recordedByName: string;
+    date: string;
+    time: string;
+  }>) => {
+    if (entries.length === 1) {
+      const entry = entries[0];
+      
+      // Check if there's a comment
+      const hasComment = entry.subtitle && !entry.subtitle.includes('Ingen kommentar');
+      let comment = '';
+      if (hasComment) {
+        // Clean up the subtitle by removing redundant prefixes
+        comment = entry.subtitle;
+        if (comment.startsWith('Kommentar: ')) {
+          comment = comment.replace('Kommentar: ', '');
+        }
+      }
+      
+      // Create tooltip content with badge for name
+      return (
+        <VStack align="start" gap={2}>
+          {comment && (
+            <Text fontSize="sm" lineHeight="1.4">
+              {comment}
+            </Text>
+          )}
+          {entry.recordedByName && (
+            <Badge 
+              variant="subtle" 
+              colorScheme="blue" 
+              size="sm"
+              borderRadius="full"
+            >
+              {entry.recordedByName}
+            </Badge>
+          )}
+          {!comment && !entry.recordedByName && (
+            <Text fontSize="sm" color="fg.muted">
+              Registrering gennemført
+            </Text>
+          )}
+        </VStack>
+      );
+    } else {
+      // Multiple entries - show simple summary
+      return `${entries.length} registreringer`;
     }
   };
 
@@ -1287,9 +1630,9 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                                           }}
                                           transition="all 0.2s"
                                         >
-                                          <Text fontSize="lg" lineHeight="1">
+                                          <Box fontSize="lg" lineHeight="1">
                                             {displayData.icon}
-                                          </Text>
+                                          </Box>
                                         </Box>
                                       );
                                     })}
