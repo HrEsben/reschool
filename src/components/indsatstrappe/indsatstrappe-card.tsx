@@ -18,6 +18,13 @@ import { CheckIcon, AddIcon } from '@/components/ui/icons';
 import { MdEdit } from 'react-icons/md';
 import { IndsatstrappePlan } from '@/lib/database-service';
 import { EditStepDialog } from './edit-step-dialog';
+import { VisibilityBadge } from '@/components/ui/visibility-badge';
+
+// Interface for plan with potential visibility properties
+interface PlanWithVisibility extends IndsatstrappePlan {
+  isPublic?: boolean;
+  accessUsers?: Array<{ user_id: number; display_name: string; email: string }>;
+}
 
 // Target/goal icon component  
 const TargetIcon = () => (
@@ -110,8 +117,15 @@ export function IndsatsrappeCard({
             )}
           </VStack>
 
-          {isUserAdmin && (
-            <HStack gap={2}>
+          <HStack gap={2} flexShrink={0}>
+            {/* Visibility Badge */}
+            <VisibilityBadge
+              isPublic={(plan as PlanWithVisibility).isPublic}
+              accessUsers={(plan as PlanWithVisibility).accessUsers || []}
+            />
+            
+            {isUserAdmin && (
+              <HStack gap={2}>
               {onAddStep && (
                 <Button 
                   size="sm" 
@@ -132,8 +146,9 @@ export function IndsatsrappeCard({
                   Rediger
                 </Button>
               )}
-            </HStack>
-          )}
+              </HStack>
+            )}
+          </HStack>
         </HStack>
 
         <Separator />

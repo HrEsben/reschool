@@ -8,7 +8,8 @@ import {
   Text,
   Box,
   Tabs,
-  Checkbox
+  Checkbox,
+  HStack
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { useUpdateIndsatstrappe } from '@/lib/queries';
@@ -22,7 +23,6 @@ interface EditIndsatsrappeDialogProps {
   setIsOpen?: (isOpen: boolean) => void;
   plan: IndsatstrappePlan;
   childId: number;
-  childName: string;
   isUserAdmin: boolean;
   onSuccess?: () => void;
 }
@@ -33,14 +33,13 @@ export function EditIndsatsrappeDialog({
   setIsOpen: controlledSetIsOpen,
   plan,
   childId,
-  childName,
   isUserAdmin,
   onSuccess
 }: EditIndsatsrappeDialogProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [title, setTitle] = useState(plan.title);
   const [description, setDescription] = useState(plan.description || '');
-  const [visibilityOption, setVisibilityOption] = useState<'alle' | 'specifikke'>('alle');
+  const [visibilityOption, setVisibilityOption] = useState<'alle' | 'kun_mig' | 'custom'>('alle');
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   
   // Use controlled or internal state
@@ -50,15 +49,42 @@ export function EditIndsatsrappeDialog({
   const updateIndsatstrapeMutation = useUpdateIndsatstrappe();
   const { data: childUsers = [] } = useChildUsers(childId.toString());
 
+  // Visibility control handlers
+  const handleVisibilityChange = (option: 'alle' | 'kun_mig' | 'custom') => {
+    setVisibilityOption(option);
+    if (option !== 'custom') {
+      setSelectedUserIds([]);
+    }
+  };
+
+  const getEffectiveSelectedUsers = (): UserWithRelation[] => {
+    return childUsers.filter((user: UserWithRelation) => selectedUserIds.includes(user.id));
+  };
+
   // Initialize form data when dialog opens
   useEffect(() => {
     if (isOpen) {
       setTitle(plan.title);
       setDescription(plan.description || '');
-      // Note: We don't have access control data in the plan object
-      // You may need to fetch this separately if implementing access control
-      setVisibilityOption('alle');
-      setSelectedUserIds([]);
+      
+      // Initialize visibility settings based on plan data
+      // Note: Access control data may not be available in the current plan object
+      // Check if the plan has access control information
+      const planWithAccess = plan as IndsatstrappePlan & { accessibleUserIds?: number[] };
+      
+      if (planWithAccess.accessibleUserIds !== undefined) {
+        if (planWithAccess.accessibleUserIds.length === 0) {
+          setVisibilityOption('kun_mig');
+          setSelectedUserIds([]);
+        } else {
+          setVisibilityOption('custom');
+          setSelectedUserIds(planWithAccess.accessibleUserIds);
+        }
+      } else {
+        // Default to 'alle' if no access control is set
+        setVisibilityOption('alle');
+        setSelectedUserIds([]);
+      }
     }
   }, [isOpen, plan]);
 
@@ -72,6 +98,16 @@ export function EditIndsatsrappeDialog({
       return;
     }
 
+    // Validate visibility settings for admin users
+    if (isUserAdmin && visibilityOption === 'custom' && getEffectiveSelectedUsers().length === 0) {
+      showToast({
+        title: 'Manglende adgang',
+        description: 'Hvis du vælger tilpasset synlighed, skal du vælge mindst én voksen der har adgang',
+        type: 'error'
+      });
+      return;
+    }
+
     try {
       await updateIndsatstrapeMutation.mutateAsync({
         planId: plan.id,
@@ -79,8 +115,11 @@ export function EditIndsatsrappeDialog({
         title: title.trim(),
         description: description.trim() || undefined,
         isActive: plan.isActive,
-        // Note: Access control implementation would go here
-        // accessibleUserIds: visibilityOption === 'specifikke' ? selectedUserIds : undefined
+        accessibleUserIds: isUserAdmin && visibilityOption === 'custom' 
+          ? getEffectiveSelectedUsers().map((user: UserWithRelation) => user.id) 
+          : visibilityOption === 'kun_mig' 
+            ? [] 
+            : undefined
       });
 
       showToast({
@@ -100,16 +139,13 @@ export function EditIndsatsrappeDialog({
     }
   };
 
-  const availableUsers = childUsers.filter((user: UserWithRelation) => 
-    user.relation === 'adult' || user.relation === 'administrator'
-  );
-
   return (
     <DialogManager
       isOpen={isOpen}
       onOpenChange={setIsOpen}
       trigger={trigger || <div style={{ display: 'none' }} />}
       title="Rediger Indsatstrappe"
+      maxWidth="lg"
       primaryAction={{
         label: "Gem ændringer",
         onClick: handleSubmit,
@@ -120,63 +156,222 @@ export function EditIndsatsrappeDialog({
         onClick: () => setIsOpen(false)
       }}
     >
-      <VStack gap={6} align="stretch">
-        {/* Title */}
-        <VStack gap={2} align="stretch">
-          <Text fontSize="sm" fontWeight="medium">
-            Titel *
-          </Text>
-          <Input
-            placeholder="F.eks. Skoleintegration, Sociale færdigheder..."
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </VStack>
+      <Tabs.Root defaultValue="indstillinger" variant="enclosed">
+        <Tabs.List>
+          <Tabs.Trigger value="indstillinger">Indstillinger</Tabs.Trigger>
+          {isUserAdmin && (
+            <Tabs.Trigger value="synlighed">Synlighed</Tabs.Trigger>
+          )}
+        </Tabs.List>
 
-        {/* Description */}
-        <VStack gap={2} align="stretch">
-          <Text fontSize="sm" fontWeight="medium">
-            Beskrivelse
-          </Text>
-          <Textarea
-            placeholder="Beskriv formålet og målene med denne indsatstrappe..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-          />
-        </VStack>
+        <Tabs.Content value="indstillinger">
+          <VStack gap={6} align="stretch">
+            {/* Title */}
+            <VStack gap={2} align="stretch">
+              <Text fontSize="sm" fontWeight="medium">
+                Titel *
+              </Text>
+              <Input
+                placeholder="F.eks. Skoleintegration, Sociale færdigheder..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </VStack>
 
-        {/* Visibility Settings - Optional for future implementation */}
-        {isUserAdmin && availableUsers.length > 0 && (
-          <VStack gap={4} align="stretch">
-            <Text fontSize="sm" fontWeight="medium">
-              Adgang
-            </Text>
-            
-            <Tabs.Root 
-              value={visibilityOption} 
-              onValueChange={(details) => setVisibilityOption(details.value as 'alle' | 'specifikke')}
+            {/* Description */}
+            <VStack gap={2} align="stretch">
+              <Text fontSize="sm" fontWeight="medium">
+                Beskrivelse
+              </Text>
+              <Textarea
+                placeholder="Beskriv formålet og målene med denne indsatstrappe..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+              />
+            </VStack>
+
+            {/* Status Information */}
+            <Box 
+              p={3} 
+              bg="sage.50" 
+              borderRadius="md" 
+              border="1px solid" 
+              borderColor="sage.200"
             >
-              <Tabs.List>
-                <Tabs.Trigger value="alle">Alle voksne</Tabs.Trigger>
-                <Tabs.Trigger value="specifikke">Specifikke personer</Tabs.Trigger>
-              </Tabs.List>
+              <Text fontSize="sm" color="sage.700" fontWeight="medium">
+                Plan status: {plan.isActive ? 'Aktiv' : 'Inaktiv'}
+              </Text>
+              <Text fontSize="xs" color="sage.600" mt={1}>
+                {plan.totalSteps} trin i alt • {plan.completedSteps} fuldført
+              </Text>
+              {plan.targetDate && (
+                <Text fontSize="xs" color="sage.600">
+                  Målsætning: {new Date(plan.targetDate).toLocaleDateString('da-DK')}
+                </Text>
+              )}
+            </Box>
+          </VStack>
+        </Tabs.Content>
+
+        {isUserAdmin && (
+          <Tabs.Content value="synlighed">
+            <VStack gap={4} align="stretch" p={4}>
+              <Text fontSize="lg" fontWeight="semibold" color="gray.700">
+                Hvem kan se denne indsatstrappe?
+              </Text>
               
-              <Box pt={4}>
-                <Tabs.Content value="alle">
-                  <Text fontSize="sm" color="fg.muted">
-                    Alle voksne med adgang til {childName} kan se denne indsatstrappe.
+              <VStack gap={3} align="stretch">
+                {/* Alle option */}
+                <Box
+                  p={3}
+                  border="2px solid"
+                  borderColor={visibilityOption === 'alle' ? 'sage.400' : 'gray.200'}
+                  borderRadius="md"
+                  bg={visibilityOption === 'alle' ? 'sage.50' : 'white'}
+                  cursor="pointer"
+                  onClick={() => handleVisibilityChange('alle')}
+                  _hover={{ borderColor: 'sage.300' }}
+                >
+                  <HStack gap={3}>
+                    <Box
+                      w={4}
+                      h={4}
+                      borderRadius="full"
+                      border="2px solid"
+                      borderColor={visibilityOption === 'alle' ? 'sage.500' : 'gray.300'}
+                      bg={visibilityOption === 'alle' ? 'sage.500' : 'white'}
+                      position="relative"
+                    >
+                      {visibilityOption === 'alle' && (
+                        <Box
+                          position="absolute"
+                          top="50%"
+                          left="50%"
+                          transform="translate(-50%, -50%)"
+                          w={2}
+                          h={2}
+                          borderRadius="full"
+                          bg="white"
+                        />
+                      )}
+                    </Box>
+                    <VStack gap={1} align="start">
+                      <Text fontWeight="semibold">Alle voksne</Text>
+                      <Text fontSize="sm" color="gray.600">
+                        Alle voksne tilknyttet barnet kan se planen (inkl. nye voksne)
+                      </Text>
+                    </VStack>
+                  </HStack>
+                </Box>
+
+                {/* Kun mig option */}
+                <Box
+                  p={3}
+                  border="2px solid"
+                  borderColor={visibilityOption === 'kun_mig' ? 'sage.400' : 'gray.200'}
+                  borderRadius="md"
+                  bg={visibilityOption === 'kun_mig' ? 'sage.50' : 'white'}
+                  cursor="pointer"
+                  onClick={() => handleVisibilityChange('kun_mig')}
+                  _hover={{ borderColor: 'sage.300' }}
+                >
+                  <HStack gap={3}>
+                    <Box
+                      w={4}
+                      h={4}
+                      borderRadius="full"
+                      border="2px solid"
+                      borderColor={visibilityOption === 'kun_mig' ? 'sage.500' : 'gray.300'}
+                      bg={visibilityOption === 'kun_mig' ? 'sage.500' : 'white'}
+                      position="relative"
+                    >
+                      {visibilityOption === 'kun_mig' && (
+                        <Box
+                          position="absolute"
+                          top="50%"
+                          left="50%"
+                          transform="translate(-50%, -50%)"
+                          w={2}
+                          h={2}
+                          borderRadius="full"
+                          bg="white"
+                        />
+                      )}
+                    </Box>
+                    <VStack gap={1} align="start">
+                      <Text fontWeight="semibold">Kun mig</Text>
+                      <Text fontSize="sm" color="gray.600">
+                        Kun du kan se denne indsatstrappe
+                      </Text>
+                    </VStack>
+                  </HStack>
+                </Box>
+
+                {/* Custom option */}
+                <Box
+                  p={3}
+                  border="2px solid"
+                  borderColor={visibilityOption === 'custom' ? 'sage.400' : 'gray.200'}
+                  borderRadius="md"
+                  bg={visibilityOption === 'custom' ? 'sage.50' : 'white'}
+                  cursor="pointer"
+                  onClick={() => handleVisibilityChange('custom')}
+                  _hover={{ borderColor: 'sage.300' }}
+                >
+                  <HStack gap={3}>
+                    <Box
+                      w={4}
+                      h={4}
+                      borderRadius="full"
+                      border="2px solid"
+                      borderColor={visibilityOption === 'custom' ? 'sage.500' : 'gray.300'}
+                      bg={visibilityOption === 'custom' ? 'sage.500' : 'white'}
+                      position="relative"
+                    >
+                      {visibilityOption === 'custom' && (
+                        <Box
+                          position="absolute"
+                          top="50%"
+                          left="50%"
+                          transform="translate(-50%, -50%)"
+                          w={2}
+                          h={2}
+                          borderRadius="full"
+                          bg="white"
+                        />
+                      )}
+                    </Box>
+                    <VStack gap={1} align="start">
+                      <Text fontWeight="semibold">Tilpasset</Text>
+                      <Text fontSize="sm" color="gray.600">
+                        Vælg specifikke personer der skal have adgang
+                      </Text>
+                    </VStack>
+                  </HStack>
+                </Box>
+              </VStack>
+
+              {/* Custom user selection */}
+              {visibilityOption === 'custom' && (
+                <VStack gap={3} align="stretch">
+                  <Text fontSize="sm" fontWeight="medium" color="gray.700">
+                    Vælg hvem der skal have adgang ({getEffectiveSelectedUsers().length} valgt)
                   </Text>
-                </Tabs.Content>
-                
-                <Tabs.Content value="specifikke">
-                  <VStack gap={3} align="stretch">
-                    <Text fontSize="sm" color="fg.muted">
-                      Vælg hvilke personer der skal have adgang til denne indsatstrappe:
-                    </Text>
-                    
-                    <VStack gap={2} align="stretch" maxH="200px" overflowY="auto">
-                      {availableUsers.map((user: UserWithRelation) => (
+                  
+                  <Box
+                    p={3}
+                    border="1px solid"
+                    borderColor="sage.200"
+                    borderRadius="md"
+                    bg="sage.25"
+                    maxH="200px"
+                    overflowY="auto"
+                  >
+                    <VStack gap={2} align="stretch">
+                      {childUsers.filter((user: UserWithRelation) => 
+                        user.relation === 'adult' || user.relation === 'administrator'
+                      ).map((user: UserWithRelation) => (
                         <Checkbox.Root
                           key={user.id}
                           checked={selectedUserIds.includes(user.id)}
@@ -191,43 +386,19 @@ export function EditIndsatsrappeDialog({
                         >
                           <Checkbox.HiddenInput />
                           <Checkbox.Control />
-                          <Checkbox.Label fontSize="sm">
-                            {user.displayName || user.email}
-                            <Text as="span" color="fg.muted" ml={2}>
-                              ({user.relation === 'administrator' ? 'Administrator' : 'Voksen'})
-                            </Text>
+                          <Checkbox.Label>
+                            <Text fontSize="sm">{user.displayName} ({user.relation})</Text>
                           </Checkbox.Label>
                         </Checkbox.Root>
                       ))}
                     </VStack>
-                  </VStack>
-                </Tabs.Content>
-              </Box>
-            </Tabs.Root>
-          </VStack>
+                  </Box>
+                </VStack>
+              )}
+            </VStack>
+          </Tabs.Content>
         )}
-
-        {/* Status Information */}
-        <Box 
-          p={3} 
-          bg="sage.50" 
-          borderRadius="md" 
-          border="1px solid" 
-          borderColor="sage.200"
-        >
-          <Text fontSize="sm" color="sage.700" fontWeight="medium">
-            Plan status: {plan.isActive ? 'Aktiv' : 'Inaktiv'}
-          </Text>
-          <Text fontSize="xs" color="sage.600" mt={1}>
-            {plan.totalSteps} trin i alt • {plan.completedSteps} fuldført
-          </Text>
-          {plan.targetDate && (
-            <Text fontSize="xs" color="sage.600">
-              Målsætning: {new Date(plan.targetDate).toLocaleDateString('da-DK')}
-            </Text>
-          )}
-        </Box>
-      </VStack>
+      </Tabs.Root>
     </DialogManager>
   );
 }

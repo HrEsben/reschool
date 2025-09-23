@@ -317,7 +317,6 @@ export function IndsatsrappeManager({
           setIsOpen={setIsEditPlanDialogOpen}
           plan={activePlan}
           childId={childId}
-          childName={childName}
           isUserAdmin={isUserAdmin}
           onSuccess={() => {
             // Refetch will happen automatically through React Query
