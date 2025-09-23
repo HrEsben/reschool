@@ -3,6 +3,11 @@
     "chakra-ui": {
       "command": "npx",
       "args": ["-y", "@chakra-ui/react-mcp"]
-    }
-  }
+    },
+    "Neon": {
+      "url": "https://mcp.neon.tech/mcp",
+      "type": "http"
+    },
+  "inputs": []
 }
+  }
