@@ -37,12 +37,14 @@ export async function PUT(
       title, 
       description, 
       isActive, 
+      isPublic,
       targetDate, 
       accessibleUserIds 
     }: {
       title?: string;
       description?: string;
       isActive?: boolean;
+      isPublic?: boolean;
       targetDate?: string;
       accessibleUserIds?: number[];
     } = body;
@@ -52,6 +54,7 @@ export async function PUT(
       title,
       description,
       isActive,
+      isPublic,
       targetDate,
       accessibleUserIds
     });

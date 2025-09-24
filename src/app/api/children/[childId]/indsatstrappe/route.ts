@@ -81,12 +81,14 @@ export async function POST(
       description, 
       targetDate, 
       startDate,
+      isPublic = true,
       accessibleUserIds 
     }: {
       title: string;
       description?: string;
       targetDate?: string;
       startDate?: string;
+      isPublic?: boolean;
       accessibleUserIds?: number[];
     } = body;
 
@@ -105,6 +107,7 @@ export async function POST(
       title.trim(),
       description?.trim(),
       true, // Always set as active for now
+      isPublic,
       startDate,
       targetDate,
       accessibleUserIds

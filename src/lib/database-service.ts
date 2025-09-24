@@ -168,9 +168,10 @@ export interface Indsatstrappe {
   title: string;
   description?: string;
   isActive: boolean;
+  isPublic: boolean;
   startDate: string; // DATE format YYYY-MM-DD
-  targetDate?: string; // DATE format YYYY-MM-DD (estimated completion)
-  completedDate?: string; // DATE format YYYY-MM-DD (actual completion)
+  targetDate?: string; 
+  completedDate?: string; 
   isCompleted: boolean;
   createdAt: string;
   updatedAt: string;
@@ -2737,6 +2738,7 @@ export async function createIndsatstrappe(
   title: string,
   description?: string,
   isActive: boolean = true,
+  isPublic: boolean = true,
   startDate?: string, // Optional start date, defaults to today
   targetDate?: string,
   accessibleUserIds?: number[]
@@ -2756,10 +2758,10 @@ export async function createIndsatstrappe(
 
     // Create the plan with start_date defaulting to today if not provided
     const planResult = await client.query(
-      `INSERT INTO indsatstrappe (child_id, created_by, title, description, is_active, start_date, target_date, updated_at)
-       VALUES ($1, $2, $3, $4, $5, COALESCE($6, CURRENT_DATE), $7, NOW())
+      `INSERT INTO indsatstrappe (child_id, created_by, title, description, is_active, is_public, start_date, target_date, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, CURRENT_DATE), $8, NOW())
        RETURNING *`,
-      [childId, createdBy, title, description, isActive, startDate, targetDate]
+      [childId, createdBy, title, description, isActive, isPublic, startDate, targetDate]
     );
 
     const plan = planResult.rows[0];
@@ -2786,6 +2788,7 @@ export async function createIndsatstrappe(
       title: plan.title,
       description: plan.description,
       isActive: plan.is_active,
+      isPublic: plan.is_public,
       startDate: plan.start_date,
       targetDate: plan.target_date,
       completedDate: plan.completed_date,
@@ -2825,9 +2828,18 @@ export async function getIndsatsrappeForChild(
     // Add access control if userId is provided
     if (userId) {
       queryText += `
-        AND (i.created_by = $2 OR 
-             EXISTS (SELECT 1 FROM indsatstrappe_user_access iua WHERE iua.indsatstrappe_id = i.id AND iua.user_id = $2) OR
-             EXISTS (SELECT 1 FROM user_child_relations ucr WHERE ucr.child_id = i.child_id AND ucr.user_id = $2 AND ucr.is_administrator = true))
+        AND (
+          i.is_public = true 
+          OR i.created_by = $2
+          OR EXISTS (
+            SELECT 1 FROM indsatstrappe_user_access iua 
+            WHERE iua.indsatstrappe_id = i.id AND iua.user_id = $2
+          )
+        )
+        AND EXISTS (
+          SELECT 1 FROM user_child_relations ucr 
+          WHERE ucr.child_id = $1 AND ucr.user_id = $2
+        )
       `;
       queryParams.push(userId);
     }
@@ -2853,6 +2865,7 @@ export async function getIndsatsrappeForChild(
         title: row.title,
         description: row.description,
         isActive: row.is_active,
+        isPublic: row.is_public ?? true, // Default to true for existing records
         startDate: row.start_date,
         targetDate: row.target_date,
         completedDate: row.completed_date,
@@ -3343,6 +3356,7 @@ export async function updateIndsatstrappe(
     title?: string;
     description?: string;
     isActive?: boolean;
+    isPublic?: boolean;
     targetDate?: string;
     accessibleUserIds?: number[];
   }
@@ -3381,6 +3395,11 @@ export async function updateIndsatstrappe(
     if (data.isActive !== undefined) {
       updateFields.push(`is_active = $${valueIndex}`);
       updateValues.push(data.isActive);
+      valueIndex++;
+    }
+    if (data.isPublic !== undefined) {
+      updateFields.push(`is_public = $${valueIndex}`);
+      updateValues.push(data.isPublic);
       valueIndex++;
     }
     if (data.targetDate !== undefined) {
@@ -3431,6 +3450,7 @@ export async function updateIndsatstrappe(
       title: row.title,
       description: row.description,
       isActive: row.is_active,
+      isPublic: row.is_public ?? true,
       startDate: row.start_date,
       targetDate: row.target_date,
       completedDate: row.completed_date,
@@ -3524,6 +3544,169 @@ export async function deleteIndsatsStep(id: number): Promise<boolean> {
   }
 }
 
+// INDSATSTRAPPE ACCESS CONTROL FUNCTIONS
+// ====================================================================
+
+// Check if a user has access to an indsatstrappe plan
+export async function checkUserIndsatstrappAccess(userId: number, indsatsrappeId: number): Promise<boolean> {
+  try {
+    const result = await query(
+      `SELECT i.is_public, i.child_id, i.created_by,
+              iua.user_id as has_specific_access,
+              ucr.user_id as is_child_user
+       FROM indsatstrappe i
+       LEFT JOIN indsatstrappe_user_access iua ON i.id = iua.indsatstrappe_id AND iua.user_id = $1
+       LEFT JOIN user_child_relations ucr ON i.child_id = ucr.child_id AND ucr.user_id = $1
+       WHERE i.id = $2`,
+      [userId, indsatsrappeId]
+    );
+
+    if (result.rows.length === 0) {
+      return false; // Indsatstrappe doesn't exist
+    }
+
+    const row = result.rows[0];
+    
+    // User must be connected to the child
+    if (!row.is_child_user) {
+      return false;
+    }
+
+    // If indsatstrappe is public, all connected users have access
+    if (row.is_public) {
+      return true;
+    }
+
+    // If user is the creator, they always have access
+    if (row.created_by === userId) {
+      return true;
+    }
+
+    // If indsatstrappe is private, user must have specific access
+    return !!row.has_specific_access;
+  } catch (error) {
+    console.error('Error checking user indsatstrappe access:', error);
+    return false;
+  }
+}
+
+// Get accessible indsatstrappe plans for a child that a specific user has access to
+export async function getAccessibleIndsatsrappeForChild(childId: number, userId: number): Promise<IndsatstrappePlan[]> {
+  try {
+    const result = await query(
+      `SELECT 
+         i.*,
+         u.display_name as created_by_name,
+         COUNT(s.id) as total_steps,
+         COUNT(CASE WHEN s.is_completed = true THEN 1 END) as completed_steps
+       FROM indsatstrappe i
+       LEFT JOIN users u ON i.created_by = u.id
+       LEFT JOIN indsatstrappe_steps s ON i.id = s.indsatstrappe_id
+       WHERE i.child_id = $1 
+       AND (
+         i.is_public = true 
+         OR i.created_by = $2
+         OR EXISTS (
+           SELECT 1 FROM indsatstrappe_user_access iua 
+           WHERE iua.indsatstrappe_id = i.id AND iua.user_id = $2
+         )
+       )
+       AND EXISTS (
+         SELECT 1 FROM user_child_relations ucr 
+         WHERE ucr.child_id = $1 AND ucr.user_id = $2
+       )
+       GROUP BY i.id, u.display_name
+       ORDER BY i.is_active DESC, i.created_at DESC`,
+      [childId, userId]
+    );
+
+    // For each plan, get its steps
+    const plans: IndsatstrappePlan[] = [];
+    
+    for (const row of result.rows) {
+      const steps = await getIndsatsStepsForPlan(row.id);
+      const currentStepIndex = steps.findIndex(step => !step.isCompleted);
+      
+      plans.push({
+        id: row.id,
+        childId: row.child_id,
+        createdBy: row.created_by,
+        title: row.title,
+        description: row.description,
+        isActive: row.is_active,
+        isPublic: row.is_public ?? true,
+        startDate: row.start_date,
+        targetDate: row.target_date,
+        completedDate: row.completed_date,
+        isCompleted: row.is_completed,
+        createdAt: new Date(row.created_at).toISOString(),
+        updatedAt: new Date(row.updated_at).toISOString(),
+        steps,
+        currentStepIndex: currentStepIndex >= 0 ? currentStepIndex : undefined,
+        totalSteps: parseInt(row.total_steps),
+        completedSteps: parseInt(row.completed_steps),
+        createdByName: row.created_by_name
+      });
+    }
+
+    return plans;
+  } catch (error) {
+    console.error('Error getting accessible indsatstrappe for child:', error);
+    return [];
+  }
+}
+
+// Get the access list for an indsatstrappe plan (users who have specific access)
+export async function getIndsatsrappeAccessList(indsatsrappeId: number): Promise<UserWithRelation[]> {
+  try {
+    const result = await query(
+      `SELECT u.id, u.display_name, u.relation_to_child, u.stack_auth_id
+       FROM indsatstrappe_user_access iua
+       JOIN users u ON iua.user_id = u.id
+       WHERE iua.indsatstrappe_id = $1
+       ORDER BY u.display_name`,
+      [indsatsrappeId]
+    );
+    
+    return result.rows;
+  } catch (error) {
+    console.error('Error getting indsatstrappe access list:', error);
+    return [];
+  }
+}
+
+// Set user access for an indsatstrappe plan
+export async function setIndsatsrappeUserAccess(indsatsrappeId: number, userIds: number[]): Promise<void> {
+  const client = await getClient();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Remove existing access
+    await client.query('DELETE FROM indsatstrappe_user_access WHERE indsatstrappe_id = $1', [indsatsrappeId]);
+    
+    // Add new access
+    if (userIds.length > 0) {
+      const values = userIds.map((userId, index) => 
+        `($1, $${index + 2})`
+      ).join(', ');
+      
+      await client.query(
+        `INSERT INTO indsatstrappe_user_access (indsatstrappe_id, user_id) VALUES ${values}`,
+        [indsatsrappeId, ...userIds]
+      );
+    }
+    
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error setting indsatstrappe user access:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 // PROGRESS VIEW FUNCTIONS
 // Get progress data for a child - includes all indsatstrappe plans, steps, and tool entries grouped by timing
 export async function getProgressDataForChild(
@@ -3531,8 +3714,10 @@ export async function getProgressDataForChild(
   userId?: number
 ): Promise<ProgressData | null> {
   try {
-    // Get all indsatstrappe plans for this child
-    const plans = await getIndsatsrappeForChild(childId, userId);
+    // Get all accessible indsatstrappe plans for this child
+    const plans = userId 
+      ? await getAccessibleIndsatsrappeForChild(childId, userId)
+      : await getIndsatsrappeForChild(childId);
     
     if (plans.length === 0) {
       return null;
