@@ -817,6 +817,7 @@ const indsatsrappeApi = {
     title: string;
     description?: string;
     startDate?: string;
+    isPublic?: boolean;
     accessibleUserIds?: number[];
   }): Promise<Indsatstrappe> {
     const response = await fetch(`/api/children/${childId}/indsatstrappe`, {
@@ -836,6 +837,7 @@ const indsatsrappeApi = {
     title?: string;
     description?: string;
     isActive?: boolean;
+    isPublic?: boolean;
     targetDate?: string;
     accessibleUserIds?: number[];
   }): Promise<Indsatstrappe> {

@@ -115,6 +115,7 @@ export function EditIndsatsrappeDialog({
         title: title.trim(),
         description: description.trim() || undefined,
         isActive: plan.isActive,
+        isPublic: visibilityOption === 'alle',
         accessibleUserIds: isUserAdmin && visibilityOption === 'custom' 
           ? getEffectiveSelectedUsers().map((user: UserWithRelation) => user.id) 
           : visibilityOption === 'kun_mig' 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Box,
   VStack,
@@ -50,6 +50,29 @@ export function IndsatsrappeCard({
   onPreviousStep
 }: IndsatsrappeCardProps) {
   const [editingStep, setEditingStep] = useState<typeof plan.steps[0] | null>(null);
+  const [accessUsers, setAccessUsers] = useState<Array<{ user_id: number; display_name: string; email: string }>>([]);
+  const [accessDataLoaded, setAccessDataLoaded] = useState(false);
+  
+  // Initialize access data state based on plan visibility
+  useEffect(() => {
+    const planWithVisibility = plan as PlanWithVisibility;
+    const isPublic = planWithVisibility.isPublic;
+    
+    if (isPublic) {
+      // For public plans, no need to load access data
+      setAccessDataLoaded(true);
+      setAccessUsers([]);
+    } else if (planWithVisibility.accessUsers) {
+      // If access users are already provided in the plan data, use them
+      setAccessUsers(planWithVisibility.accessUsers);
+      setAccessDataLoaded(true);
+    } else {
+      // For private plans without access data, we'll need to fetch it when needed
+      // Reset the state to ensure fresh data is loaded
+      setAccessDataLoaded(false);
+      setAccessUsers([]);
+    }
+  }, [plan.id, (plan as PlanWithVisibility).isPublic]); // Watch for changes in plan ID and visibility
   
   const progressPercentage = plan.totalSteps > 0 ? (plan.completedSteps / plan.totalSteps) * 100 : 0;
   const currentStep = plan.steps.find(step => !step.isCompleted);
@@ -68,6 +91,24 @@ export function IndsatsrappeCard({
       return null;
     }
   };
+
+  // Fetch access data when needed (for lazy loading on hover/click)
+  const fetchAccessData = useCallback(async () => {
+    const isPublic = (plan as PlanWithVisibility).isPublic;
+    if (accessDataLoaded || isPublic) return;
+    
+    try {
+      const response = await fetch(`/api/indsatstrappe/${plan.id}/access`);
+      if (response.ok) {
+        const data = await response.json();
+        setAccessUsers(data.accessUsers || []);
+      }
+    } catch (error) {
+      console.error('Error fetching indsatstrappe access data:', error);
+    } finally {
+      setAccessDataLoaded(true);
+    }
+  }, [accessDataLoaded, plan.id]);
 
   return (
     <Box 
@@ -120,7 +161,9 @@ export function IndsatsrappeCard({
             {/* Visibility Badge */}
             <VisibilityBadge
               isPublic={(plan as PlanWithVisibility).isPublic}
-              accessUsers={(plan as PlanWithVisibility).accessUsers || []}
+              accessUsers={accessUsers}
+              fetchAccessData={fetchAccessData}
+              accessDataLoaded={accessDataLoaded}
             />
             
             {isUserAdmin && (

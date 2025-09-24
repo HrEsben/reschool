@@ -88,6 +88,7 @@ export function CreateIndsatsrappeDialog({
         title: title.trim(),
         description: description.trim() || undefined,
         startDate: startDate || undefined,
+        isPublic: visibilityOption === 'alle',
         accessibleUserIds: isUserAdmin && visibilityOption === 'custom' 
           ? getEffectiveSelectedUsers().map((user: UserWithRelation) => user.id) 
           : visibilityOption === 'kun_mig' 

@@ -9,13 +9,19 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000, // Increased to 10 seconds
 });
 
-// Helper function to execute queries
-export async function query(text: string, params?: unknown[]) {
+// Helper function to execute queries with optional user context
+export async function query(text: string, params?: unknown[], userStackId?: string) {
   const start = Date.now();
   let client;
   
   try {
     client = await pool.connect();
+    
+    // Set user context for RLS if provided
+    if (userStackId) {
+      await client.query('SET app.current_user_stack_id = $1', [userStackId]);
+    }
+    
     const res = await client.query(text, params);
     const duration = Date.now() - start;
     console.log('Executed query', { text, duration, rows: res.rowCount });
@@ -30,9 +36,47 @@ export async function query(text: string, params?: unknown[]) {
   }
 }
 
-// Helper function to get a client for transactions
-export async function getClient() {
-  return await pool.connect();
+// Helper function to get a client for transactions with optional user context
+export async function getClient(userStackId?: string) {
+  const client = await pool.connect();
+  
+  // Set user context for RLS if provided
+  if (userStackId) {
+    await client.query('SET app.current_user_stack_id = $1', [userStackId]);
+  }
+  
+  return client;
+}
+
+// Helper function to execute multiple database operations with user context
+export async function withUserContext<T>(
+  userStackId: string,
+  callback: (query: (text: string, params?: unknown[]) => Promise<any>) => Promise<T>
+): Promise<T> {
+  const client = await pool.connect();
+  
+  try {
+    // Set user context for RLS
+    await client.query('SET app.current_user_stack_id = $1', [userStackId]);
+    
+    // Create a query function that uses this client
+    const queryWithClient = async (text: string, params?: unknown[]) => {
+      const start = Date.now();
+      try {
+        const res = await client.query(text, params);
+        const duration = Date.now() - start;
+        console.log('Executed query with user context', { text, duration, rows: res.rowCount, userStackId });
+        return res;
+      } catch (error) {
+        console.error('Database query error with user context:', error);
+        throw error;
+      }
+    };
+    
+    return await callback(queryWithClient);
+  } finally {
+    client.release();
+  }
 }
 
 export default pool;
