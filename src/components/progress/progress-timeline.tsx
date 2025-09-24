@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   VStack,
@@ -140,6 +140,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
       setSelectedSteps(allStepTitles);
       setIsInitialized(true);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progressData, isInitialized]);
   
   // Convert query error to string for display
@@ -361,10 +362,10 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     // Helper function to get tool icon for activity rows
     const getActivityRowIcon = (toolType: string) => {
       switch (toolType) {
-        case 'barometer': return <Icons.Barometer size={4} color="gray.400" />;
-        case 'dagens-smiley': return <Icons.Smiley size={4} color="gray.400" />;
-        case 'sengetider': return <Icons.Bedtime size={4} color="gray.400" />;
-        default: return <Icons.Edit size={4} color="gray.400" />;
+        case 'barometer': return <Icons.Barometer size={4} color="navy.400" />;
+        case 'dagens-smiley': return <Icons.Smiley size={4} color="sage.400" />;
+        case 'sengetider': return <Icons.Bedtime size={4} color="golden.400" />;
+        default: return <Icons.Edit size={4} color="navy.400" />;
       }
     };
 
@@ -372,19 +373,19 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     const getToolIcon = (title: string) => {
       const toolType = allChartData.find(item => item.title === title)?.toolType;
       switch (toolType) {
-        case 'barometer': return <Icon as={Thermometer} size="xs" color="gray.400" />;
-        case 'dagens-smiley': return <Icon as={Smile} size="xs" color="gray.400" />;
-        case 'sengetider': return <Icon as={Bed} size="xs" color="gray.400" />;
-        default: return <Icon as={Edit3} size="xs" color="gray.400" />;
+        case 'barometer': return <Icon as={Thermometer} size="xs" color="navy.400" />;
+        case 'dagens-smiley': return <Icon as={Smile} size="xs" color="sage.400" />;
+        case 'sengetider': return <Icon as={Bed} size="xs" color="golden.400" />;
+        default: return <Icon as={Edit3} size="xs" color="navy.400" />;
       }
     };    if (allChartData.length === 0) {
       return (
         <Box h="400px" w="full" display="flex" alignItems="center" justifyContent="center">
           <VStack gap={2}>
-            <Text color="gray.500" fontSize="lg">
+            <Text color="navy.500" fontSize="lg">
               Ingen data at vise i oversigten
             </Text>
-            <Text color="gray.400" fontSize="sm">
+            <Text color="navy.400" fontSize="sm">
               Der er endnu ikke registreret nogen data for denne plan
             </Text>
           </VStack>
@@ -504,7 +505,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
         icon: <Box 
           w={4} h={4} 
           borderRadius="full" 
-          bg="gray.400" 
+          bg="cream.400" 
           color="white" 
           fontSize="10px" 
           fontWeight="bold" 
@@ -518,7 +519,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     });
 
     return (
-      <Box w="full" p={{ base: 2, md: 4 }} bg="gray.50" borderRadius="md">
+      <Box w="full" p={{ base: 2, md: 4 }} bg="cream.50" borderRadius="md">
         {/* Header with filters */}
         <VStack gap={4} mb={4} align="stretch">
           <Text fontSize="lg" fontWeight="bold">
@@ -590,10 +591,10 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                   <Select.Trigger>
                     <Select.ValueText placeholder="Vælg trin">
                       {selectedSteps.length === 0 
-                        ? <HStack gap={1}><FaStairs size={14} color="gray.500" /><Text>Ingen trin valgt</Text></HStack>
+                        ? <HStack gap={1}><FaStairs size={14} color="navy.500" /><Text>Ingen trin valgt</Text></HStack>
                         : selectedSteps.length === uniqueStepTitles.length
-                        ? <HStack gap={1}><FaStairs size={14} color="gray.500" /><Text>Alle trin</Text></HStack>
-                        : <HStack gap={1}><FaStairs size={14} color="gray.500" /><Text>Flere trin</Text></HStack>
+                        ? <HStack gap={1}><FaStairs size={14} color="navy.500" /><Text>Alle trin</Text></HStack>
+                        : <HStack gap={1}><FaStairs size={14} color="navy.500" /><Text>Flere trin</Text></HStack>
                       }
                     </Select.ValueText>
                   </Select.Trigger>
@@ -628,7 +629,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
         
         <Table.ScrollArea 
           borderWidth="1px" 
-          borderColor="border.default" 
+          borderColor="border.sage" 
           borderRadius="lg"
           bg="bg.canvas"
           maxH={{ base: "50vh", md: "70vh" }}
@@ -637,7 +638,8 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
             size="sm" 
             stickyHeader 
             variant="outline"
-            colorPalette="gray"
+            colorPalette="current"
+            showColumnBorder={true}
           >
             {/* Column definitions */}
             <Table.ColumnGroup>
@@ -665,7 +667,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                 <Table.ColumnHeader 
                   textAlign="center" 
                   bg="bg.subtle" 
-                  borderColor="border.default"
+                  borderColor="border.subtle"
                   position="sticky"
                   top={0}
                   zIndex={31}
@@ -732,7 +734,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                         colSpan={spanCount}
                         textAlign="center"
                         bg={bgColor}
-                        borderColor="border.default"
+                        borderColor="border.subtle"
                         px={2}
                         position="sticky"
                         top={0}
@@ -761,7 +763,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                     bg="bg.subtle" 
                     px={{ base: 2, md: 4 }} 
                     py={{ base: 2, md: 3 }}
-                    borderColor="border.default"
+                    borderColor="border.subtle"
                     position="sticky"
                     left={0}
                     zIndex={20}
@@ -784,18 +786,18 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                         <Table.Cell 
                           key={`condensed-${index}`}
                           textAlign="center"
-                          bg="gray.50"
-                          borderColor="border.default"
+                          bg="cream.50"
+                          borderColor="border.subtle"
                           px={1}
                           py={2}
                           position="relative"
                           borderLeft="2px dashed"
                           borderRight={index === processedDays.length - 1 ? "none" : "2px dashed"}
-                          borderLeftColor="gray.300"
-                          borderRightColor="gray.300"
+                          borderLeftColor="cream.300"
+                          borderRightColor="cream.300"
                           title={`Ingen data: ${item.dateRange}`}
                         >
-                          <Text fontSize="2xs" color="gray.300">⋯</Text>
+                          <Text fontSize="2xs" color="cream.500">⋯</Text>
                         </Table.Cell>
                       );
                     }
@@ -809,14 +811,14 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                         key={dayNumber}
                         textAlign="center"
                         bg={entries.length > 0 ? "bg.canvas" : "bg.muted"}
-                        borderColor="border.default"
+                        borderColor="border.subtle"
                         px={{ base: 0.5, md: 1 }}
                         py={{ base: 1, md: 2 }}
                         position="relative"
                         _hover={{ 
-                          bg: entries.length > 0 ? "gray.50" : "bg.subtle",
+                          bg: entries.length > 0 ? "cream.50" : "bg.subtle",
                           boxShadow: entries.length > 0 ? "0 2px 4px rgba(0, 0, 0, 0.1)" : "none",
-                          borderColor: entries.length > 0 ? "gray.300" : "border.default"
+                          borderColor: entries.length > 0 ? "cream.300" : "border.subtle"
                         }}
                         transition="all 0.2s ease"
                         cursor={entries.length > 0 ? "pointer" : "default"}
@@ -891,7 +893,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                 {/* Empty cell for activity column */}
                 <Table.Cell 
                   bg="bg.subtle" 
-                  borderColor="border.default" 
+                  borderColor="border.subtle" 
                   position="sticky" 
                   left={0} 
                   zIndex={25}
@@ -904,24 +906,24 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                       <Table.Cell 
                         key={`condensed-dates-${index}`}
                         textAlign="center"
-                        bg="gray.50"
-                        borderColor="border.default"
+                        bg="cream.50"
+                        borderColor="border.subtle"
                         px={0.5}
                         py={1}
                         borderLeft="2px dashed"
                         borderRight={index === processedDays.length - 1 ? "none" : "2px dashed"}
-                        borderLeftColor="gray.300"
-                        borderRightColor="gray.300"
+                        borderLeftColor="cream.300"
+                        borderRightColor="cream.300"
                         title={`Kondenseret periode: ${item.dateRange}`}
                       >
                         <Stack gap={0}>
-                          <Text fontSize="2xs" fontWeight="normal" color="gray.400" lineHeight="1">
+                          <Text fontSize="2xs" fontWeight="normal" color="cream.500" lineHeight="1">
                             {item.dateRange?.split(' - ')[0]}
                           </Text>
-                          <Text fontSize="2xs" fontWeight="normal" color="gray.400" lineHeight="1">
+                          <Text fontSize="2xs" fontWeight="normal" color="cream.500" lineHeight="1">
                             ⋯
                           </Text>
-                          <Text fontSize="2xs" fontWeight="normal" color="gray.400" lineHeight="1">
+                          <Text fontSize="2xs" fontWeight="normal" color="cream.500" lineHeight="1">
                             {item.dateRange?.split(' - ')[1]}
                           </Text>
                         </Stack>
@@ -939,7 +941,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                       key={dayNumber}
                       textAlign="center"
                       bg="bg.subtle"
-                      borderColor="border.default"
+                      borderColor="border.subtle"
                       px={1}
                       py={2}
                     >
@@ -957,22 +959,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     );
   };
 
-  // Helper function to generate date range for a step
-  const generateDateRange = (startDate: string | null, endDate: string | null): Date[] => {
-    if (!startDate) return [];
-    
-    const start = new Date(startDate);
-    const end = endDate ? new Date(endDate) : new Date();
-    const dates: Date[] = [];
-    
-    const current = new Date(start);
-    while (current <= end) {
-      dates.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
-    
-    return dates;
-  };
+
 
   // Helper function to group entries by date
   const groupEntriesByDate = (entries: ProgressEntry[]): { [dateKey: string]: ProgressEntry[] } => {
@@ -1000,7 +987,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     // Generate date range based on actual entries, not the full step period
     const entryDates = Object.keys(entriesByDate).map(dateKey => new Date(dateKey)).sort((a, b) => a.getTime() - b.getTime());
     
-    let dateRange: Date[] = [];
+    const dateRange: Date[] = [];
     if (entryDates.length > 0) {
       const firstEntryDate = entryDates[0];
       const lastEntryDate = entryDates[entryDates.length - 1];
@@ -1094,16 +1081,16 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                     align="center"
                     minW="120px"
                     p={3}
-                    bg={entriesForDate.length > 0 ? "sage.50" : "gray.50"}
+                    bg={entriesForDate.length > 0 ? "sage.50" : "cream.50"}
                     borderRadius="md"
                     border="2px solid"
-                    borderColor={isToday ? "sage.300" : entriesForDate.length > 0 ? "sage.200" : "gray.200"}
+                    borderColor={isToday ? "sage.300" : entriesForDate.length > 0 ? "sage.200" : "cream.200"}
                   >
                     <VStack gap={0} align="center">
-                      <Text fontSize="xs" color="gray.600" fontWeight="medium">
+                      <Text fontSize="xs" color="navy.600" fontWeight="medium">
                         {format(date, 'EEE', { locale: da })}
                       </Text>
-                      <Text fontSize="sm" fontWeight="bold" color={isToday ? "sage.700" : "gray.900"}>
+                      <Text fontSize="sm" fontWeight="bold" color={isToday ? "sage.700" : "navy.700"}>
                         {format(date, 'd. MMM', { locale: da })}
                       </Text>
                     </VStack>
@@ -1170,7 +1157,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                   borderColor={isToday ? "sage.300" : "sage.200"}
                 >
                   <HStack mb={3}>
-                    <Text fontSize="sm" fontWeight="bold" color={isToday ? "sage.700" : "gray.900"}>
+                    <Text fontSize="sm" fontWeight="bold" color={isToday ? "sage.700" : "navy.700"}>
                       {format(date, 'EEEE d. MMMM', { locale: da })}
                     </Text>
                     {isToday && (
@@ -1242,10 +1229,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     return <Text>{content}</Text>;
   };
 
-  // Helper function specifically for dagens smiley (backwards compatibility)
-  const getDagensSmileyIcon = (smileyValue: string, size = 20) => {
-    return getEmojiIcon(smileyValue, size);
-  };
+
 
   // Helper function to get barometer display value based on display type
   const getBarometerDisplayValue = (rating: number, displayType: string, smileyType?: string, scaleMin = 1, scaleMax = 5): React.ReactNode => {
@@ -1437,7 +1421,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
             <Text color="gray.600" fontSize="lg" textAlign="center">
               Ingen indsatstrappe fundet
             </Text>
-            <Text color="gray.500" fontSize="sm" textAlign="center">
+            <Text color="navy.500" fontSize="sm" textAlign="center">
               Opret en indsatstrappe for at se overblikket
             </Text>
           </VStack>
@@ -1523,8 +1507,8 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                   return (
                     <Timeline.Item key={step.id}>
                       <Timeline.Indicator 
-                        bg={step.isCompleted ? 'sage.500' : isCurrentStep ? 'navy.500' : 'gray.300'}
-                        borderColor={step.isCompleted ? 'sage.600' : isCurrentStep ? 'navy.600' : 'gray.400'}
+                        bg={step.isCompleted ? 'sage.500' : isCurrentStep ? 'navy.500' : 'cream.300'}
+                        borderColor={step.isCompleted ? 'sage.600' : isCurrentStep ? 'navy.600' : 'cream.400'}
                       />
                       <Timeline.Content>
                         <Box>
@@ -1533,7 +1517,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                             <VStack align="start" gap={2} flex={1}>
                               <Stack direction={{ base: "column", sm: "row" }} gap={3} align={{ base: "start", sm: "center" }} wrap="wrap">
                                 <Badge
-                                  colorPalette={step.isCompleted ? 'sage' : isCurrentStep ? 'navy' : 'gray'}
+                                  colorPalette={step.isCompleted ? 'sage' : isCurrentStep ? 'navy' : 'cream'}
                                   size="sm"
                                 >
                                   Trin {step.stepNumber}
@@ -1555,7 +1539,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                                     size="sm"
                                     onClick={() => toggleDescriptionExpansion(step.id)}
                                     fontSize="xs"
-                                    color="gray.500"
+                                    color="navy.500"
                                     p={1}
                                     h="auto"
                                     fontWeight="normal"
@@ -1640,7 +1624,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                                 </Box>
                               )}
 
-                              <Stack direction={{ base: "column", sm: "row" }} gap={{ base: 2, sm: 4 }} fontSize="xs" color="gray.500" wrap="wrap">
+                              <Stack direction={{ base: "column", sm: "row" }} gap={{ base: 2, sm: 4 }} fontSize="xs" color="navy.500" wrap="wrap">
                                 {/* Date Range Badge */}
                                 {formatDateRange(step.timePerriod.startDate, step.timePerriod.endDate, step.durationDays) && (
                                   <Badge
