@@ -22,7 +22,6 @@ import { VisibilityBadge } from '@/components/ui/visibility-badge';
 
 // Interface for plan with potential visibility properties
 interface PlanWithVisibility extends IndsatstrappePlan {
-  isPublic?: boolean;
   accessUsers?: Array<{ user_id: number; display_name: string; email: string }>;
 }
 
