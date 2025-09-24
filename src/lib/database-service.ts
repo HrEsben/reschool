@@ -3723,8 +3723,8 @@ export async function getProgressDataForChild(
       return null;
     }
 
-    // Get all tool entries for this child with timing information
-    const allEntries = await getAllToolEntriesForChild(childId);
+    // Get all tool entries for this child with timing information (filtered by user access)
+    const allEntries = await getAllToolEntriesForChild(childId, userId);
     
     // For each plan, get steps with their linked tool entries
     const progressPlans: ProgressPlan[] = [];
@@ -3753,13 +3753,13 @@ export async function getProgressDataForChild(
   }
 }
 
-// Get all tool entries for a child across all tools
-export async function getAllToolEntriesForChild(childId: number): Promise<ProgressEntry[]> {
+// Get all tool entries for a child across all tools (filtered by user access)
+export async function getAllToolEntriesForChild(childId: number, userId?: number): Promise<ProgressEntry[]> {
   try {
     const entries: ProgressEntry[] = [];
     
-    // Get barometer entries
-    const barometerResult = await query(`
+    // Get barometer entries (with access control)
+    let barometerQuery = `
       SELECT 
         be.id, be.barometer_id as tool_id, be.recorded_by, be.entry_date, 
         be.rating, be.comment, be.created_at, be.updated_at,
@@ -3768,9 +3768,27 @@ export async function getAllToolEntriesForChild(childId: number): Promise<Progre
       FROM barometer_entries be
       JOIN barometers b ON be.barometer_id = b.id
       LEFT JOIN users u ON be.recorded_by = u.id
-      WHERE b.child_id = $1
-      ORDER BY be.created_at DESC
-    `, [childId]);
+      WHERE b.child_id = $1`;
+    
+    const barometerParams = [childId];
+    
+    // Add access control for barometers if userId is provided
+    if (userId) {
+      barometerQuery += `
+        AND (
+          b.is_public = true 
+          OR b.created_by = $2
+          OR EXISTS (
+            SELECT 1 FROM barometer_user_access bua 
+            WHERE bua.barometer_id = b.id AND bua.user_id = $2
+          )
+        )`;
+      barometerParams.push(userId);
+    }
+    
+    barometerQuery += ` ORDER BY be.created_at DESC`;
+    
+    const barometerResult = await query(barometerQuery, barometerParams);
     
     for (const row of barometerResult.rows) {
       entries.push({
@@ -3791,8 +3809,8 @@ export async function getAllToolEntriesForChild(childId: number): Promise<Progre
       });
     }
     
-    // Get dagens smiley entries
-    const smileyResult = await query(`
+    // Get dagens smiley entries (with access control)
+    let smileyQuery = `
       SELECT 
         dse.id, dse.smiley_id as tool_id, dse.recorded_by, dse.entry_date,
         dse.selected_emoji, dse.reasoning, dse.created_at, dse.updated_at,
@@ -3801,9 +3819,27 @@ export async function getAllToolEntriesForChild(childId: number): Promise<Progre
       FROM dagens_smiley_entries dse
       JOIN dagens_smiley ds ON dse.smiley_id = ds.id
       LEFT JOIN users u ON dse.recorded_by = u.id
-      WHERE ds.child_id = $1
-      ORDER BY dse.created_at DESC
-    `, [childId]);
+      WHERE ds.child_id = $1`;
+    
+    const smileyParams = [childId];
+    
+    // Add access control for dagens smiley if userId is provided
+    if (userId) {
+      smileyQuery += `
+        AND (
+          ds.is_public = true 
+          OR ds.created_by = $2
+          OR EXISTS (
+            SELECT 1 FROM dagens_smiley_user_access dsua 
+            WHERE dsua.smiley_id = ds.id AND dsua.user_id = $2
+          )
+        )`;
+      smileyParams.push(userId);
+    }
+    
+    smileyQuery += ` ORDER BY dse.created_at DESC`;
+    
+    const smileyResult = await query(smileyQuery, smileyParams);
     
     for (const row of smileyResult.rows) {
       entries.push({
@@ -3822,8 +3858,8 @@ export async function getAllToolEntriesForChild(childId: number): Promise<Progre
       });
     }
     
-    // Get sengetider entries
-    const sengetiderResult = await query(`
+    // Get sengetider entries (with access control)
+    let sengetiderQuery = `
       SELECT 
         se.id, se.sengetider_id as tool_id, se.recorded_by, se.entry_date,
         se.puttetid, se.sov_kl, se.vaagnede, se.notes,
@@ -3833,9 +3869,27 @@ export async function getAllToolEntriesForChild(childId: number): Promise<Progre
       FROM sengetider_entries se
       JOIN sengetider s ON se.sengetider_id = s.id
       LEFT JOIN users u ON se.recorded_by = u.id
-      WHERE s.child_id = $1
-      ORDER BY se.created_at DESC
-    `, [childId]);
+      WHERE s.child_id = $1`;
+    
+    const sengetiderParams = [childId];
+    
+    // Add access control for sengetider if userId is provided
+    if (userId) {
+      sengetiderQuery += `
+        AND (
+          s.is_public = true 
+          OR s.created_by = $2
+          OR EXISTS (
+            SELECT 1 FROM sengetider_user_access sua 
+            WHERE sua.sengetider_id = s.id AND sua.user_id = $2
+          )
+        )`;
+      sengetiderParams.push(userId);
+    }
+    
+    sengetiderQuery += ` ORDER BY se.created_at DESC`;
+    
+    const sengetiderResult = await query(sengetiderQuery, sengetiderParams);
     
     for (const row of sengetiderResult.rows) {
       entries.push({
