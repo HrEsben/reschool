@@ -648,6 +648,85 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                     'sage.300',    // Step 6 - darker sage
                     'navy.300',    // Step 7 - darker navy
                   ];
+
+                  // Helper function to convert day ranges to column spans in the processedDays array
+                  const getColumnSpanForDayRange = (startDay: number, endDay: number): { startColumnIndex: number, columnCount: number } => {
+                    let startColumnIndex = -1;
+                    let endColumnIndex = -1;
+                    
+                    // Find the column indices for the start and end days
+                    for (let i = 0; i < processedDays.length; i++) {
+                      const item = processedDays[i];
+                      
+                      if (item.type === 'day') {
+                        // Regular day column
+                        if (item.day === startDay && startColumnIndex === -1) {
+                          startColumnIndex = i;
+                        }
+                        if (item.day && item.day <= endDay) {
+                          endColumnIndex = i;
+                        }
+                      } else if (item.type === 'condensed') {
+                        // Condensed column - check if any of our days fall within it
+                        const condensedDays = item.condensedDays || [];
+                        
+                        // Check if start day is in this condensed range
+                        if (condensedDays.includes(startDay) && startColumnIndex === -1) {
+                          startColumnIndex = i;
+                        }
+                        
+                        // Check if any day up to endDay is in this condensed range
+                        const hasAnyDayInRange = condensedDays.some(day => day >= startDay && day <= endDay);
+                        if (hasAnyDayInRange) {
+                          endColumnIndex = i;
+                        }
+                      }
+                    }
+                    
+                    // Fallback: if we can't find exact matches, find the closest columns
+                    if (startColumnIndex === -1) {
+                      // Find the first column that contains or comes after startDay
+                      for (let i = 0; i < processedDays.length; i++) {
+                        const item = processedDays[i];
+                        if (item.type === 'day' && item.day && item.day >= startDay) {
+                          startColumnIndex = i;
+                          break;
+                        } else if (item.type === 'condensed') {
+                          const condensedDays = item.condensedDays || [];
+                          if (condensedDays.some(day => day >= startDay)) {
+                            startColumnIndex = i;
+                            break;
+                          }
+                        }
+                      }
+                    }
+                    
+                    if (endColumnIndex === -1) {
+                      // Find the last column that contains or comes before endDay
+                      for (let i = processedDays.length - 1; i >= 0; i--) {
+                        const item = processedDays[i];
+                        if (item.type === 'day' && item.day && item.day <= endDay) {
+                          endColumnIndex = i;
+                          break;
+                        } else if (item.type === 'condensed') {
+                          const condensedDays = item.condensedDays || [];
+                          if (condensedDays.some(day => day <= endDay)) {
+                            endColumnIndex = i;
+                            break;
+                          }
+                        }
+                      }
+                    }
+                    
+                    // Safety fallbacks
+                    if (startColumnIndex === -1) startColumnIndex = 0;
+                    if (endColumnIndex === -1) endColumnIndex = processedDays.length - 1;
+                    if (endColumnIndex < startColumnIndex) endColumnIndex = startColumnIndex;
+                    
+                    const columnCount = endColumnIndex - startColumnIndex + 1;
+                    
+                    return { startColumnIndex, columnCount };
+                  };
                   
                   (filteredPlan.stepsWithEntries || []).forEach((step, stepIndex) => {
                     // Check if step has multiple active periods (for demoted/restarted steps)
@@ -760,18 +839,19 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                           ? differenceInDays(normalizedPeriodEnd, normalizedPlanStart) + 1
                           : Math.min(allDays.length, startDay + 30);
                         
-                        const spanCount = endDay - startDay + 1;
+                        // Get the actual column span accounting for condensed columns
+                        const { startColumnIndex, columnCount } = getColumnSpanForDayRange(startDay, endDay);
                         
-                        console.log(`Step ${step.stepNumber} Period ${periodIndex + 1}${period.isSynthetic ? ' (synthetic)' : ''} (${step.title}): startDay=${startDay}, endDay=${endDay}, spanCount=${spanCount}, periodStart=${period.startDate}, periodEnd=${period.endDate}`);
+                        console.log(`Step ${step.stepNumber} Period ${periodIndex + 1}${period.isSynthetic ? ' (synthetic)' : ''} (${step.title}): startDay=${startDay}, endDay=${endDay}, actualColumns=${columnCount}, startColumnIndex=${startColumnIndex}, periodStart=${period.startDate}, periodEnd=${period.endDate}`);
                         
-                        if (spanCount <= 0) return;
+                        if (columnCount <= 0) return;
                         
                         const bgColor = stepColors[stepIndex % stepColors.length];
                         
                         stepCells.push(
                           <Table.ColumnHeader 
                             key={`${step.id}-period-${periodIndex}`}
-                            colSpan={spanCount}
+                            colSpan={columnCount}
                             textAlign="center"
                             bg={bgColor}
                             borderColor="border.subtle"
@@ -811,12 +891,13 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                         ? differenceInDays(normalizedStepEnd, normalizedPlanStart) + 1
                         : Math.min(allDays.length, startDay + 30);
                       
-                      const spanCount = endDay - startDay + 1;
+                      // Get the actual column span accounting for condensed columns
+                      const { startColumnIndex, columnCount } = getColumnSpanForDayRange(startDay, endDay);
                       
-                      console.log(`Step ${step.stepNumber} Single Period (${step.title}): startDay=${startDay}, endDay=${endDay}, spanCount=${spanCount}, stepStartDate=${stepStartDate}, stepEndDate=${stepEndDate}`);
+                      console.log(`Step ${step.stepNumber} Single Period (${step.title}): startDay=${startDay}, endDay=${endDay}, actualColumns=${columnCount}, startColumnIndex=${startColumnIndex}, stepStartDate=${stepStartDate}, stepEndDate=${stepEndDate}`);
                       
-                      if (spanCount <= 0) {
-                        console.log(`Step ${step.stepNumber} has invalid span count (${spanCount}), skipping`);
+                      if (columnCount <= 0) {
+                        console.log(`Step ${step.stepNumber} has invalid column count (${columnCount}), skipping`);
                         return;
                       }
                       
@@ -825,7 +906,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                       stepCells.push(
                         <Table.ColumnHeader 
                           key={step.id}
-                          colSpan={spanCount}
+                          colSpan={columnCount}
                           textAlign="center"
                           bg={bgColor}
                           borderColor="border.subtle"
