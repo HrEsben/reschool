@@ -10,12 +10,9 @@ import {
   Heading,
   Badge,
   Skeleton,
-  Flex,
   Icon,
   Card,
   Separator,
-  Button,
-  Timeline,
   Table,
   useBreakpointValue,
   Select,
@@ -23,7 +20,6 @@ import {
   createListCollection,
   Container
 } from '@chakra-ui/react';
-import { IoChevronDown, IoChevronUp } from 'react-icons/io5';
 import { FaStairs, FaClock, FaClipboardList } from 'react-icons/fa6';
 import { Icons } from '@/components/ui/icons';
 import { OpenMojiEmoji } from '@/components/ui/openmoji-emoji';
@@ -38,13 +34,15 @@ interface ProgressTimelineProps {
   childId: number;
 }
 
-interface ExpandedSteps {
-  [stepId: number]: boolean;
-}
+type StepActivePeriod = {
+  startDate: string;
+  endDate?: string;
+};
 
-interface ExpandedDescriptions {
-  [stepId: number]: boolean;
-}
+type StepWithActivePeriods = StepWithGroupedEntries & {
+  activePeriods?: StepActivePeriod[];
+  startDate?: string;
+};
 
 // Enhanced Tooltip component using Chakra UI's built-in Tooltip
 interface EnhancedTooltipProps {
@@ -100,8 +98,6 @@ const EnhancedTooltip = ({ content, children }: EnhancedTooltipProps) => {
 };
 
 export function ProgressTimeline({ childId }: ProgressTimelineProps) {
-  const [expandedSteps, setExpandedSteps] = useState<ExpandedSteps>({});
-  const [expandedDescriptions, setExpandedDescriptions] = useState<ExpandedDescriptions>({});
   const [selectedTools, setSelectedTools] = useState<string[]>([]); // Will be populated after data loads
   const [selectedSteps, setSelectedSteps] = useState<string[]>([]); // Will be populated after data loads
   const [isInitialized, setIsInitialized] = useState(false); // Track if we've set default selections
@@ -111,7 +107,6 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
   
   // Breakpoint values for responsive design
   const isMdAndUp = useBreakpointValue({ base: false, md: true }) ?? false;
-  const isSmallScreen = !isMdAndUp;
   const responsiveColumnWidth = useBreakpointValue({ base: "120px", md: "200px" }) ?? "120px";
   const responsiveDayColumnWidth = useBreakpointValue({ base: "30px", md: "40px" }) ?? "30px";
   const responsiveFontSize = useBreakpointValue({ base: "xs", md: "sm" }) ?? "xs";
@@ -121,8 +116,10 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     if (progressData && progressData.plans && progressData.plans.length > 0 && !isInitialized) {
       const allToolTitles = Array.from(new Set(
         progressData.plans.flatMap((plan: ProgressPlan) =>
-          plan.stepsWithEntries.flatMap((step: StepWithGroupedEntries) => 
-            step.groupedEntries.map((entry: ProgressEntry) => {
+          (plan.stepsWithEntries || []).flatMap((step: StepWithGroupedEntries) => 
+            step.groupedEntries
+              .filter(entry => entry != null && entry.createdAt != null)
+              .map((entry: ProgressEntry) => {
               const displayData = getEntryDisplayData(entry);
               return displayData.title;
             })
@@ -132,7 +129,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
       
       const allStepTitles = Array.from(new Set(
         progressData.plans.flatMap((plan: ProgressPlan) =>
-          plan.stepsWithEntries.map((step: StepWithGroupedEntries) => step.title)
+          (plan.stepsWithEntries || []).map((step: StepWithGroupedEntries) => step.title)
         )
       )) as string[];
       
@@ -146,20 +143,6 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
   // Convert query error to string for display
   const error = queryError ? (queryError instanceof Error ? queryError.message : 'Der opstod en fejl') : null;
 
-  const toggleStepExpansion = (stepId: number) => {
-    setExpandedSteps(prev => ({
-      ...prev,
-      [stepId]: !prev[stepId]
-    }));
-  };
-
-  const toggleDescriptionExpansion = (stepId: number) => {
-    setExpandedDescriptions(prev => ({
-      ...prev,
-      [stepId]: !prev[stepId]
-    }));
-  };
-
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Ikke angivet';
     
@@ -170,32 +153,6 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     } catch {
       return 'Ugyldig dato';
     }
-  };
-
-  const formatDateTime = (dateString: string) => {
-    try {
-      const date = parseISO(dateString);
-      if (!isValid(date)) return 'Ugyldig dato';
-      return format(date, 'dd. MMM yyyy, HH:mm', { locale: da });
-    } catch {
-      return 'Ugyldig dato';
-    }
-  };
-  
-  const formatDateRange = (startDate: string | null, endDate: string | null, durationDays?: number | null) => {
-    if (!startDate && !endDate) {
-      return null;
-    }
-    
-    const start = startDate ? formatDate(startDate) : 'Start ikke angivet';
-    const end = endDate ? formatDate(endDate) : 'Igangværende';
-    
-    if (durationDays !== null && durationDays !== undefined) {
-      const dayText = durationDays === 1 ? 'dag' : 'dage';
-      return `${start} - ${end} (${durationDays} ${dayText})`;
-    }
-    
-    return `${start} - ${end}`;
   };
 
   // Transform entries data for scatter chart
@@ -217,9 +174,9 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     }> = [];
     const baseDate = plan.startDate ? new Date(plan.startDate) : new Date();
     
-    plan.stepsWithEntries.forEach((step, stepIndex) => {
+    (plan.stepsWithEntries || []).forEach((step, stepIndex) => {
       
-      step.groupedEntries.forEach((entry) => {
+      step.groupedEntries.forEach((entry: ProgressEntry) => {
         const entryDate = new Date(entry.entryDate);
         // Normalize both dates to avoid timezone issues
         const normalizedEntryDate = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
@@ -236,9 +193,9 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
           // For ReactNode icons, extract the emoji from the entry data directly
           switch (entry.toolType) {
             case 'barometer':
-              const rating = Number(entry.data.rating) || 0;
-              const displayType = String(entry.data.displayType) || 'numbers';
-              const smileyType = String(entry.data.smileyType) || 'emojis';
+              const rating = Number(entry.rating) || 0;
+              const displayType = String(entry.displayType) || 'numbers';
+              const smileyType = String(entry.smileyType) || 'emojis';
               
               if (displayType === 'percentage') {
                 const percentage = Math.round(((rating - 1) / (5 - 1)) * 100);
@@ -272,7 +229,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
               }
               break;
             case 'dagens-smiley':
-              iconString = String(entry.data.smileyValue || '😐');
+              iconString = String(entry.smileyValue || '😐');
               break;
             case 'sengetider':
               iconString = '🛏️';
@@ -291,7 +248,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
           icon: iconString,
           title: displayData.title,
           subtitle: displayData.subtitle,
-          createdAt: entry.createdAt,
+          createdAt: entry.createdAt instanceof Date ? entry.createdAt.toISOString() : entry.createdAt,
           toolType: entry.toolType,
           entryId: entry.id,
           recordedByName: entry.recordedByName || 'Ukendt',
@@ -309,7 +266,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     const allChartData = transformEntriesForChart(plan);
     
     // Get unique step titles for steps filter - define this first since it's used in filtering
-    const uniqueStepTitles = Array.from(new Set(plan.stepsWithEntries.map(step => step.title)));
+    const uniqueStepTitles = Array.from(new Set((plan.stepsWithEntries || []).map(step => step.title)));
     
     // Filter chart data to only include entries from selected steps
     const stepFilteredData = allChartData.filter(entry => {
@@ -317,8 +274,8 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
         return true; // Show all if no filter or all selected
       }
       // Find which step this entry belongs to
-      const entryStep = plan.stepsWithEntries.find(step => 
-        step.groupedEntries.some(e => e.id === entry.entryId)
+      const entryStep = (plan.stepsWithEntries || []).find(step => 
+        step.groupedEntries.some((e: ProgressEntry) => e.id === entry.entryId)
       );
       return entryStep ? selectedSteps.includes(entryStep.title) : false;
     });
@@ -481,7 +438,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     // Filter plan steps based on selected steps
     const filteredPlan = {
       ...plan,
-      stepsWithEntries: plan.stepsWithEntries.filter(step => 
+      stepsWithEntries: (plan.stepsWithEntries || []).filter(step => 
         selectedSteps.length === 0 || 
         selectedSteps.length === uniqueStepTitles.length ||
         selectedSteps.includes(step.title)
@@ -499,7 +456,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
 
     // Create collection for steps filter
     const stepsCollection = createListCollection({
-      items: plan.stepsWithEntries.map((step) => ({
+      items: (plan.stepsWithEntries || []).map((step) => ({
         label: step.title,
         value: step.title,
         icon: <Box 
@@ -677,76 +634,214 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                   </Text>
                 </Table.ColumnHeader>
                 {(() => {
-                  // Calculate step spans and render merged cells
+                  // Calculate step spans and render merged cells - handle multiple active periods per step
                   const stepCells: React.ReactElement[] = [];
+                  const planStartDate = plan.startDate ? new Date(plan.startDate) : new Date();
                   
-                  filteredPlan.stepsWithEntries.forEach((step, stepIndex) => {
-                    const stepStartDate = step.timePerriod?.startDate;
-                    const stepEndDate = step.timePerriod?.endDate;
+                  // Color coding using site's palette
+                  const stepColors = [
+                    'sage.200',    // Step 1 - primary brand color
+                    'navy.200',    // Step 2 - secondary brand color
+                    'golden.200',  // Step 3 - accent color
+                    'coral.200',   // Step 4 - coral accent
+                    'cream.200',   // Step 5 - cream accent
+                    'sage.300',    // Step 6 - darker sage
+                    'navy.300',    // Step 7 - darker navy
+                  ];
+                  
+                  (filteredPlan.stepsWithEntries || []).forEach((step, stepIndex) => {
+                    // Check if step has multiple active periods (for demoted/restarted steps)
+                    const stepWithPeriods = step as StepWithActivePeriods;
+                    const rawActivePeriods = stepWithPeriods.activePeriods || [];
+                    // Use the original step start date from database, not timePerriod which gets overwritten
+                    const stepStartDate = stepWithPeriods.startDate || step.timePerriod?.startDate;
                     
-                    if (!stepStartDate) return;
-                    
-                    const planStartDate = plan.startDate ? new Date(plan.startDate) : new Date();
-                    const stepStart = new Date(stepStartDate);
-                    const stepEnd = stepEndDate ? new Date(stepEndDate) : new Date();
-                    
-                    // Normalize dates to avoid timezone issues
-                    const normalizedPlanStart = new Date(planStartDate.getFullYear(), planStartDate.getMonth(), planStartDate.getDate());
-                    const normalizedStepStart = new Date(stepStart.getFullYear(), stepStart.getMonth(), stepStart.getDate());
-                    const normalizedStepEnd = new Date(stepEnd.getFullYear(), stepEnd.getMonth(), stepEnd.getDate());
-                    
-                    const startDay = Math.max(1, differenceInDays(normalizedStepStart, normalizedPlanStart) + 1);
-                    const endDay = stepEndDate 
-                      ? differenceInDays(normalizedStepEnd, normalizedPlanStart) + 1
-                      : Math.min(allDays.length, startDay + 30);
-                    
-                    // Calculate span based on processed days
-                    let spanCount = 0;
-                    processedDays.forEach(item => {
-                      if (item.type === 'day' && item.day! >= startDay && item.day! <= endDay) {
-                        spanCount++;
-                      } else if (item.type === 'condensed') {
-                        const condensedInRange = item.condensedDays!.filter(day => day >= startDay && day <= endDay);
-                        if (condensedInRange.length > 0) {
-                          spanCount++; // Condensed column counts as 1 span regardless of how many days it represents
-                        }
-                      }
+                    console.log(`Processing step ${step.stepNumber} (${step.title}):`, {
+                      hasActivePeriods: rawActivePeriods.length > 0,
+                      rawActivePeriods: rawActivePeriods,
+                      periodsCount: rawActivePeriods.length,
+                      timePerriod: step.timePerriod,
+                      stepStartDate: stepStartDate,
+                      stepEndDate: step.timePerriod?.endDate,
+                      stepStartDateExists: !!stepStartDate,
+                      rawStep: step
                     });
                     
-                    if (spanCount === 0) return;
+                    // Create complete periods list by filling gaps between step start and first active period
+                    let allPeriods: { startDate: string; endDate?: string; isSynthetic?: boolean }[] = [];
                     
-                    // Color coding using site's palette
-                    const stepColors = [
-                      'sage.200',    // Step 1 - primary brand color
-                      'navy.200',    // Step 2 - secondary brand color
-                      'golden.200',  // Step 3 - accent color
-                      'coral.200',   // Step 4 - coral accent
-                      'cream.200',   // Step 5 - cream accent
-                      'sage.300',    // Step 6 - darker sage
-                      'navy.300',    // Step 7 - darker navy
-                    ];
+                    if (rawActivePeriods.length > 0 && stepStartDate) {
+                      // Sort active periods by start date
+                      const sortedPeriods = [...rawActivePeriods].sort((a, b) => 
+                        new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+                      );
+                      
+                      const stepStart = new Date(stepStartDate);
+                      const firstPeriodStart = new Date(sortedPeriods[0].startDate);
+                      
+                      // Check if there's a gap between step start and first active period
+                      const daysDiff = differenceInDays(firstPeriodStart, stepStart);
+                      
+                      // Check if there are intermediate steps between the gap to validate step progression
+                      const hasIntermediateSteps = (filteredPlan.stepsWithEntries || []).some(otherStep => {
+                        if (otherStep.id === step.id) return false; // Skip self
+                        
+                        // Check if this other step has entries in the gap period
+                        const gapStart = new Date(stepStartDate);
+                        const gapEnd = new Date(firstPeriodStart);
+                        
+                        return otherStep.groupedEntries.some((entry: ProgressEntry) => {
+                          const entryDate = new Date(entry.entryDate);
+                          return entryDate >= gapStart && entryDate < gapEnd;
+                        });
+                      });
+                      
+                      console.log(`Gap analysis for step ${step.stepNumber}:`, {
+                        stepStartDate: stepStartDate,
+                        firstPeriodStart: sortedPeriods[0].startDate,
+                        stepStart: stepStart.toISOString(),
+                        firstPeriodStartNormalized: firstPeriodStart.toISOString(),
+                        daysDiff: daysDiff,
+                        hasIntermediateSteps: hasIntermediateSteps,
+                        shouldCreateSynthetic: daysDiff > 1 && hasIntermediateSteps
+                      });
+                      
+                      if (daysDiff > 1 && hasIntermediateSteps) {
+                        // Create synthetic period to fill the gap - only if there are intermediate steps
+                        const syntheticEndDate = new Date(firstPeriodStart);
+                        syntheticEndDate.setDate(syntheticEndDate.getDate() - 1); // End one day before first period
+                        
+                        console.log(`Creating synthetic period for step ${step.stepNumber}: ${stepStartDate} to ${syntheticEndDate.toISOString()} (validated: has intermediate steps)`);
+                        
+                        allPeriods.push({
+                          startDate: stepStartDate,
+                          endDate: syntheticEndDate.toISOString(),
+                          isSynthetic: true
+                        });
+                      } else if (daysDiff > 1 && !hasIntermediateSteps) {
+                        console.log(`No intermediate steps found for step ${step.stepNumber} - extending first period to original start date instead of creating synthetic period`);
+                        // Extend the first active period to start from the original step start date
+                        sortedPeriods[0] = {
+                          ...sortedPeriods[0],
+                          startDate: stepStartDate
+                        };
+                      }
+                      
+                      // Add all real active periods
+                      allPeriods = allPeriods.concat(sortedPeriods.map(p => ({ ...p, isSynthetic: false })));
+                    } else {
+                      // Use raw periods if no gaps to fill
+                      allPeriods = rawActivePeriods.map((p: StepActivePeriod) => ({ ...p, isSynthetic: false }));
+                    }
                     
-                    const bgColor = stepColors[stepIndex % stepColors.length];
+                    // Log each individual period for debugging
+                    allPeriods.forEach((period: { startDate: string; endDate?: string; isSynthetic?: boolean }, idx: number) => {
+                      console.log(`  Period ${idx + 1}${period.isSynthetic ? ' (synthetic)' : ''}:`, {
+                        startDate: period.startDate,
+                        endDate: period.endDate,
+                        isSynthetic: period.isSynthetic,
+                        rawPeriod: period
+                      });
+                    });
                     
-                    stepCells.push(
-                      <Table.ColumnHeader 
-                        key={step.id} 
-                        colSpan={spanCount}
-                        textAlign="center"
-                        bg={bgColor}
-                        borderColor="border.subtle"
-                        px={2}
-                        position="sticky"
-                        top={0}
-                        zIndex={30}
-                        _hover={{ bg: stepColors[(stepIndex + 3) % stepColors.length] }}
-                        transition="all 0.2s"
-                      >
-                        <Text fontSize="xs" fontWeight="600" color="navy.800" lineHeight="1.2">
-                          Trin {step.stepNumber}: {step.title}
-                        </Text>
-                      </Table.ColumnHeader>
-                    );
+                    if (allPeriods.length > 0) {
+                      // Handle steps with multiple active periods (including synthetic ones)
+                      allPeriods.forEach((period: { startDate: string; endDate?: string; isSynthetic?: boolean }, periodIndex: number) => {
+                        const periodStart = new Date(period.startDate);
+                        const periodEnd = period.endDate ? new Date(period.endDate) : new Date();
+                        
+                        // Normalize dates to avoid timezone issues
+                        const normalizedPlanStart = new Date(planStartDate.getFullYear(), planStartDate.getMonth(), planStartDate.getDate());
+                        const normalizedPeriodStart = new Date(periodStart.getFullYear(), periodStart.getMonth(), periodStart.getDate());
+                        const normalizedPeriodEnd = new Date(periodEnd.getFullYear(), periodEnd.getMonth(), periodEnd.getDate());
+                        
+                        const startDay = Math.max(1, differenceInDays(normalizedPeriodStart, normalizedPlanStart) + 1);
+                        const endDay = period.endDate 
+                          ? differenceInDays(normalizedPeriodEnd, normalizedPlanStart) + 1
+                          : Math.min(allDays.length, startDay + 30);
+                        
+                        const spanCount = endDay - startDay + 1;
+                        
+                        console.log(`Step ${step.stepNumber} Period ${periodIndex + 1}${period.isSynthetic ? ' (synthetic)' : ''} (${step.title}): startDay=${startDay}, endDay=${endDay}, spanCount=${spanCount}, periodStart=${period.startDate}, periodEnd=${period.endDate}`);
+                        
+                        if (spanCount <= 0) return;
+                        
+                        const bgColor = stepColors[stepIndex % stepColors.length];
+                        
+                        stepCells.push(
+                          <Table.ColumnHeader 
+                            key={`${step.id}-period-${periodIndex}`}
+                            colSpan={spanCount}
+                            textAlign="center"
+                            bg={bgColor}
+                            borderColor="border.subtle"
+                            px={2}
+                            position="sticky"
+                            top={0}
+                            zIndex={30}
+                            _hover={{ bg: stepColors[(stepIndex + 3) % stepColors.length] }}
+                            transition="all 0.2s"
+                          >
+                            <Text fontSize="xs" fontWeight="600" color="navy.800" lineHeight="1.2">
+                              Trin {step.stepNumber}: {step.title}
+                            </Text>
+                          </Table.ColumnHeader>
+                        );
+                      });
+                    } else {
+                      // Fallback to single time period for steps without active periods
+                      const stepStartDate = step.timePerriod?.startDate;
+                      const stepEndDate = step.timePerriod?.endDate;
+                      
+                      if (!stepStartDate) {
+                        console.log(`Step ${step.stepNumber} has no start date, skipping`);
+                        return;
+                      }
+                      
+                      const stepStart = new Date(stepStartDate);
+                      const stepEnd = stepEndDate ? new Date(stepEndDate) : new Date();
+                      
+                      // Normalize dates to avoid timezone issues
+                      const normalizedPlanStart = new Date(planStartDate.getFullYear(), planStartDate.getMonth(), planStartDate.getDate());
+                      const normalizedStepStart = new Date(stepStart.getFullYear(), stepStart.getMonth(), stepStart.getDate());
+                      const normalizedStepEnd = new Date(stepEnd.getFullYear(), stepEnd.getMonth(), stepEnd.getDate());
+                      
+                      const startDay = Math.max(1, differenceInDays(normalizedStepStart, normalizedPlanStart) + 1);
+                      const endDay = stepEndDate 
+                        ? differenceInDays(normalizedStepEnd, normalizedPlanStart) + 1
+                        : Math.min(allDays.length, startDay + 30);
+                      
+                      const spanCount = endDay - startDay + 1;
+                      
+                      console.log(`Step ${step.stepNumber} Single Period (${step.title}): startDay=${startDay}, endDay=${endDay}, spanCount=${spanCount}, stepStartDate=${stepStartDate}, stepEndDate=${stepEndDate}`);
+                      
+                      if (spanCount <= 0) {
+                        console.log(`Step ${step.stepNumber} has invalid span count (${spanCount}), skipping`);
+                        return;
+                      }
+                      
+                      const bgColor = stepColors[stepIndex % stepColors.length];
+                      
+                      stepCells.push(
+                        <Table.ColumnHeader 
+                          key={step.id}
+                          colSpan={spanCount}
+                          textAlign="center"
+                          bg={bgColor}
+                          borderColor="border.subtle"
+                          px={2}
+                          position="sticky"
+                          top={0}
+                          zIndex={30}
+                          _hover={{ bg: stepColors[(stepIndex + 3) % stepColors.length] }}
+                          transition="all 0.2s"
+                        >
+                          <Text fontSize="xs" fontWeight="600" color="navy.800" lineHeight="1.2">
+                            Trin {step.stepNumber}: {step.title}
+                          </Text>
+                        </Table.ColumnHeader>
+                      );
+                    }
                   });
                   
                   return stepCells;
@@ -959,257 +1054,6 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     );
   };
 
-
-
-  // Helper function to group entries by date
-  const groupEntriesByDate = (entries: ProgressEntry[]): { [dateKey: string]: ProgressEntry[] } => {
-    const grouped: { [dateKey: string]: ProgressEntry[] } = {};
-    
-    entries.forEach(entry => {
-      const entryDate = new Date(entry.entryDate);
-      // Normalize date to avoid timezone issues
-      const normalizedEntryDate = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
-      const dateKey = format(normalizedEntryDate, 'yyyy-MM-dd');
-      
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-      }
-      grouped[dateKey].push(entry);
-    });
-    
-    return grouped;
-  };
-
-  // Dated Timeline Component
-  const DatedTimeline = ({ step, isHorizontal }: { step: StepWithGroupedEntries; isHorizontal: boolean }) => {
-    const entriesByDate = groupEntriesByDate(step.groupedEntries);
-    
-    // Generate date range based on actual entries, not the full step period
-    const entryDates = Object.keys(entriesByDate).map(dateKey => new Date(dateKey)).sort((a, b) => a.getTime() - b.getTime());
-    
-    const dateRange: Date[] = [];
-    if (entryDates.length > 0) {
-      const firstEntryDate = entryDates[0];
-      const lastEntryDate = entryDates[entryDates.length - 1];
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Normalize to start of day
-      
-      // Don't show dates beyond today
-      const effectiveLastDate = lastEntryDate > today ? today : lastEntryDate;
-      
-      console.log(`DatedTimeline: Step ${step.title}, Entries from ${format(firstEntryDate, 'dd/MM')} to ${format(effectiveLastDate, 'dd/MM')}`);
-      
-      // Generate range from first entry to last entry (only dates with entries)
-      const current = new Date(firstEntryDate);
-      while (current <= effectiveLastDate) {
-        const dateKey = format(current, 'yyyy-MM-dd');
-        // Only include dates that have entries
-        if (entriesByDate[dateKey]) {
-          dateRange.push(new Date(current));
-        }
-        current.setDate(current.getDate() + 1);
-      }
-    }
-    
-    console.log(`DatedTimeline: Showing ${dateRange.length} dates for step ${step.title}`);
-    
-    if (dateRange.length === 0) {
-      // Fallback to simple entry list if no date range
-      return (
-        <VStack gap={3} align="stretch">
-          {step.groupedEntries.map((entry: ProgressEntry) => {
-            const displayData = getEntryDisplayData(entry);
-            
-            return (
-              <Box
-                key={`${entry.toolType}-${entry.id}-simple`}
-                p={3}
-                bg="white"
-                borderRadius="md"
-                border="1px solid"
-                borderColor="cream.300"
-              >
-                <Flex align="center" gap={3} wrap="wrap">
-                  <Box fontSize="xl">
-                    {displayData.icon}
-                  </Box>
-                  <VStack align="start" gap={0} flex={1}>
-                    <Text fontSize="sm" fontWeight="medium" color="navy.700">
-                      {displayData.title}
-                    </Text>
-                    <Text fontSize="xs" color="gray.600">
-                      {displayData.subtitle}
-                    </Text>
-                  </VStack>
-                  <VStack align="end" gap={0}>
-                    <Text fontSize="xs" color="gray.500">
-                      {formatDateTime(entry.createdAt)}
-                    </Text>
-                    {entry.recordedByName && (
-                      <Badge colorPalette="sage" size="xs">
-                        {entry.recordedByName}
-                      </Badge>
-                    )}
-                  </VStack>
-                </Flex>
-              </Box>
-            );
-          })}
-        </VStack>
-      );
-    }
-
-    return (
-      <Box w="full">
-        <Text fontSize="sm" fontWeight="medium" color="navy.700" mb={4}>
-          Tidsbaseret registreringsoversigt
-        </Text>
-        
-        {isHorizontal ? (
-          // Horizontal timeline for larger screens
-          <Box overflowX="auto" pb={4}>
-            <HStack gap={4} align="start" minW="fit-content">
-              {dateRange.map(date => {
-                const dateKey = format(date, 'yyyy-MM-dd');
-                const entriesForDate = entriesByDate[dateKey] || [];
-                const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-                
-                return (
-                  <VStack
-                    key={dateKey}
-                    gap={2}
-                    align="center"
-                    minW="120px"
-                    p={3}
-                    bg={entriesForDate.length > 0 ? "sage.50" : "cream.50"}
-                    borderRadius="md"
-                    border="2px solid"
-                    borderColor={isToday ? "sage.300" : entriesForDate.length > 0 ? "sage.200" : "cream.200"}
-                  >
-                    <VStack gap={0} align="center">
-                      <Text fontSize="xs" color="navy.600" fontWeight="medium">
-                        {format(date, 'EEE', { locale: da })}
-                      </Text>
-                      <Text fontSize="sm" fontWeight="bold" color={isToday ? "sage.700" : "navy.700"}>
-                        {format(date, 'd. MMM', { locale: da })}
-                      </Text>
-                    </VStack>
-                    
-                    {entriesForDate.length > 0 && (
-                      <VStack gap={1} align="center" w="full">
-                        {entriesForDate.map(entry => {
-                          const displayData = getEntryDisplayData(entry);
-                          return (
-                            <Box
-                              key={`${entry.toolType}-${entry.id}-timeline`}
-                              p={2}
-                              bg="white"
-                              borderRadius="sm"
-                              border="1px solid"
-                              borderColor="sage.300"
-                              w="full"
-                              textAlign="center"
-                            >
-                              <Box fontSize="lg" mb={1}>
-                                {displayData.icon}
-                              </Box>
-                              <Text fontSize="xs" color="navy.700" fontWeight="medium" lineClamp={2}>
-                                {entry.toolTopic}
-                              </Text>
-                              {entry.recordedByName && (
-                                <Badge colorPalette="sage" size="xs" mt={1}>
-                                  {entry.recordedByName}
-                                </Badge>
-                              )}
-                            </Box>
-                          );
-                        })}
-                      </VStack>
-                    )}
-                    
-                    {entriesForDate.length === 0 && (
-                      <Text fontSize="xs" color="gray.400">
-                        Ingen
-                      </Text>
-                    )}
-                  </VStack>
-                );
-              })}
-            </HStack>
-          </Box>
-        ) : (
-          // Vertical timeline for smaller screens
-          <VStack gap={3} align="stretch">
-            {dateRange.map(date => {
-              const dateKey = format(date, 'yyyy-MM-dd');
-              const entriesForDate = entriesByDate[dateKey] || [];
-              const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-              
-              if (entriesForDate.length === 0) return null;
-              
-              return (
-                <Box
-                  key={dateKey}
-                  p={3}
-                  bg="sage.50"
-                  borderRadius="md"
-                  border="1px solid"
-                  borderColor={isToday ? "sage.300" : "sage.200"}
-                >
-                  <HStack mb={3}>
-                    <Text fontSize="sm" fontWeight="bold" color={isToday ? "sage.700" : "navy.700"}>
-                      {format(date, 'EEEE d. MMMM', { locale: da })}
-                    </Text>
-                    {isToday && (
-                      <Badge colorPalette="sage" size="xs">
-                        I dag
-                      </Badge>
-                    )}
-                  </HStack>
-                  
-                  <VStack gap={2} align="stretch">
-                    {entriesForDate.map(entry => {
-                      const displayData = getEntryDisplayData(entry);
-                      return (
-                        <Box
-                          key={`${entry.toolType}-${entry.id}-vertical`}
-                          p={2}
-                          bg="white"
-                          borderRadius="sm"
-                          border="1px solid"
-                          borderColor="sage.300"
-                        >
-                          <Flex align="center" gap={3}>
-                            <Box fontSize="xl">
-                              {displayData.icon}
-                            </Box>
-                            <VStack align="start" gap={0} flex={1}>
-                              <Text fontSize="sm" fontWeight="medium" color="navy.700">
-                                {displayData.title}
-                              </Text>
-                              <Text fontSize="xs" color="gray.600">
-                                {displayData.subtitle}
-                              </Text>
-                            </VStack>
-                            {entry.recordedByName && (
-                              <Badge colorPalette="sage" size="xs">
-                                {entry.recordedByName}
-                              </Badge>
-                            )}
-                          </Flex>
-                        </Box>
-                      );
-                    })}
-                  </VStack>
-                </Box>
-              );
-            })}
-          </VStack>
-        )}
-      </Box>
-    );
-  };
-
   // Helper function to get OpenMoji component for any emoji
   const getEmojiIcon = (content: string, size = 20) => {
     // Check if content is an emoji (simple check for common emoji patterns)
@@ -1286,42 +1130,52 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     return String(rating);
   };
 
-  const getEntryDisplayData = (entry: ProgressEntry): {
+  const getEntryDisplayData = (entry: ProgressEntry | null | undefined): {
     icon: React.ReactNode;
     title: string;
     subtitle: string;
     color: string;
   } => {
+    // Guard clause to handle undefined entry
+    if (!entry) {
+      return {
+        icon: getEmojiIcon('❓'),
+        title: 'Ukendt data',
+        subtitle: 'Data ikke tilgængelig',
+        color: 'gray'
+      };
+    }
+
     switch (entry.toolType) {
       case 'barometer':
-        const rating = Number(entry.data.rating) || 0;
-        const displayType = String(entry.data.displayType) || 'numbers';
-        const smileyType = String(entry.data.smileyType) || 'emojis';
+        const rating = Number(entry?.rating) || 0;
+        const displayType = String(entry?.displayType) || 'numbers';
+        const smileyType = String(entry?.smileyType) || 'emojis';
         
         return {
           icon: getBarometerDisplayValue(rating, displayType, smileyType),
-          title: entry.toolTopic,
-          subtitle: String(entry.data.comment || 'Ingen kommentar'),
+          title: entry?.toolTopic || 'Barometer',
+          subtitle: String(entry?.comment || 'Ingen kommentar'),
           color: 'navy'
         };
       case 'dagens-smiley':
         return {
-          icon: getEmojiIcon(String(entry.data.smileyValue || '😐')),
-          title: entry.toolTopic,
-          subtitle: String(entry.data.comment || 'Ingen kommentar'),
+          icon: getEmojiIcon(String(entry?.smileyValue || entry?.comment || '😐')),
+          title: entry?.toolTopic || 'Dagens Smiley',
+          subtitle: String(entry?.comment || 'Ingen kommentar'),
           color: 'sage'
         };
       case 'sengetider':
         return {
           icon: getEmojiIcon('🛏️'),
-          title: `${entry.toolTopic}`,
-          subtitle: `Sengetid: ${String(entry.data.bedtime || 'Ikke angivet')}`,
+          title: entry?.toolTopic || 'Sengetider',
+          subtitle: `Sengetid: ${String(entry?.bedtime || 'Ikke angivet')}`,
           color: 'golden'
         };
       default:
         return {
           icon: getEmojiIcon('📝'),
-          title: entry.toolTopic,
+          title: entry?.toolTopic || 'Data registreret',
           subtitle: 'Data registreret',
           color: 'gray'
         };
@@ -1493,202 +1347,6 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
 
               {/* Overview Table */}
               <ProgressTimelineChart plan={plan} />
-
-             
-              <Separator />
-
-              {/* Timeline */}
-              <Timeline.Root variant="outline">
-                {plan.stepsWithEntries.map((step: StepWithGroupedEntries, index: number) => {
-                  const isExpanded = expandedSteps[step.id];
-                  const hasEntries = step.groupedEntries.length > 0;
-                  const isCurrentStep = index === (plan.currentStepIndex || 0);
-
-                  return (
-                    <Timeline.Item key={step.id}>
-                      <Timeline.Indicator 
-                        bg={step.isCompleted ? 'sage.500' : isCurrentStep ? 'navy.500' : 'cream.300'}
-                        borderColor={step.isCompleted ? 'sage.600' : isCurrentStep ? 'navy.600' : 'cream.400'}
-                      />
-                      <Timeline.Content>
-                        <Box>
-                          {/* Step Header */}
-                          <Stack direction={{ base: "column", lg: "row" }} justify="space-between" align={{ base: "stretch", lg: "start" }} gap={3} mb={3}>
-                            <VStack align="start" gap={2} flex={1}>
-                              <Stack direction={{ base: "column", sm: "row" }} gap={3} align={{ base: "start", sm: "center" }} wrap="wrap">
-                                <Badge
-                                  colorPalette={step.isCompleted ? 'sage' : isCurrentStep ? 'navy' : 'cream'}
-                                  size="sm"
-                                >
-                                  Trin {step.stepNumber}
-                                </Badge>
-                                <Heading size="md" color="navy.700">
-                                  {step.title}
-                                </Heading>
-                                {hasEntries && (
-                                  <Badge colorPalette="cream" size="sm">
-                                    {step.groupedEntries.length} registreringer
-                                  </Badge>
-                                )}
-                              </Stack>
-                              
-                              {(step.description || step.målsætning) && (
-                                <Box>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => toggleDescriptionExpansion(step.id)}
-                                    fontSize="xs"
-                                    color="navy.500"
-                                    p={1}
-                                    h="auto"
-                                    fontWeight="normal"
-                                  >
-                                    {expandedDescriptions[step.id] ? 'Skjul detaljer' : 'Vis detaljer'}
-                                    <Icon as={expandedDescriptions[step.id] ? IoChevronUp : IoChevronDown} ml={1} />
-                                  </Button>
-                                  
-                                  {expandedDescriptions[step.id] && (
-                                    <VStack align="start" mt={2} gap={2}>
-                                      {step.description && (
-                                        <Text color="gray.600" fontSize="sm">
-                                          {step.description}
-                                        </Text>
-                                      )}
-                                      
-                                      {step.målsætning && (
-                                        <Box
-                                          bg="navy.50"
-                                          p={3}
-                                          borderRadius="md"
-                                          borderLeft="4px solid"
-                                          borderColor="navy.200"
-                                          w="full"
-                                        >
-                                          <Text fontSize="sm" color="navy.700" fontWeight="medium">
-                                            Målsætning: {step.målsætning}
-                                          </Text>
-                                        </Box>
-                                      )}
-                                    </VStack>
-                                  )}
-                                </Box>
-                              )}
-
-                              {/* Inline Emoji Timeline */}
-                              {hasEntries && (
-                                <Box
-                                  bg="cream.25"
-                                  p={3}
-                                  borderRadius="md"
-                                  border="1px solid"
-                                  borderColor="cream.200"
-                                >
-                                  <Text fontSize="xs" color="gray.600" mb={2} fontWeight="medium">
-                                    Registreringer ({step.groupedEntries.length})
-                                  </Text>
-                                  <HStack gap={2} wrap="wrap">
-                                    {step.groupedEntries.map((entry: ProgressEntry) => {
-                                      const displayData = getEntryDisplayData(entry);
-                                      
-                                      return (
-                                        <Box
-                                          key={`${entry.toolType}-${entry.id}-inline`}
-                                          position="relative"
-                                          display="inline-flex"
-                                          alignItems="center"
-                                          justifyContent="center"
-                                          w="32px"
-                                          h="32px"
-                                          bg="white"
-                                          borderRadius="full"
-                                          border="2px solid"
-                                          borderColor={displayData.color === 'navy' ? 'navy.200' : 
-                                                      displayData.color === 'sage' ? 'sage.200' : 'gray.200'}
-                                          cursor="pointer"
-                                          title={`${displayData.title} - ${formatDateTime(entry.createdAt)}`}
-                                          _hover={{
-                                            transform: 'scale(1.1)',
-                                            borderColor: displayData.color === 'navy' ? 'navy.400' : 
-                                                        displayData.color === 'sage' ? 'sage.400' : 'gray.400'
-                                          }}
-                                          transition="all 0.2s"
-                                        >
-                                          <Box fontSize="lg" lineHeight="1">
-                                            {displayData.icon}
-                                          </Box>
-                                        </Box>
-                                      );
-                                    })}
-                                  </HStack>
-                                </Box>
-                              )}
-
-                              <Stack direction={{ base: "column", sm: "row" }} gap={{ base: 2, sm: 4 }} fontSize="xs" color="navy.500" wrap="wrap">
-                                {/* Date Range Badge */}
-                                {formatDateRange(step.timePerriod.startDate, step.timePerriod.endDate, step.durationDays) && (
-                                  <Badge
-                                    colorPalette={step.isCompleted ? 'sage' : 'navy'}
-                                    size="sm"
-                                    px={3}
-                                    py={1}
-                                  >
-                                    {formatDateRange(step.timePerriod.startDate, step.timePerriod.endDate, step.durationDays)}
-                                  </Badge>
-                                )}
-                                
-                                {step.completedAt && (
-                                  <Text>Afsluttet: {formatDateTime(step.completedAt)}</Text>
-                                )}
-                              </Stack>
-                            </VStack>
-
-                            {isMdAndUp && hasEntries && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => toggleStepExpansion(step.id)}
-                                >
-                                  {isExpanded ? 'Skjul' : 'Vis'} registreringer
-                                  <Icon as={isExpanded ? IoChevronUp : IoChevronDown} ml={2} />
-                                </Button>
-                              )}
-                          </Stack>
-
-                          
-                          {/* Mobile expand button */}
-                          {isSmallScreen && hasEntries && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => toggleStepExpansion(step.id)}
-                                w="full"
-                                justifyContent="center"
-                              >
-                                {isExpanded ? 'Skjul' : 'Vis'} registreringer
-                                <Icon as={isExpanded ? IoChevronUp : IoChevronDown} ml={2} />
-                              </Button>
-                            )}
-
-                          {/* Dated Timeline View */}
-                          {hasEntries && isExpanded && (
-                            <Box
-                              mt={4}
-                              p={4}
-                              bg="cream.25"
-                              borderRadius="md"
-                              border="1px solid"
-                              borderColor="cream.200"
-                            >
-                              <DatedTimeline step={step} isHorizontal={isMdAndUp} />
-                            </Box>
-                          )}
-                        </Box>
-                      </Timeline.Content>
-                    </Timeline.Item>
-                  );
-                })}
-              </Timeline.Root>
             </VStack>
           </Card.Body>
         </Card.Root>

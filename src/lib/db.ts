@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool, QueryResult } from 'pg';
 
 // Create a connection pool to your Neon database
 const pool = new Pool({
@@ -51,7 +51,7 @@ export async function getClient(userStackId?: string) {
 // Helper function to execute multiple database operations with user context
 export async function withUserContext<T>(
   userStackId: string,
-  callback: (query: (text: string, params?: unknown[]) => Promise<any>) => Promise<T>
+  callback: (query: (text: string, params?: unknown[]) => Promise<QueryResult>) => Promise<T>
 ): Promise<T> {
   const client = await pool.connect();
   

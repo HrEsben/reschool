@@ -172,12 +172,13 @@ function groupEntriesByStepTiming(
 
     groupedSteps.push({
       ...step,
+      entries: stepEntries,
       groupedEntries: stepEntries,
       timePerriod: {
-        startDate: overallStartDate,
-        endDate: overallEndDate
+        startDate: overallStartDate || new Date().toISOString(),
+        endDate: overallEndDate || new Date().toISOString()
       },
-      durationDays: totalDurationDays
+      durationDays: totalDurationDays || 0
     });
   }
   

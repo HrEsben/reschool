@@ -1,3 +1,57 @@
+export interface ProgressPlan {
+  id: number;
+  childId: number;
+  createdBy: number;
+  title: string;
+  description?: string;
+  startDate: string;
+  targetDate?: string;
+  isActive: boolean;
+  isCompleted: boolean;
+  isPublic: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  totalSteps: number;
+  completedSteps: number;
+  currentStepIndex?: number;
+  stepsWithEntries?: StepWithGroupedEntries[];
+  totalEntries?: number;
+}
+
+export interface ProgressData {
+  childId: number;
+  plans: ProgressPlan[];
+  totalEntries: number;
+}
+
+export interface ProgressEntry {
+  id: number;
+  toolId: number;
+  recordedBy: number;
+  entryDate: string;
+  rating?: number;
+  comment?: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  topic: string;
+  displayType?: string;
+  smileyType?: string;
+  recordedByName?: string;
+  toolType: string;
+  smileyValue?: string;
+  bedtime?: string;
+  toolTopic?: string;
+}
+
+export interface StepWithGroupedEntries extends IndsatsSteps {
+  entries: ProgressEntry[];
+  groupedEntries: ProgressEntry[];
+  timePerriod: {
+    startDate?: string;
+    endDate?: string;
+  };
+  durationDays?: number;
+}
 import { query, getClient } from './db';
 import crypto from 'crypto';
 
@@ -15,36 +69,21 @@ export interface User {
 export interface Child {
   id: number;
   name: string;
-  slug: string;
-  createdBy: number;
-  createdAt: string; // Changed from Date to string for consistency
-  updatedAt: string; // Changed from Date to string for consistency
+  slug?: string;
+  createdBy?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface UserChildRelation {
   id: number;
-  userId: number;
-  childId: number;
-  relation: 'Mor' | 'Far' | 'Underviser' | 'Ressourceperson';
-  customRelationName?: string;
-  isAdministrator: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface Invitation {
-  id: number;
-  email: string;
-  childId: number;
-  invitedBy: number;
-  relation: 'Mor' | 'Far' | 'Underviser' | 'Ressourceperson';
-  customRelationName?: string;
-  token: string;
-  status: 'pending' | 'accepted' | 'expired';
-  expiresAt: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  isAdministrator: boolean;
+  user_id: number;
+  child_id: number;
+  relation: string;
+  custom_relation_name?: string;
+  is_administrator: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ChildWithRelation extends Child {
@@ -53,33 +92,56 @@ export interface ChildWithRelation extends Child {
   isAdministrator: boolean;
 }
 
+export interface Invitation {
+  id: number;
+  token: string;
+  email: string;
+  childId: number;
+  invitedBy: number;
+  relation: string;
+  customRelationName?: string;
+  expiresAt: Date;
+  usedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  status?: string;
+  isAdministrator?: boolean;
+}
+
+// Additional missing interfaces
+export interface DagensSmiley {
+  id: number;
+  childId: number;
+  topic: string;
+  createdBy: number;
+  createdAt: string;
+  updatedAt: string;
+  isActive?: boolean;
+  isPublic?: boolean;
+  description?: string;
+}
+
 export interface Barometer {
   id: number;
   childId: number;
-  createdBy: number;
   topic: string;
+  displayType: string;
+  smileyType?: string;
+  createdBy: number;
+  isActive?: boolean;
+  isPublic?: boolean;
   description?: string;
   scaleMin: number;
   scaleMax: number;
-  displayType: string;
-  smileyType?: string;
-  isPublic: boolean;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface BarometerUserAccess {
-  id: number;
-  barometerId: number;
-  userId: number;
-  createdAt: string;
 }
 
 export interface BarometerEntry {
   id: number;
   barometerId: number;
   recordedBy: number;
-  entryDate: string; // YYYY-MM-DD format
+  entryDate: string;
   rating: number;
   comment?: string;
   createdAt: string;
@@ -91,24 +153,14 @@ export interface BarometerWithLatestEntry extends Barometer {
   recordedByName?: string;
 }
 
-export interface DagensSmiley {
-  id: number;
-  childId: number;
-  createdBy: number;
-  topic: string;
-  description?: string;
-  isPublic: boolean;
-  createdAt: string;
-  updatedAt: string;
+export async function getProgressDataWithRLS(
+  childId: number,
+  userId: number
+): Promise<ProgressData | null> {
+  // For now, delegate to the complete implementation with proper access control
+  // TODO: Implement full RLS version when database RLS policies are ready
+  return await getProgressDataForChild(childId, userId);
 }
-
-export interface DagensSmileyUserAccess {
-  id: number;
-  smileyId: number;
-  userId: number;
-  createdAt: string;
-}
-
 export interface DagensSmileyEntry {
   id: number;
   smileyId: number;
@@ -907,13 +959,13 @@ export async function getUserChildRelation(userId: number, childId: number): Pro
     const row = result.rows[0];
     return {
       id: row.id,
-      userId: row.user_id,
-      childId: row.child_id,
+      user_id: row.user_id,
+      child_id: row.child_id,
       relation: row.relation,
-      customRelationName: row.custom_relation_name,
-      isAdministrator: row.is_administrator,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
+      custom_relation_name: row.custom_relation_name,
+      is_administrator: row.is_administrator,
+      created_at: row.created_at,
+      updated_at: row.updated_at
     };
   } catch (error) {
     console.error('Error fetching user-child relation:', error);
@@ -1174,7 +1226,7 @@ export async function updateBarometer(
       description: row.description,
       scaleMin: row.scale_min,
       scaleMax: row.scale_max,
-      displayType: row.display_type,
+      displayType: row.display_type || 'numbers',
       smileyType: row.smiley_type,
       isPublic: row.is_public ?? true, // Default to true for existing records
       createdAt: new Date(row.created_at).toISOString(),
@@ -3106,7 +3158,7 @@ export async function endStepPeriod(
     if (result.rows.length === 0) {
       return null;
     }
-    
+
     const row = result.rows[0];
     return {
       id: row.id,
@@ -3492,26 +3544,26 @@ export async function updateIndsatsStep(
   try {
     const fields = [];
     const values = [];
-    let paramCount = 0;
+    let paramIndex = 0;
 
     if (updates.title !== undefined) {
-      fields.push(`title = $${++paramCount}`);
+      fields.push(`title = $${++paramIndex}`);
       values.push(updates.title);
     }
     if (updates.description !== undefined) {
-      fields.push(`description = $${++paramCount}`);
+      fields.push(`description = $${++paramIndex}`);
       values.push(updates.description);
     }
     if (updates.målsætning !== undefined) {
-      fields.push(`målsætning = $${++paramCount}`);
+      fields.push(`målsætning = $${++paramIndex}`);
       values.push(updates.målsætning);
     }
     if (updates.startDate !== undefined) {
-      fields.push(`start_date = $${++paramCount}`);
+      fields.push(`start_date = $${++paramIndex}`);
       values.push(updates.startDate);
     }
     if (updates.targetEndDate !== undefined) {
-      fields.push(`target_end_date = $${++paramCount}`);
+      fields.push(`target_end_date = $${++paramIndex}`);
       values.push(updates.targetEndDate);
     }
 
@@ -3519,11 +3571,11 @@ export async function updateIndsatsStep(
       return true; // No updates needed
     }
 
-    fields.push(`updated_at = $${++paramCount}`);
+    fields.push(`updated_at = $${++paramIndex}`);
     values.push(new Date());
     values.push(id); // Add id as the last parameter
 
-    const updateQuery = `UPDATE indsatstrappe_steps SET ${fields.join(', ')} WHERE id = $${++paramCount}`;
+    const updateQuery = `UPDATE indsatstrappe_steps SET ${fields.join(', ')} WHERE id = $${paramIndex}`;
     const result = await query(updateQuery, values);
     
     return result.rowCount !== null && result.rowCount > 0;
@@ -3690,7 +3742,7 @@ export async function setIndsatsrappeUserAccess(indsatsrappeId: number, userIds:
       const values = userIds.map((userId, index) => 
         `($1, $${index + 2})`
       ).join(', ');
-      
+
       await client.query(
         `INSERT INTO indsatstrappe_user_access (indsatstrappe_id, user_id) VALUES ${values}`,
         [indsatsrappeId, ...userIds]
@@ -3714,6 +3766,11 @@ export async function getProgressDataForChild(
   userId?: number
 ): Promise<ProgressData | null> {
   try {
+    // If we have a Stack Auth ID, we need to convert it to userId first
+    // For now, use the fallback implementation since we don't have a direct mapping
+    // The RLS version should be called directly from the API route instead
+    
+    // Fallback to the original implementation with manual access control
     // Get all accessible indsatstrappe plans for this child
     const plans = userId 
       ? await getAccessibleIndsatsrappeForChild(childId, userId)
@@ -3737,6 +3794,8 @@ export async function getProgressDataForChild(
       
       progressPlans.push({
         ...plan,
+        createdAt: typeof plan.createdAt === 'string' ? new Date(plan.createdAt) : plan.createdAt,
+        updatedAt: typeof plan.updatedAt === 'string' ? new Date(plan.updatedAt) : plan.updatedAt,
         stepsWithEntries: groupedEntries,
         totalEntries: allEntries.length
       });
@@ -3797,15 +3856,15 @@ export async function getAllToolEntriesForChild(childId: number, userId?: number
         toolType: 'barometer',
         toolTopic: row.topic,
         entryDate: row.entry_date,
-        createdAt: new Date(row.created_at).toISOString(),
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at || row.created_at),
         recordedBy: row.recorded_by,
         recordedByName: row.recorded_by_name,
-        data: {
-          rating: row.rating,
-          comment: row.comment,
-          displayType: row.display_type,
-          smileyType: row.smiley_type
-        }
+        rating: row.rating,
+        comment: row.comment,
+        displayType: row.display_type,
+        smileyType: row.smiley_type,
+        topic: row.topic
       });
     }
     
@@ -3848,13 +3907,13 @@ export async function getAllToolEntriesForChild(childId: number, userId?: number
         toolType: 'dagens-smiley',
         toolTopic: row.topic,
         entryDate: row.entry_date,
-        createdAt: new Date(row.created_at).toISOString(),
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at || row.created_at),
         recordedBy: row.recorded_by,
         recordedByName: row.recorded_by_name,
-        data: {
-          smileyValue: row.selected_emoji,
-          comment: row.reasoning
-        }
+        smileyValue: row.selected_emoji,
+        comment: row.reasoning,
+        topic: row.topic
       });
     }
     
@@ -3898,21 +3957,22 @@ export async function getAllToolEntriesForChild(childId: number, userId?: number
         toolType: 'sengetider',
         toolTopic: row.topic,
         entryDate: row.entry_date,
-        createdAt: new Date(row.created_at).toISOString(),
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at || row.created_at),
         recordedBy: row.recorded_by,
         recordedByName: row.recorded_by_name,
-        data: {
-          bedtime: row.puttetid,
-          sleepTime: row.sov_kl,
-          wakeTime: row.vaagnede,
-          sleepQuality: null, // Not available in current schema
-          comment: row.notes
-        }
+        bedtime: row.puttetid,
+        comment: row.notes,
+        topic: row.topic
       });
     }
     
     // Sort all entries by creation date
-    entries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    entries.sort((a, b) => {
+      const aDate = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+      const bDate = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+      return bDate - aDate;
+    });
     
     return entries;
   } catch (error) {
@@ -4069,12 +4129,13 @@ function groupEntriesByStepTiming(
 
       groupedSteps.push({
         ...step,
+        entries: stepEntries,
         groupedEntries: stepEntries,
         timePerriod: {
-          startDate: overallStartDate,
-          endDate: overallEndDate
+          startDate: overallStartDate ?? undefined,
+          endDate: overallEndDate ?? undefined
         },
-        durationDays: totalDurationDays
+        durationDays: totalDurationDays ?? undefined
       });
     }
     
@@ -4207,14 +4268,15 @@ function groupEntriesByStepTiming(
       
       groupedSteps.push({
         ...step,
+        entries: stepEntries,
         groupedEntries: stepEntries,
         timePerriod: {
-          startDate: step.startDate || null,
-          endDate: step.targetEndDate || null
+          startDate: step.startDate || undefined,
+          endDate: step.targetEndDate || undefined
         },
         durationDays: step.startDate && step.targetEndDate ? 
           Math.ceil((new Date(step.targetEndDate).getTime() - new Date(step.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 
-          null
+          undefined
       });
     }
     
@@ -4228,12 +4290,13 @@ function groupEntriesByStepTiming(
       
       groupedSteps.push({
         ...step,
+        entries: [], // No entries for inactive steps
         groupedEntries: [], // No entries for inactive steps
         timePerriod: {
-          startDate: null,
-          endDate: null
+          startDate: undefined,
+          endDate: undefined
         },
-        durationDays: null
+        durationDays: undefined
       });
     }
   }
@@ -4243,37 +4306,4 @@ function groupEntriesByStepTiming(
   console.log(`Final distribution: ${totalAssigned} entries assigned across ${groupedSteps.length} steps`);
   
   return groupedSteps;
-}
-
-// Progress data interfaces
-export interface ProgressData {
-  childId: number;
-  plans: ProgressPlan[];
-  totalEntries: number;
-}
-
-export interface ProgressPlan extends IndsatstrappePlan {
-  stepsWithEntries: StepWithGroupedEntries[];
-  totalEntries: number;
-}
-
-export interface StepWithGroupedEntries extends IndsatsStepsWithEntries {
-  groupedEntries: ProgressEntry[];
-  timePerriod: {
-    startDate: string | null;
-    endDate: string | null;
-  };
-  durationDays?: number | null;
-}
-
-export interface ProgressEntry {
-  id: number;
-  toolId: number;
-  toolType: 'barometer' | 'dagens-smiley' | 'sengetider';
-  toolTopic: string;
-  entryDate: string;
-  createdAt: string;
-  recordedBy: number;
-  recordedByName?: string;
-  data: Record<string, unknown>;
 }

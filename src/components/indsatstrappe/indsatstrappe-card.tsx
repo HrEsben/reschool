@@ -53,15 +53,16 @@ export function IndsatsrappeCard({
   const [accessUsers, setAccessUsers] = useState<Array<{ user_id: number; display_name: string; email: string }>>([]);
   const [accessDataLoaded, setAccessDataLoaded] = useState(false);
   
-  // Initialize access data state based on plan visibility
+    const isPublicPlan = (plan as PlanWithVisibility).isPublic;
+
+  // Handle access control and data initialization
   useEffect(() => {
     const planWithVisibility = plan as PlanWithVisibility;
-    const isPublic = planWithVisibility.isPublic;
     
-    if (isPublic) {
-      // For public plans, no need to load access data
-      setAccessDataLoaded(true);
+    if (isPublicPlan) {
+      // Public plans don't need access control
       setAccessUsers([]);
+      setAccessDataLoaded(true);
     } else if (planWithVisibility.accessUsers) {
       // If access users are already provided in the plan data, use them
       setAccessUsers(planWithVisibility.accessUsers);
@@ -72,7 +73,7 @@ export function IndsatsrappeCard({
       setAccessDataLoaded(false);
       setAccessUsers([]);
     }
-  }, [plan.id, (plan as PlanWithVisibility).isPublic]); // Watch for changes in plan ID and visibility
+  }, [plan, isPublicPlan]); // Watch for changes in plan and visibility
   
   const progressPercentage = plan.totalSteps > 0 ? (plan.completedSteps / plan.totalSteps) * 100 : 0;
   const currentStep = plan.steps.find(step => !step.isCompleted);
@@ -108,7 +109,7 @@ export function IndsatsrappeCard({
     } finally {
       setAccessDataLoaded(true);
     }
-  }, [accessDataLoaded, plan.id]);
+  }, [accessDataLoaded, plan]);
 
   return (
     <Box 

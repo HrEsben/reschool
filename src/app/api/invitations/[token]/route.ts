@@ -40,7 +40,7 @@ export async function GET(
       relation: invitation.relation,
       customRelationName: invitation.customRelationName,
       status: invitation.status,
-      expiresAt: invitation.expiresAt.toISOString()
+      expiresAt: invitation.expiresAt
     });
 
   } catch (error) {

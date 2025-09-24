@@ -120,7 +120,7 @@ export async function POST(
       await createChildAddedNotification(
         currentUser.id,
         child.name,
-        child.slug
+        child.slug || `child-${child.id}`
       );
 
       // Notify other users of the child that a new user has joined
@@ -132,7 +132,7 @@ export async function POST(
             otherUser.id,
             currentUser.displayName || currentUser.email,
             child.name,
-            child.slug
+            child.slug || `child-${child.id}`
           );
         }
       }
