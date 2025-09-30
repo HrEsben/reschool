@@ -11,7 +11,6 @@ const pool = new Pool({
 
 // Helper function to execute queries with optional user context
 export async function query(text: string, params?: unknown[], userStackId?: string) {
-  const start = Date.now();
   let client;
   
   try {
@@ -23,7 +22,6 @@ export async function query(text: string, params?: unknown[], userStackId?: stri
     }
     
     const res = await client.query(text, params);
-    const duration = Date.now() - start;
     return res;
   } catch (error) {
     console.error('Database query error:', error);
@@ -60,11 +58,9 @@ export async function withUserContext<T>(
     
     // Create a query function that uses this client
     const queryWithClient = async (text: string, params?: unknown[]) => {
-      const start = Date.now();
       try {
         const res = await client.query(text, params);
-        const duration = Date.now() - start;
-     return res;
+        return res;
       } catch (error) {
         console.error('Database query error with user context:', error);
         throw error;

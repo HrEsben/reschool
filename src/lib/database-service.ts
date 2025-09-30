@@ -2312,11 +2312,6 @@ export async function getLatestRegistrationsForUser(
 ): Promise<RegistrationEntry[]> {
   try {
     // First check what children this user has access to
-    const childrenCheck = await query(
-      `SELECT child_id FROM user_child_relations WHERE user_id = $1`,
-      [userId]
-    );
-
     const mainResult = await query(
       `WITH user_children AS (
         SELECT child_id FROM user_child_relations WHERE user_id = $1
@@ -4278,8 +4273,5 @@ function groupEntriesByStepTiming(
     }
   }
   
-  // Log final distribution
-  const totalAssigned = groupedSteps.reduce((sum, step) => sum + step.groupedEntries.length, 0);
-
   return groupedSteps;
 }

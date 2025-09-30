@@ -810,7 +810,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                           : Math.min(allDays.length, startDay + 30);
                         
                         // Get the actual column span accounting for condensed columns
-                        const { startColumnIndex, columnCount } = getColumnSpanForDayRange(startDay, endDay);
+                        const { columnCount } = getColumnSpanForDayRange(startDay, endDay);
                 
                         if (columnCount <= 0) return;
                         
@@ -859,7 +859,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                         : Math.min(allDays.length, startDay + 30);
                       
                       // Get the actual column span accounting for condensed columns
-                      const { startColumnIndex, columnCount } = getColumnSpanForDayRange(startDay, endDay);
+                      const { columnCount } = getColumnSpanForDayRange(startDay, endDay);
                       
                       if (columnCount <= 0) {
                         return;

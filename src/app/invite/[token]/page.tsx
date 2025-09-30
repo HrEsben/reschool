@@ -81,7 +81,7 @@ export default function InviteAcceptPage() {
                 return;
               }
             }
-          } catch (autoAcceptError) {
+          } catch {
             // Continue to show manual acceptance UI
           }
         }
