@@ -46,9 +46,7 @@ export async function POST(
     // Check if user is already connected to this child
     const existingUser = childData.users.find(u => u.email.toLowerCase() === normalizedEmail);
     if (existingUser) {
-      // Temporarily allow testing with existing users for email testing
-      console.log('Warning: Allowing invitation to existing user for testing purposes');
-      // return NextResponse.json({ error: 'This user is already connected to this child' }, { status: 400 });
+      return NextResponse.json({ error: 'This user is already connected to this child' }, { status: 400 });
     }
 
     // Create invitation record in our database first
@@ -82,9 +80,6 @@ export async function POST(
 
     // Send invitation email using email service
     
-    console.log('sendInvitationEmail function:', sendInvitationEmail);
-    console.log('typeof sendInvitationEmail:', typeof sendInvitationEmail);
-    
     try {
       await sendInvitationEmail({
         to: normalizedEmail,
@@ -94,8 +89,6 @@ export async function POST(
         recipientRelation: customRelationName || relation,
         inviteUrl
       });
-
-      console.log(`Invitation email sent successfully to ${normalizedEmail} for child ${childData.child.name}`);
 
       return NextResponse.json({ 
         success: true, 

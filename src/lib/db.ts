@@ -24,7 +24,6 @@ export async function query(text: string, params?: unknown[], userStackId?: stri
     
     const res = await client.query(text, params);
     const duration = Date.now() - start;
-    console.log('Executed query', { text, duration, rows: res.rowCount });
     return res;
   } catch (error) {
     console.error('Database query error:', error);
@@ -65,8 +64,7 @@ export async function withUserContext<T>(
       try {
         const res = await client.query(text, params);
         const duration = Date.now() - start;
-        console.log('Executed query with user context', { text, duration, rows: res.rowCount, userStackId });
-        return res;
+     return res;
       } catch (error) {
         console.error('Database query error with user context:', error);
         throw error;

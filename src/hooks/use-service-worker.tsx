@@ -28,8 +28,7 @@ export function useServiceWorker(): ServiceWorkerHookReturn {
         updateViaCache: 'none' // Always check for updates
       })
       .then((reg) => {
-        console.log('[SW] Service worker registered successfully:', reg.scope);
-        setRegistration(reg);
+    setRegistration(reg);
         setIsRegistered(true);
 
         // Check for updates immediately
@@ -37,14 +36,12 @@ export function useServiceWorker(): ServiceWorkerHookReturn {
 
         // Listen for updates
         reg.addEventListener('updatefound', () => {
-          console.log('[SW] New service worker found');
-          const newWorker = reg.installing;
+         const newWorker = reg.installing;
           
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('[SW] New content available, refreshing...');
-                // Force refresh to get new content
+              // Force refresh to get new content
                 window.location.reload();
               }
             });
@@ -54,8 +51,7 @@ export function useServiceWorker(): ServiceWorkerHookReturn {
         // Listen for messages from service worker
         navigator.serviceWorker.addEventListener('message', (event) => {
           if (event.data?.type === 'CACHE_CLEARED') {
-            console.log('[SW] Cache cleared, reloading page...');
-            setTimeout(() => {
+          setTimeout(() => {
               window.location.reload();
             }, 1000);
           }
@@ -67,8 +63,7 @@ export function useServiceWorker(): ServiceWorkerHookReturn {
 
       // Listen for controller changes (new SW took control)
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('[SW] New service worker took control, reloading...');
-        window.location.reload();
+    window.location.reload();
       });
     } else {
       console.warn('[SW] Service workers not supported');
@@ -95,8 +90,7 @@ export function useServiceWorker(): ServiceWorkerHookReturn {
 
     try {
       await registration.update();
-      console.log('[SW] Checked for updates');
-    } catch (error) {
+ } catch (error) {
       console.warn('[SW] Failed to check for updates:', error);
     }
   };

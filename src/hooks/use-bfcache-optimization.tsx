@@ -12,15 +12,13 @@ export function useBfcacheOptimization() {
     const handlePageHide = (event: PageTransitionEvent) => {
       if (event.persisted) {
         // Page is being cached for bfcache
-        console.log('Page cached for bfcache');
-      }
+    }
     };
 
     const handlePageShow = (event: PageTransitionEvent) => {
       if (event.persisted) {
         // Page was restored from bfcache
-        console.log('Page restored from bfcache');
-        
+     
         // Refresh any time-sensitive data
         if ('performance' in window && performance.navigation) {
           const navigation = performance.navigation as Performance['navigation'] & { type?: string };

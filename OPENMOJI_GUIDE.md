@@ -180,8 +180,6 @@ All existing emoji usage has been automatically migrated:
 
 ### Debug Tools
 ```javascript
-// Check emoji filename conversion
-console.log(unicodeToFilename('😊')); // "1F60A.svg"
 
 // Test emoji file existence
 fetch('/emojis/1F60A.svg').then(r => console.log(r.ok));

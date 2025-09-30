@@ -2316,7 +2316,6 @@ export async function getLatestRegistrationsForUser(
       `SELECT child_id FROM user_child_relations WHERE user_id = $1`,
       [userId]
     );
-    console.log('DB: User', userId, 'has access to children:', childrenCheck.rows);
 
     const mainResult = await query(
       `WITH user_children AS (
@@ -2383,11 +2382,6 @@ export async function getLatestRegistrationsForUser(
       LIMIT $2`,
       [userId, limit]
     );
-
-    console.log('DB: Query for userId:', userId, 'returned', mainResult.rows.length, 'rows');
-    if (mainResult.rows.length > 0) {
-      console.log('DB: Sample row:', mainResult.rows[0]);
-    }
 
     return mainResult.rows.map(row => ({
       id: row.id,
@@ -4030,9 +4024,6 @@ function groupEntriesByStepTiming(
 ): StepWithGroupedEntries[] {
   const groupedSteps: StepWithGroupedEntries[] = [];
   
-  console.log('=== GROUPING ENTRIES BY STEP TIMING ===');
-  console.log(`Total steps: ${steps.length}, Total entries: ${allEntries.length}`);
-  
   // Sort steps by step number
   const sortedSteps = [...steps].sort((a, b) => a.stepNumber - b.stepNumber);
   
@@ -4076,16 +4067,14 @@ function groupEntriesByStepTiming(
           
           if (isInThisPeriod) {
             assignedEntries.add(entryKey);
-            console.log(`  Entry ${entry.id} (${entry.toolType}) assigned to step ${step.stepNumber} via period matching`);
-            return true;
+          return true;
           }
         }
         
         return false;
       });
       
-      console.log(`Step ${step.stepNumber} matched ${stepEntries.length} entries via periods`);
-      
+   
       // Calculate time range and duration for this step
       let overallStartDate: string | null = null;
       let overallEndDate: string | null = null;
@@ -4146,8 +4135,7 @@ function groupEntriesByStepTiming(
     });
     
     if (unassignedEntries.length > 0) {
-      console.log(`Found ${unassignedEntries.length} unassigned entries - checking for valid step assignments`);
-      
+ 
       // Only assign unassigned entries to steps that have actually been active (have periods)
       const activeSteps = groupedSteps.filter(step => 
         step.activePeriods && step.activePeriods.length > 0
@@ -4173,8 +4161,7 @@ function groupEntriesByStepTiming(
               if (entryDate >= periodStart && entryDate <= periodEnd) {
                 step.groupedEntries.push(entry);
                 assignedToStep = true;
-                console.log(`Entry ${entry.id} assigned to step ${step.stepNumber} (within active period)`);
-                break;
+             break;
               }
               
               // Calculate distance to this period
@@ -4197,27 +4184,21 @@ function groupEntriesByStepTiming(
           // If not assigned within any period but we found a close step, assign it
           if (!assignedToStep && bestStep && bestDistance <= 30) { // Allow up to 30 days distance
             bestStep.groupedEntries.push(entry);
-            console.log(`Entry ${entry.id} assigned to step ${bestStep.stepNumber} (${bestDistance} days from period)`);
-          } else if (!assignedToStep) {
-            console.log(`Entry ${entry.id} (${entry.toolType}) could not be assigned to any active step - skipping`);
-          }
+        } 
         }
       } else {
         // Fallback: if no active steps with periods, assign to any step for backward compatibility
-        console.log(`No active steps found - using fallback assignment for ${unassignedEntries.length} entries`);
-        
+      
         if (groupedSteps.length > 0) {
           // Assign all unassigned entries to the first step as a fallback
           const firstStep = groupedSteps[0];
           firstStep.groupedEntries = [...firstStep.groupedEntries, ...unassignedEntries];
-          console.log(`All ${unassignedEntries.length} unassigned entries assigned to step ${firstStep.stepNumber} as fallback`);
-        }
+       }
       }
     }
   } else {
     // Legacy approach: no periods exist, use step dates or chronological distribution
-    console.log('No step periods found - using legacy chronological assignment');
-    
+   
     // Filter to only barometer and smiley entries
     const validEntries = allEntries.filter(entry => entry.toolType !== 'sengetider');
     
@@ -4231,8 +4212,7 @@ function groupEntriesByStepTiming(
       step.stepNumber === 1 || step.startDate !== null
     );
     
-    console.log(`Found ${activeSteps.length} active steps (with start dates or step 1)`);
-    
+ 
     // Distribute entries across active steps based on timing
     for (const step of activeSteps) {
       let stepEntries: ProgressEntry[] = [];
@@ -4247,8 +4227,7 @@ function groupEntriesByStepTiming(
           return entryDate >= stepStart && entryDate <= stepEnd;
         });
         
-        console.log(`Step ${step.stepNumber} (${step.title}) assigned ${stepEntries.length} entries via date range`);
-      } else if (step.stepNumber === 1) {
+     } else if (step.stepNumber === 1) {
         // Step 1 without dates gets entries before any other step's start date
         const nextStepStart = sortedSteps.find(s => s.stepNumber > 1 && s.startDate)?.startDate;
         
@@ -4263,8 +4242,7 @@ function groupEntriesByStepTiming(
           stepEntries = [...sortedEntries];
         }
         
-        console.log(`Step ${step.stepNumber} (step 1 fallback) assigned ${stepEntries.length} entries`);
-      }
+ }
       
       groupedSteps.push({
         ...step,
@@ -4286,8 +4264,7 @@ function groupEntriesByStepTiming(
     );
     
     for (const step of inactiveSteps) {
-      console.log(`Step ${step.stepNumber} (${step.title}) marked as inactive - no entries assigned`);
-      
+    
       groupedSteps.push({
         ...step,
         entries: [], // No entries for inactive steps
@@ -4303,7 +4280,6 @@ function groupEntriesByStepTiming(
   
   // Log final distribution
   const totalAssigned = groupedSteps.reduce((sum, step) => sum + step.groupedEntries.length, 0);
-  console.log(`Final distribution: ${totalAssigned} entries assigned across ${groupedSteps.length} steps`);
-  
+
   return groupedSteps;
 }

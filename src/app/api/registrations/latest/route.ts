@@ -24,9 +24,7 @@ export async function GET(request: NextRequest) {
 
     const registrations = await getLatestRegistrationsForUser(dbUser.id, limit);
 
-    console.log('API: User ID:', dbUser.id, 'Limit:', limit, 'Found registrations:', registrations.length);
-    if (registrations.length > 0) {
-      console.log('API: First registration:', registrations[0]);
+   if (registrations.length > 0) {
     }
 
     return NextResponse.json({

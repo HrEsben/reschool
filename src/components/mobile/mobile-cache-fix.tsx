@@ -65,8 +65,6 @@ export function MobileCacheFix({ children }: MobileCacheFixProps) {
           if (!lastRefresh || 
               cacheVersion !== currentVersion || 
               (now - parseInt(lastRefresh)) > 86400000) { // 24 hours
-            
-            console.log('[Mobile Cache] Cache may be outdated, suggesting refresh');
             setShowRefreshPrompt(true);
             localStorage.setItem('lastCacheCheck', now.toString());
           }

@@ -2,7 +2,6 @@ import { query } from './db';
 
 export async function runMigration() {
   try {
-    console.log('Running database migration...');
 
     // Create users table
     await query(`
@@ -89,7 +88,6 @@ export async function runMigration() {
     await query(`ALTER TABLE barometers ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE`);
     await query(`CREATE INDEX IF NOT EXISTS idx_barometers_is_public ON barometers(is_public)`);
 
-    console.log('Database migration completed successfully!');
     return true;
   } catch (error) {
     console.error('Migration failed:', error);

@@ -23,8 +23,7 @@ export async function GET() {
     // Try to activate pending notifications if we have a user
     let activationResult = null;
     if (dbUser && user.primaryEmail) {
-      console.log('Attempting to activate pending notifications for:', user.primaryEmail, 'user ID:', dbUser.id);
-      try {
+    try {
         await activatePendingNotifications(user.primaryEmail, dbUser.id);
         activationResult = 'Activation attempted';
       } catch (error) {

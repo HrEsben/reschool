@@ -73,8 +73,6 @@ function unicodeToFilename(unicode) {
     .map(char => char.codePointAt(0)?.toString(16).toUpperCase().padStart(4, '0'))
     .join('-') + '.svg';
 }
-console.log('😊 ->', unicodeToFilename('😊'));  // Should output: 1F60A.svg
-console.log('🥰 ->', unicodeToFilename('🥰'));  // Should output: 1F970.svg
 "
 ```
 

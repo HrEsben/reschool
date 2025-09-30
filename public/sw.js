@@ -12,12 +12,10 @@ const CRITICAL_URLS = [
 
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker version:', APP_VERSION);
-  
+
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('[SW] Caching critical resources');
         return cache.addAll(CRITICAL_URLS.filter(url => !url.includes('undefined')));
       })
       .catch((error) => {
@@ -26,8 +24,7 @@ self.addEventListener('install', (event) => {
         return Promise.resolve();
       })
       .then(() => {
-        console.log('[SW] Installation complete');
-        // Force immediate activation
+      // Force immediate activation
         return self.skipWaiting();
       })
   );
@@ -35,27 +32,23 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker version:', APP_VERSION);
-  
+
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
         const deletePromises = cacheNames
           .filter((name) => name !== CACHE_NAME)
           .map((name) => {
-            console.log('[SW] Deleting old cache:', name);
-            return caches.delete(name);
+          return caches.delete(name);
           });
         
         return Promise.all(deletePromises);
       })
       .then(() => {
-        console.log('[SW] Cache cleanup complete');
-        // Force immediate control of all clients
+      // Force immediate control of all clients
         return self.clients.claim();
       })
       .then(() => {
-        console.log('[SW] Service worker is now controlling all clients');
       })
   );
 });
@@ -98,8 +91,7 @@ self.addEventListener('fetch', (event) => {
           return caches.match(request)
             .then((cachedResponse) => {
               if (cachedResponse) {
-                console.log('[SW] Serving cached version of:', request.url);
-                return cachedResponse;
+               return cachedResponse;
               }
               
               // If no cache, return a basic offline page
@@ -209,19 +201,16 @@ self.addEventListener('fetch', (event) => {
 // Listen for messages from the main thread
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'CLEAR_CACHE') {
-    console.log('[SW] Clearing all caches due to user request');
     event.waitUntil(
       caches.keys()
         .then((cacheNames) => {
           const deletePromises = cacheNames.map((name) => {
-            console.log('[SW] Deleting cache:', name);
-            return caches.delete(name);
+           return caches.delete(name);
           });
           return Promise.all(deletePromises);
         })
         .then(() => {
-          console.log('[SW] All caches cleared');
-          // Notify all clients to reload
+         // Notify all clients to reload
           return self.clients.matchAll();
         })
         .then((clients) => {
@@ -243,9 +232,3 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Handle updates
-self.addEventListener('updatefound', () => {
-  console.log('[SW] Update found');
-});
-
-console.log('[SW] Service worker script loaded, version:', APP_VERSION);

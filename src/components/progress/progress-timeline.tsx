@@ -735,16 +735,6 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                     // Use the original step start date from database, not timePerriod which gets overwritten
                     const stepStartDate = stepWithPeriods.startDate || step.timePerriod?.startDate;
                     
-                    console.log(`Processing step ${step.stepNumber} (${step.title}):`, {
-                      hasActivePeriods: rawActivePeriods.length > 0,
-                      rawActivePeriods: rawActivePeriods,
-                      periodsCount: rawActivePeriods.length,
-                      timePerriod: step.timePerriod,
-                      stepStartDate: stepStartDate,
-                      stepEndDate: step.timePerriod?.endDate,
-                      stepStartDateExists: !!stepStartDate,
-                      rawStep: step
-                    });
                     
                     // Create complete periods list by filling gaps between step start and first active period
                     let allPeriods: { startDate: string; endDate?: string; isSynthetic?: boolean }[] = [];
@@ -774,32 +764,21 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                           return entryDate >= gapStart && entryDate < gapEnd;
                         });
                       });
-                      
-                      console.log(`Gap analysis for step ${step.stepNumber}:`, {
-                        stepStartDate: stepStartDate,
-                        firstPeriodStart: sortedPeriods[0].startDate,
-                        stepStart: stepStart.toISOString(),
-                        firstPeriodStartNormalized: firstPeriodStart.toISOString(),
-                        daysDiff: daysDiff,
-                        hasIntermediateSteps: hasIntermediateSteps,
-                        shouldCreateSynthetic: daysDiff > 1 && hasIntermediateSteps
-                      });
+        
                       
                       if (daysDiff > 1 && hasIntermediateSteps) {
                         // Create synthetic period to fill the gap - only if there are intermediate steps
                         const syntheticEndDate = new Date(firstPeriodStart);
                         syntheticEndDate.setDate(syntheticEndDate.getDate() - 1); // End one day before first period
                         
-                        console.log(`Creating synthetic period for step ${step.stepNumber}: ${stepStartDate} to ${syntheticEndDate.toISOString()} (validated: has intermediate steps)`);
-                        
+                   
                         allPeriods.push({
                           startDate: stepStartDate,
                           endDate: syntheticEndDate.toISOString(),
                           isSynthetic: true
                         });
                       } else if (daysDiff > 1 && !hasIntermediateSteps) {
-                        console.log(`No intermediate steps found for step ${step.stepNumber} - extending first period to original start date instead of creating synthetic period`);
-                        // Extend the first active period to start from the original step start date
+                     // Extend the first active period to start from the original step start date
                         sortedPeriods[0] = {
                           ...sortedPeriods[0],
                           startDate: stepStartDate
@@ -813,15 +792,6 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                       allPeriods = rawActivePeriods.map((p: StepActivePeriod) => ({ ...p, isSynthetic: false }));
                     }
                     
-                    // Log each individual period for debugging
-                    allPeriods.forEach((period: { startDate: string; endDate?: string; isSynthetic?: boolean }, idx: number) => {
-                      console.log(`  Period ${idx + 1}${period.isSynthetic ? ' (synthetic)' : ''}:`, {
-                        startDate: period.startDate,
-                        endDate: period.endDate,
-                        isSynthetic: period.isSynthetic,
-                        rawPeriod: period
-                      });
-                    });
                     
                     if (allPeriods.length > 0) {
                       // Handle steps with multiple active periods (including synthetic ones)
@@ -841,9 +811,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                         
                         // Get the actual column span accounting for condensed columns
                         const { startColumnIndex, columnCount } = getColumnSpanForDayRange(startDay, endDay);
-                        
-                        console.log(`Step ${step.stepNumber} Period ${periodIndex + 1}${period.isSynthetic ? ' (synthetic)' : ''} (${step.title}): startDay=${startDay}, endDay=${endDay}, actualColumns=${columnCount}, startColumnIndex=${startColumnIndex}, periodStart=${period.startDate}, periodEnd=${period.endDate}`);
-                        
+                
                         if (columnCount <= 0) return;
                         
                         const bgColor = stepColors[stepIndex % stepColors.length];
@@ -874,8 +842,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                       const stepEndDate = step.timePerriod?.endDate;
                       
                       if (!stepStartDate) {
-                        console.log(`Step ${step.stepNumber} has no start date, skipping`);
-                        return;
+                     return;
                       }
                       
                       const stepStart = new Date(stepStartDate);
@@ -894,10 +861,7 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                       // Get the actual column span accounting for condensed columns
                       const { startColumnIndex, columnCount } = getColumnSpanForDayRange(startDay, endDay);
                       
-                      console.log(`Step ${step.stepNumber} Single Period (${step.title}): startDay=${startDay}, endDay=${endDay}, actualColumns=${columnCount}, startColumnIndex=${startColumnIndex}, stepStartDate=${stepStartDate}, stepEndDate=${stepEndDate}`);
-                      
                       if (columnCount <= 0) {
-                        console.log(`Step ${step.stepNumber} has invalid column count (${columnCount}), skipping`);
                         return;
                       }
                       

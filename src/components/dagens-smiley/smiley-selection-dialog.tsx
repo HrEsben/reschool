@@ -38,8 +38,7 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
   const gridColumns = useBreakpointValue({ base: 3, sm: 4, md: 4, lg: 4 });
 
   const handleEmojiSelect = (emoji: string) => {
-    console.log('Selected emoji:', emoji, 'Current selected:', selectedEmoji); // Debug log
-    setSelectedEmoji(selectedEmoji === emoji ? null : emoji);
+  setSelectedEmoji(selectedEmoji === emoji ? null : emoji);
   };
 
   const handleStepChange = (details: { step: number }) => {

@@ -14,30 +14,22 @@ export async function GET(
 
     const resolvedParams = await params;
     const childId = parseInt(resolvedParams.childId);
-    console.log('Child profile request for ID:', childId);
-    
+  
     if (isNaN(childId)) {
-      console.log('Invalid child ID:', resolvedParams.childId);
-      return NextResponse.json({ error: 'Invalid child ID' }, { status: 400 });
+     return NextResponse.json({ error: 'Invalid child ID' }, { status: 400 });
     }
 
     // Get current user from database
     const currentUser = await getUserByStackAuthId(user.id);
     if (!currentUser) {
-      console.log('User not found in database:', user.id);
-      return NextResponse.json({ error: 'User not found in database' }, { status: 404 });
+     return NextResponse.json({ error: 'User not found in database' }, { status: 404 });
     }
-
-    console.log('Current user:', currentUser.id, currentUser.email);
 
     // Get child with all connected users
     const childData = await getChildWithUsers(childId);
     if (!childData) {
-      console.log('Child not found:', childId);
       return NextResponse.json({ error: 'Child not found' }, { status: 404 });
     }
-
-    console.log('Child found:', childData.child.name, 'with', childData.users.length, 'users');
 
     // Check if current user has access to this child
     const userHasAccess = childData.users.some(u => u.id === currentUser.id);

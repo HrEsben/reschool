@@ -85,8 +85,7 @@ export function CacheDebugger() {
       if ('caches' in window) {
         const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map(name => caches.delete(name)));
-        console.log('All caches cleared manually');
-      }
+ }
       
       // Also clear service worker cache
       await clearCache();
@@ -221,8 +220,7 @@ export function CacheDebugger() {
 export function enableCacheDebugging() {
   if (typeof window !== 'undefined') {
     window.localStorage.setItem('debug-cache', 'true');
-    console.log('Cache debugging enabled. Refresh the page to see the debug panel.');
-  }
+ }
 }
 
 // Add to window for easy access in production

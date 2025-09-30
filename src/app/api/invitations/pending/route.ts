@@ -5,12 +5,9 @@ import { query } from '@/lib/db';
 // Get pending invitations for the current user
 export async function GET() {
   try {
-    console.log('GET /api/invitations/pending - Starting...');
-    const user = await stackServerApp.getUser();
-    console.log('GET /api/invitations/pending - User:', user ? { id: user.id, email: user.primaryEmail } : 'null');
+  const user = await stackServerApp.getUser();
     
     if (!user) {
-      console.log('GET /api/invitations/pending - No user found, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

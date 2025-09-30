@@ -6,29 +6,22 @@ function groupEntriesByStepTiming(
 ): StepWithGroupedEntries[] {
   const groupedSteps: StepWithGroupedEntries[] = [];
   
-  console.log('=== GROUP ENTRIES BY STEP TIMING DEBUG (Using Periods) ===');
-  console.log(`Total steps: ${steps.length}, Total entries: ${allEntries.length}`);
-  
   // Sort steps by step number
   const sortedSteps = [...steps].sort((a, b) => a.stepNumber - b.stepNumber);
   
   // If we have no steps, return empty
   if (sortedSteps.length === 0) {
-    console.log('No steps found, returning empty array');
     return [];
   }
   
   for (const step of sortedSteps) {
-    console.log(`\n--- Processing Step ${step.stepNumber} ---`);
-    console.log(`Step has ${step.activePeriods?.length || 0} periods`);
     
     // Get all periods for this step
     const periods = step.activePeriods || [];
     
     // Log each period
     periods.forEach((period, index) => {
-      console.log(`  Period ${index + 1}: ${period.startDate} to ${period.endDate || 'ongoing'}`);
-    });
+   });
     
     // Find entries that fall within any of the step's active periods
     const stepEntries = allEntries.filter(entry => {
@@ -52,8 +45,7 @@ function groupEntriesByStepTiming(
           const isInThisPeriod = afterStart && beforeEnd;
           
           if (isInThisPeriod) {
-            console.log(`  Entry ${entry.id} (${entry.toolType}) at ${entryDate.toISOString()} matches period: ${period.startDate} to ${period.endDate || 'ongoing'}`);
-          }
+         }
           
           return isInThisPeriod;
         });
@@ -70,8 +62,7 @@ function groupEntriesByStepTiming(
         const isInStepRange = afterStart && beforeEnd;
         
         if (isInStepRange) {
-          console.log(`  Entry ${entry.id} (${entry.toolType}) at ${entryDate.toISOString()} matches step date range: ${step.startDate || 'no start'} to ${step.targetEndDate || 'no end'}`);
-        }
+      }
         
         return isInStepRange;
       } else {
@@ -86,8 +77,7 @@ function groupEntriesByStepTiming(
           const isInStepRange = afterStart && beforeEnd;
           
           if (isInStepRange) {
-            console.log(`  Entry ${entry.id} (${entry.toolType}) at ${entryDate.toISOString()} matches step date range: ${step.startDate || 'no start'} to ${step.targetEndDate || 'no end'}`);
-          }
+     }
           
           return isInStepRange;
         } else {
@@ -118,8 +108,7 @@ function groupEntriesByStepTiming(
           const belongsToThisStep = step.id === targetStep.id;
           
           if (belongsToThisStep) {
-            console.log(`  Entry ${entry.id} (${entry.toolType}) distributed to step ${step.stepNumber} (chronological position ${entryIndex + 1}/${totalEntries})`);
-            return true;
+        return true;
           }
           
           return false;
@@ -127,7 +116,6 @@ function groupEntriesByStepTiming(
       }
     });
     
-    console.log(`Step ${step.stepNumber} matched ${stepEntries.length} entries across ${periods.length} periods`);
     
     // Calculate overall time range and total duration
     let overallStartDate: string | null = null;

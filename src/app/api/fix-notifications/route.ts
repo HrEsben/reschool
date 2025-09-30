@@ -7,24 +7,18 @@ export async function POST() {
     const email = 'hej@skolr.dk';
     const userId = 10;
     
-    console.log('Manually activating notifications for:', email, 'to user ID:', userId);
-    
+ 
     // Find pending notifications
     const pendingResult = await query(
       'SELECT * FROM notifications WHERE pending_email = $1',
       [email]
     );
-    
-    console.log('Found pending notifications:', pendingResult.rows);
-    
     // Activate them
     const updateResult = await query(
       'UPDATE notifications SET user_id = $1, pending_email = NULL WHERE pending_email = $2',
       [userId, email]
     );
-    
-    console.log('Update result:', updateResult);
-    
+      
     // Verify the fix
     const verifyResult = await query(
       'SELECT * FROM notifications WHERE user_id = $1',

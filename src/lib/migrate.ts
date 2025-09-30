@@ -7,10 +7,8 @@ export async function runMigration(filename: string) {
     const migrationPath = path.join(__dirname, 'migrations', filename);
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
     
-    console.log(`Running migration: ${filename}`);
-    await query(migrationSQL);
-    console.log(`Migration completed: ${filename}`);
-  } catch (error) {
+   await query(migrationSQL);
+ } catch (error) {
     console.error(`Migration failed: ${filename}`, error);
     throw error;
   }
