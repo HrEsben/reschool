@@ -166,16 +166,16 @@ function RegistrationItem({ registration }: { registration: RegistrationEntry })
         </Card.Body>
       </Card.Root>
 
-      {/* Mobile Layout - No Card, with padding */}
-      <Box 
+      {/* Mobile Layout - Card with borders */}
+      <Card.Root 
         display={{ base: "block", lg: "none" }}
-        p={4}
-        bg="gray.50"
-        borderRadius="md"
+        size="sm" 
+        variant="outline" 
         width="100%" 
         maxW="100%" 
         overflow="hidden"
       >
+        <Card.Body p={4}>
         <VStack gap={3} align="stretch" width="100%" maxW="100%">
           <HStack justify="space-between" align="start">
             <VStack align="start" gap={1} flex={1} minW={0}>
@@ -243,7 +243,8 @@ function RegistrationItem({ registration }: { registration: RegistrationEntry })
             </HStack>
           )}
         </VStack>
-      </Box>
+        </Card.Body>
+      </Card.Root>
     </>
   );
 }

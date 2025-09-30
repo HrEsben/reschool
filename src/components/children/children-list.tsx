@@ -446,10 +446,10 @@ export function ChildrenList({}: ChildrenListProps) {
           <Card.Root 
             key={child.id} 
             variant={{ base: "outline", lg: "outline" }}
-            bg={{ base: "transparent", lg: "#f4f1de" }}
+            bg={{ base: "#f4f1de", lg: "#f4f1de" }}
             borderRadius="xl"
             display={{ base: "block", lg: "block" }}
-            borderWidth={{ base: 0, lg: 1 }}
+            borderWidth={{ base: 1, lg: 1 }}
             borderColor="#81b29a"
             _hover={{ 
               borderColor: "#3d405b"
