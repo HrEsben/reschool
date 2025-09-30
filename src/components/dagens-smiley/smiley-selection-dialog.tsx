@@ -7,7 +7,6 @@ import {
   VStack,
   SimpleGrid,
   Textarea,
-  useBreakpointValue,
   Steps,
   Box
 } from '@chakra-ui/react';
@@ -34,8 +33,7 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
 
   // Responsive settings - 4 columns on large screens for bigger emojis
-  const isMobile = useBreakpointValue({ base: true, md: false });
-  const gridColumns = useBreakpointValue({ base: 3, sm: 4, md: 4, lg: 4 });
+  // Use responsive props directly on SimpleGrid
 
   const handleEmojiSelect = (emoji: string) => {
   setSelectedEmoji(selectedEmoji === emoji ? null : emoji);
@@ -174,15 +172,15 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
             </Text>
             
             {/* Smiley Selection Grid */}
-            <SimpleGrid columns={gridColumns} gap={6}>
+            <SimpleGrid columns={{ base: 3, sm: 4, md: 4, lg: 4 }} gap={6}>
               {SMILEY_OPTIONS.map((option) => (
                 <Button
                   key={option.unicode}
                   type="button"
                   variant="ghost"
                   size="lg"
-                  h={isMobile ? "80px" : "100px"}
-                  w={isMobile ? "80px" : "100px"}
+                  h={{ base: "80px", md: "100px" }}
+                  w={{ base: "80px", md: "100px" }}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -212,7 +210,7 @@ export const SmileySelectionDialog: React.FC<SmileySelectionDialogProps> = ({
                 >
                   <OpenMojiEmoji 
                     unicode={option.unicode} 
-                    size={isMobile ? 56 : 72}
+                    size={72}
                   />
                 </Button>
               ))}

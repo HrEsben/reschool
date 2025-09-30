@@ -19,14 +19,15 @@ import {
 } from '@chakra-ui/react';
 import { showToast } from '@/components/ui/simple-toast';
 import { AuthenticatedLayout } from '@/components/layouts/authenticated-layout';
+import { AdminStarIcon, DemoteStarIcon } from '@/components/ui/icons';
 import { DeleteChildDialog } from '@/components/ui/delete-child-dialog';
 import { RemoveUserDialog } from '@/components/ui/remove-user-dialog';
 import { InviteUserDialog } from '@/components/ui/invite-user-dialog';
 import { DeleteInvitationDialog } from '@/components/ui/delete-invitation-dialog';
 import { PromoteUserDialog } from '@/components/ui/promote-user-dialog';
 import { DemoteUserDialog } from '@/components/ui/demote-user-dialog';
-import { ToolsManager, ToolsManagerRef } from '@/components/tools/tools-manager';
-import { AdminStarIcon, DemoteStarIcon } from '@/components/ui/icons';
+import { ToolsManager } from '@/components/tools/tools-manager';
+import type { ToolsManagerRef } from '@/components/tools/tools-manager';
 import { useChildBySlug, useRemoveUserFromChild, useDeleteInvitation, useDeleteChild, usePromoteUserToAdmin, useDemoteUserFromAdmin } from '@/lib/queries';
 
 export default function ChildSlugPage() {

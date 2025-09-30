@@ -1,59 +1,39 @@
-const CACHE_NAME = 'reschool-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'reschool-v1';
 
-// Critical URLs to cache - only cache routes that definitely exist
-const CRITICAL_URLS = [
-  '/',
-  '/dashboard',
-];
-
-// Install event - cache critical resources
+// Minimal service worker
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
+});
 
+self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(async (cache) => {
-        // Cache each URL individually to avoid failing all if one fails
-        const cachePromises = CRITICAL_URLS
-          .filter(url => !url.includes('undefined'))
-          .map(async (url) => {
-            try {
-              await cache.add(url);
-            } catch (error) {
-              console.warn(`[SW] Failed to cache ${url}:`, error);
-              // Continue with other URLs even if one fails
-            }
-          });
-        
-        await Promise.allSettled(cachePromises);
-      })
-      .then(() => {
-        // Force immediate activation
-        return self.skipWaiting();
-      })
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames
+          .filter(name => name !== CACHE_NAME)
+          .map(name => caches.delete(name))
+      );
+    }).then(() => {
+      return self.clients.claim();
+    })
   );
 });
 
-// Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
-
-  event.waitUntil(
-    caches.keys()
-      .then((cacheNames) => {
-        const deletePromises = cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => {
-          return caches.delete(name);
-          });
-        
-        return Promise.all(deletePromises);
-      })
-      .then(() => {
-      // Force immediate control of all clients
-        return self.clients.claim();
-      })
-      .then(() => {
-      })
+// Simple fetch handler - network first for everything
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+  
+  // Skip cross-origin and API requests
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) {
+    return;
+  }
+  
+  // Simple network-first strategy
+  event.respondWith(
+    fetch(request).catch(() => {
+      return caches.match(request);
+    })
   );
 });
 
@@ -150,39 +130,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Handle static resources (JS, CSS, images)
+  // Handle static resources with aggressive caching for performance
   if (url.pathname.startsWith('/_next/static/') || 
       url.pathname.includes('.css') || 
       url.pathname.includes('.js') ||
       url.pathname.includes('.png') ||
       url.pathname.includes('.jpg') ||
-      url.pathname.includes('.svg')) {
+      url.pathname.includes('.svg') ||
+      url.pathname.includes('.woff') ||
+      url.pathname.includes('.woff2')) {
     
     event.respondWith(
       caches.match(request)
         .then((cachedResponse) => {
+          // For static assets, serve from cache immediately if available
           if (cachedResponse) {
-            // Serve from cache but also update in background
-            fetch(request)
-              .then((response) => {
-                if (response.ok) {
-                  caches.open(CACHE_NAME)
-                    .then((cache) => {
-                      cache.put(request, response);
-                    })
-                    .catch(() => {
-                      // Silently fail cache updates
-                    });
-                }
-              })
-              .catch(() => {
-                // Network failed, that's okay
-              });
-            
             return cachedResponse;
           }
           
-          // Not in cache, fetch from network
+          // Not in cache, fetch from network and cache aggressively
           return fetch(request)
             .then((response) => {
               if (response.ok) {
@@ -196,6 +162,12 @@ self.addEventListener('fetch', (event) => {
                   });
               }
               return response;
+            })
+            .catch(() => {
+              // Return offline fallback for failed static resources
+              return new Response('/* Offline fallback */', {
+                headers: { 'Content-Type': 'text/css' }
+              });
             });
         })
     );

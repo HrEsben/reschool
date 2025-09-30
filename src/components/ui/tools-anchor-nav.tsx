@@ -5,11 +5,10 @@ import {
   Box,
   VStack,
   HStack,
-  Text,
   Button,
-  IconButton,
+  Text,
   Portal,
-  useBreakpointValue,
+  IconButton
 } from '@chakra-ui/react';
 import { DragHandleIcon, SettingsIcon } from '@/components/ui/icons';
 import { Thermometer, Smile, Bed } from 'lucide-react';
@@ -44,8 +43,7 @@ export function ToolsAnchorNav({
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sectionChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Responsive positioning
-  const isMobile = useBreakpointValue({ base: true, md: false });
+  // Use Chakra UI responsive props instead of manual breakpoint detection
 
   // Helper function to get the appropriate icon for each tool type
   const getToolIcon = (type: string) => {
@@ -118,9 +116,8 @@ export function ToolsAnchorNav({
     
     const element = document.getElementById(`tool-section-${toolId}`);
     if (element) {
-      const yOffset = -100; // Offset for fixed navigation
-      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
+      // Use scrollIntoView instead of getBoundingClientRect to avoid forced layout
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -173,15 +170,15 @@ export function ToolsAnchorNav({
 
   return (
     <Portal>
-      {/* Only show on desktop when there's enough space - hidden on mobile and narrow screens */}
-      {!isMobile && (
-        <Box
-          position="fixed"
-          top="50%"
-          left={0}
-          transform="translateY(-50%)"
-          zIndex={100}
-          className={className}
+      {/* Only show on desktop - use Chakra UI responsive props */}
+      <Box
+        position="fixed"
+        top="50%"
+        left={0}
+        transform="translateY(-50%)"
+        zIndex={100}
+        className={className}
+        hideBelow="md"
           // Dynamic positioning based on viewport and content width
           style={{
             // Calculate left position: center viewport minus half of max content width (7xl = 80rem = 1280px) 
@@ -347,7 +344,6 @@ export function ToolsAnchorNav({
             )}
           </VStack>
         </Box>
-      )}
     </Portal>
   );
 }

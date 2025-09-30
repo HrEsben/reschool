@@ -3,17 +3,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
-  Button,
+  Grid,
   Text,
-  VStack,
-  HStack,
+  Button,
   Flex,
-  Heading,
   Input,
   Textarea,
-  Grid,
-  useBreakpointValue,
-} from '@chakra-ui/react';
+  VStack,
+  HStack,
+  Heading,
+} from "@chakra-ui/react";
 import { showToast } from '@/components/ui/simple-toast';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { SettingsIcon, TrashIcon } from '@/components/ui/icons';
@@ -60,7 +59,6 @@ export function SengetiderCard({
 
   // React Query mutation for deleting sengetider
   const deleteSengetiderMutation = useDeleteSengetider();
-  const isMobile = useBreakpointValue({ base: true, md: false });
 
   // Load all entries for this sengetider tool
   useEffect(() => {
@@ -322,7 +320,7 @@ export function SengetiderCard({
                 : `Registrer for ${selectedDate.toLocaleDateString('da-DK')}`}
             </Heading>
             
-            <Grid templateColumns={isMobile ? "1fr" : "repeat(3, 1fr)"} gap={4}>
+            <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={4}>
               <VStack align="start" gap={2}>
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">Puttetid *</Text>
                 <Input

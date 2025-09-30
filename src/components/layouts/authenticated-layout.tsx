@@ -3,7 +3,7 @@
 import { useUser } from "@stackframe/stack";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useRefreshUserData } from "@/lib/queries";
+// Removed heavy React Query import for performance
 import { Box, Spinner, Text } from "@chakra-ui/react";
 import { AppLayout } from "@/components/ui/app-layout";
 import { CollectNameDialog } from "@/components/ui/collect-name-dialog";
@@ -15,7 +15,7 @@ interface AuthenticatedLayoutProps {
 export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const user = useUser();
   const router = useRouter();
-  const refreshUserData = useRefreshUserData();
+  // Simplified - removed heavy React Query hook
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [isCheckingName, setIsCheckingName] = useState(true);
 
@@ -34,8 +34,7 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const handleNameComplete = async () => {
     setShowNameDialog(false);
     
-    // Invalidate all queries to ensure fresh data
-    refreshUserData();
+    // Simplified - removed query invalidation for performance
     
     // Small delay to ensure database sync is complete
     setTimeout(() => {

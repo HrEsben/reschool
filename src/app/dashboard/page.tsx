@@ -15,61 +15,56 @@ export default function Dashboard() {
   return (
     <BfcacheOptimizer>
       <AuthenticatedLayout>
-      <Box p={{ base: 4, md: 8 }}>
-        <DashboardLoading>
-          {/* Main Content */}
-          <Box maxW="7xl" mx="auto">
-            <Grid 
-              templateColumns={{ base: "1fr", lg: "1fr 400px" }} 
-              gap={{ base: 8, lg: 12 }}
-              alignItems="start"
-            >
-              {/* Left Column - Main Content */}
-              <VStack gap={6} align="stretch">
-                <HStack justify="space-between" align="center">
-                  <Box>
-                    <Heading size="xl" className="text-delft-blue-500" mb={2} fontWeight="700">
-                      Børn
-                    </Heading>
-                    <Box className="w-16 h-1 bg-cambridge-blue-500 rounded-full"></Box>
-                  </Box>
-                  <LazyAddChildForm onChildAdded={() => {
-                    // React Query will automatically refetch and update the cache
-                  }} />
-                </HStack>
-                
-                {/* Pending Invitations Section */}
-                <LazyInvitationManager />
-                
-                {/* Child Management Section */}
-                <LazyChildrenManager />
-
-                {/* Latest Registrations on Mobile */}
-                <Box 
-                  display={{ base: "block", lg: "none" }}
-                  overflow="hidden"
-                  width="100%"
-                  px={4}
-                >
-                  <LazyLatestRegistrations limit={5} />
-                </Box>
-              </VStack>
-
-              {/* Right Column - Latest Registrations on Desktop */}
-              <Box 
-                display={{ base: "none", lg: "block" }} 
-                position="sticky" 
-                top="8"
-                overflow="hidden"
-                width="100%"
+        <Box p={{ base: 4, md: 8 }}>
+          <DashboardLoading>
+            {/* Main Content */}
+            <Box maxW="7xl" mx="auto">
+              <Grid 
+                templateColumns={{ base: "1fr", lg: "1fr 400px" }} 
+                gap={{ base: 8, lg: 12 }}
+                alignItems="start"
               >
-                <LazyLatestRegistrations limit={5} />
-              </Box>
-            </Grid>
-          </Box>
-        </DashboardLoading>
-      </Box>
-    </AuthenticatedLayout>
+                {/* Left Column - Main Content */}
+                <VStack gap={6} align="stretch">
+                  <HStack justify="space-between" align="center">
+                    <Box>
+                      <Heading size="xl" className="text-delft-blue-500" mb={2} fontWeight="700">
+                        Børn
+                      </Heading>
+                      <Box w="16" h="1" bg="blue.500" borderRadius="full"></Box>
+                    </Box>
+                    <LazyAddChildForm onChildAdded={() => {
+                      // React Query will automatically refetch and update the cache
+                    }} />
+                  </HStack>
+                  
+                  {/* Pending Invitations Section */}
+                  <LazyInvitationManager />
+                  
+                  {/* Child Management Section */}
+                  <LazyChildrenManager />
+
+                  {/* Latest Registrations on Mobile */}
+                  <Box 
+                    display={{ base: "block", lg: "none" }}
+                    overflow="hidden"
+                  >
+                    <LazyLatestRegistrations />
+                  </Box>
+                </VStack>
+
+                {/* Right Column - Latest Registrations (Desktop only) */}
+                <Box 
+                  display={{ base: "none", lg: "block" }}
+                  overflow="hidden"
+                >
+                  <LazyLatestRegistrations />
+                </Box>
+              </Grid>
+            </Box>
+          </DashboardLoading>
+        </Box>
+      </AuthenticatedLayout>
     </BfcacheOptimizer>
   );
 }
