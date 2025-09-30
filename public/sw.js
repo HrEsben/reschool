@@ -1,13 +1,10 @@
 const CACHE_NAME = 'reschool-v1.0.0';
 const APP_VERSION = '1.0.0';
 
-// Critical URLs to cache
+// Critical URLs to cache - only cache routes that definitely exist
 const CRITICAL_URLS = [
   '/',
   '/dashboard',
-  '/_next/static/chunks/main.js',
-  '/_next/static/chunks/webpack.js',
-  '/_next/static/chunks/pages/_app.js',
 ];
 
 // Install event - cache critical resources
@@ -15,16 +12,23 @@ self.addEventListener('install', (event) => {
 
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(CRITICAL_URLS.filter(url => !url.includes('undefined')));
-      })
-      .catch((error) => {
-        console.warn('[SW] Failed to cache some resources:', error);
-        // Don't fail the installation if caching fails
-        return Promise.resolve();
+      .then(async (cache) => {
+        // Cache each URL individually to avoid failing all if one fails
+        const cachePromises = CRITICAL_URLS
+          .filter(url => !url.includes('undefined'))
+          .map(async (url) => {
+            try {
+              await cache.add(url);
+            } catch (error) {
+              console.warn(`[SW] Failed to cache ${url}:`, error);
+              // Continue with other URLs even if one fails
+            }
+          });
+        
+        await Promise.allSettled(cachePromises);
       })
       .then(() => {
-      // Force immediate activation
+        // Force immediate activation
         return self.skipWaiting();
       })
   );
