@@ -28,6 +28,29 @@ function unicodeToFilename(unicode: string): string {
   return codePoints.join('-') + '.svg';
 }
 
+// Helper function to get fallback filename without variation selector (FE0F)
+function getFallbackFilename(unicode: string): string | null {
+  const codePoints: string[] = [];
+  for (let i = 0; i < unicode.length; i++) {
+    const codePoint = unicode.codePointAt(i);
+    if (codePoint) {
+      // Skip variation selectors (FE0F, FE0E, etc.)
+      if (codePoint !== 0xFE0F && codePoint !== 0xFE0E) {
+        codePoints.push(codePoint.toString(16).toUpperCase());
+      }
+      // Skip next character if it's a surrogate pair
+      if (codePoint > 0xFFFF) {
+        i++;
+      }
+    }
+  }
+  // Only return fallback if we actually removed a variation selector
+  if (codePoints.length < unicode.split('').filter(char => char.codePointAt(0)! > 0xFFFF ? 2 : 1).length) {
+    return codePoints.join('-') + '.svg';
+  }
+  return null;
+}
+
 export const OpenMojiEmoji = memo<OpenMojiEmojiProps>(({ 
   unicode, 
   size = 24, 
@@ -36,6 +59,7 @@ export const OpenMojiEmoji = memo<OpenMojiEmojiProps>(({
   ...boxProps 
 }) => {
   const filename = unicodeToFilename(unicode);
+  const fallbackFilename = getFallbackFilename(unicode);
   const src = `/emojis/${filename}`;
   
   return (
@@ -60,8 +84,15 @@ export const OpenMojiEmoji = memo<OpenMojiEmojiProps>(({
         }}
         onError={(e) => {
           if (fallback) {
-            // If SVG fails to load, show unicode fallback
             const target = e.target as HTMLImageElement;
+            
+            // First, try fallback filename without variation selector
+            if (fallbackFilename && target.src.includes(filename)) {
+              target.src = `/emojis/${fallbackFilename}`;
+              return;
+            }
+            
+            // If both SVG attempts fail, show unicode fallback
             target.style.display = 'none';
             const parent = target.parentElement;
             if (parent) {

@@ -85,10 +85,98 @@ function RegistrationItem({ registration }: { registration: RegistrationEntry })
   const config = typeConfig[registration.type];
 
   return (
-    <Card.Root size="sm" variant="outline">
-      <Card.Body p={4}>
-        <VStack gap={3} align="stretch">
-          {/* Header */}
+    <>
+      {/* Desktop Card Layout */}
+      <Card.Root 
+        size="sm" 
+        variant="outline" 
+        width="100%" 
+        maxW="100%" 
+        overflow="hidden"
+        display={{ base: "none", lg: "block" }}
+      >
+        <Card.Body p={4}>
+          <VStack gap={3} align="stretch" width="100%" maxW="100%">
+            <HStack justify="space-between" align="start">
+              <VStack align="start" gap={1} flex={1} minW={0}>
+                <HStack gap={2} align="center">
+                  <Icon color={`${config.color}.500`}>
+                    {config.icon}
+                  </Icon>
+                  <Badge variant="subtle" colorScheme={config.color} size="sm">
+                    {config.label}
+                  </Badge>
+                </HStack>
+                <Text fontSize="sm" fontWeight="medium" color="gray.900" lineClamp={1} wordBreak="break-word">
+                  {registration.toolName}
+                </Text>
+                <HStack gap={2} fontSize="xs" color="gray.600" minW={0} width="100%">
+                  <Text lineClamp={1} wordBreak="break-word">{registration.childName}</Text>
+                  <Text>•</Text>
+                  <Text>{formatDate(registration.createdAt)}</Text>
+                </HStack>
+              </VStack>
+            </HStack>
+
+            {registration.type === 'barometer' && (
+              <VStack gap={2} align="stretch">
+                <HStack gap={2} align="center">
+                  <Text fontSize="sm" color="gray.600">Værdi:</Text>
+                  <Badge variant="solid" colorScheme="sage">
+                    {registration.rating}
+                  </Badge>
+                </HStack>
+                {registration.comment && (
+                  <Text fontSize="sm" color="gray.700" bg="gray.50" p={2} borderRadius="md" wordBreak="break-word" lineClamp={3}>
+                    &ldquo;{registration.comment}&rdquo;
+                  </Text>
+                )}
+              </VStack>
+            )}
+
+            {registration.type === 'smiley' && (
+              <VStack gap={2} align="stretch">
+                <HStack gap={2} align="center">
+                  <Text fontSize="sm" color="gray.600">Smiley:</Text>
+                  {registration.selectedEmoji && (
+                    <OpenMojiEmoji unicode={registration.selectedEmoji} size={20} />
+                  )}
+                </HStack>
+                {registration.reasoning && (
+                  <Text fontSize="sm" color="gray.700" bg="gray.50" p={2} borderRadius="md" wordBreak="break-word" lineClamp={3}>
+                    &ldquo;{registration.reasoning}&rdquo;
+                  </Text>
+                )}
+              </VStack>
+            )}
+
+            {registration.recordedByName && (
+              <HStack gap={1} fontSize="xs" color="gray.500">
+                <Text>Registreret af</Text>
+                <Text fontWeight="medium">{registration.recordedByName}</Text>
+                {registration.userRelation && (
+                  <>
+                    <Text>•</Text>
+                    <Text>{getRelationDisplayName(registration.userRelation, registration.customRelationName)}</Text>
+                  </>
+                )}
+              </HStack>
+            )}
+          </VStack>
+        </Card.Body>
+      </Card.Root>
+
+      {/* Mobile Layout - No Card, with padding */}
+      <Box 
+        display={{ base: "block", lg: "none" }}
+        p={4}
+        bg="gray.50"
+        borderRadius="md"
+        width="100%" 
+        maxW="100%" 
+        overflow="hidden"
+      >
+        <VStack gap={3} align="stretch" width="100%" maxW="100%">
           <HStack justify="space-between" align="start">
             <VStack align="start" gap={1} flex={1} minW={0}>
               <HStack gap={2} align="center">
@@ -99,18 +187,17 @@ function RegistrationItem({ registration }: { registration: RegistrationEntry })
                   {config.label}
                 </Badge>
               </HStack>
-              <Text fontSize="sm" fontWeight="medium" color="gray.900" lineClamp={1}>
+              <Text fontSize="sm" fontWeight="medium" color="gray.900" lineClamp={1} wordBreak="break-word">
                 {registration.toolName}
               </Text>
-              <HStack gap={2} fontSize="xs" color="gray.600">
-                <Text>{registration.childName}</Text>
+              <HStack gap={2} fontSize="xs" color="gray.600" minW={0} width="100%">
+                <Text lineClamp={1} wordBreak="break-word">{registration.childName}</Text>
                 <Text>•</Text>
                 <Text>{formatDate(registration.createdAt)}</Text>
               </HStack>
             </VStack>
           </HStack>
 
-          {/* Content */}
           {registration.type === 'barometer' && (
             <VStack gap={2} align="stretch">
               <HStack gap={2} align="center">
@@ -120,7 +207,7 @@ function RegistrationItem({ registration }: { registration: RegistrationEntry })
                 </Badge>
               </HStack>
               {registration.comment && (
-                <Text fontSize="sm" color="gray.700" bg="gray.50" p={2} borderRadius="md">
+                <Text fontSize="sm" color="gray.700" bg="white" p={2} borderRadius="md" wordBreak="break-word" lineClamp={3}>
                   &ldquo;{registration.comment}&rdquo;
                 </Text>
               )}
@@ -136,14 +223,13 @@ function RegistrationItem({ registration }: { registration: RegistrationEntry })
                 )}
               </HStack>
               {registration.reasoning && (
-                <Text fontSize="sm" color="gray.700" bg="gray.50" p={2} borderRadius="md">
+                <Text fontSize="sm" color="gray.700" bg="white" p={2} borderRadius="md" wordBreak="break-word" lineClamp={3}>
                   &ldquo;{registration.reasoning}&rdquo;
                 </Text>
               )}
             </VStack>
           )}
 
-          {/* Recorded by */}
           {registration.recordedByName && (
             <HStack gap={1} fontSize="xs" color="gray.500">
               <Text>Registreret af</Text>
@@ -157,8 +243,8 @@ function RegistrationItem({ registration }: { registration: RegistrationEntry })
             </HStack>
           )}
         </VStack>
-      </Card.Body>
-    </Card.Root>
+      </Box>
+    </>
   );
 }
 
@@ -204,8 +290,7 @@ export function LatestRegistrations({ limit = 10 }: LatestRegistrationsProps) {
   }
 
   return (
-    <VStack gap={4} align="stretch">
-      {/* Header */}
+    <VStack gap={4} align="stretch" width="100%" maxW="100%" overflow="hidden">
       <Box>
         <Heading size="xl" className="text-delft-blue-500" mb={2} fontWeight="700">
           Seneste registreringer
@@ -213,7 +298,6 @@ export function LatestRegistrations({ limit = 10 }: LatestRegistrationsProps) {
         <Box className="w-16 h-1 bg-cambridge-blue-500 rounded-full"></Box>
       </Box>
 
-      {/* Content */}
       {isLoading ? (
         <VStack gap={3} align="stretch">
           {Array.from({ length: limit }).map((_, index) => (

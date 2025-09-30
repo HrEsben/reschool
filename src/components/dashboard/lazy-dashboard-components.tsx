@@ -53,3 +53,11 @@ export const LazyLatestRegistrations = dynamic(
     ssr: false,
   }
 );
+
+export const LazyAddChildForm = dynamic(
+  () => import('@/components/children/add-child-form').then(mod => ({ default: mod.AddChildForm })),
+  {
+    loading: () => <Skeleton height="40px" width="120px" borderRadius="md" />,
+    ssr: false,
+  }
+);

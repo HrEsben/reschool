@@ -445,10 +445,11 @@ export function ChildrenList({}: ChildrenListProps) {
         {children.map((child) => (
           <Card.Root 
             key={child.id} 
-            variant="outline"
-            bg="#f4f1de"
+            variant={{ base: "outline", lg: "outline" }}
+            bg={{ base: "transparent", lg: "#f4f1de" }}
             borderRadius="xl"
-            borderWidth={1}
+            display={{ base: "block", lg: "block" }}
+            borderWidth={{ base: 0, lg: 1 }}
             borderColor="#81b29a"
             _hover={{ 
               borderColor: "#3d405b"
@@ -718,7 +719,6 @@ export function ChildrenList({}: ChildrenListProps) {
                     </Box>
                   ) : (
                     childSummaries[child.id]?.activeIndsatstrappe && (
-                                          childSummaries[child.id]?.activeIndsatstrappe && (
                       <Box flex="1" minW="0">
                         {/* Inline header with mini stairs and title */}
                         <Flex align="center" gap={2} mb={2}>
@@ -793,7 +793,6 @@ export function ChildrenList({}: ChildrenListProps) {
                           })}
                         </HStack>
                       </Box>
-                    )
                     )
                   )}
 
