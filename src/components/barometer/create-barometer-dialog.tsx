@@ -19,7 +19,7 @@ import {
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { showToast } from '@/components/ui/simple-toast';
 import { NumberIcon } from '@/components/ui/icons';
-import { useChildUsers } from '@/lib/queries';
+import { useChildUsers, useCreateBarometer } from '@/lib/queries';
 import { UserWithRelation } from '@/lib/database-service';
 import { useUser } from '@stackframe/stack';
 
@@ -49,6 +49,9 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
   
   // Fetch child users for access control selection
   const { data: childUsers = [], isLoading: usersLoading } = useChildUsers(childId.toString());
+  
+  // React Query mutation for creating barometer
+  const createBarometerMutation = useCreateBarometer();
 
   // Find current user in child users list
   const currentUser = childUsers.find((user: UserWithRelation) => user.stackAuthId === stackUser?.id);
@@ -464,7 +467,7 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
         finalScaleMax = 100;
       }
       
-      const requestBody = {
+      const requestData = {
         topic: topic.trim(),
         description: description.trim() || undefined,
         scaleMin: finalScaleMin,
@@ -475,18 +478,11 @@ export function CreateBarometerDialog({ childId, onBarometerCreated, trigger, is
         accessibleUserIds: visibilityOption === 'custom' ? getEffectiveSelectedUsers().map(user => user.id) : []
       };
       
-      const response = await fetch(`/api/children/${childId}/barometers`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
+      // Use React Query mutation instead of direct fetch
+      await createBarometerMutation.mutateAsync({
+        childId: childId.toString(),
+        data: requestData
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
 
       showToast({
         title: 'Succes',

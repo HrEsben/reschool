@@ -423,6 +423,7 @@ export function useCreateBarometer() {
     onSuccess: (_, { childId }) => {
       // Invalidate barometers for this child
       queryClient.invalidateQueries({ queryKey: queryKeys.barometers(childId) });
+      queryClient.invalidateQueries({ queryKey: ['latest-registrations'] });
     },
   });
 }
@@ -444,6 +445,27 @@ export function useRecordBarometerEntry() {
       });
       if (!response.ok) {
         throw new Error('Failed to record barometer entry');
+      }
+      return response.json();
+    },
+    onSuccess: (_, { childId }) => {
+      // Invalidate barometers for this child and latest registrations
+      queryClient.invalidateQueries({ queryKey: queryKeys.barometers(childId) });
+      queryClient.invalidateQueries({ queryKey: ['latest-registrations'] });
+    },
+  });
+}
+
+export function useDeleteBarometer() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ barometerId }: { barometerId: number; childId: string }) => {
+      const response = await fetch(`/api/barometers/${barometerId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete barometer');
       }
       return response.json();
     },
@@ -638,8 +660,9 @@ export function useCreateDagensSmiley() {
   return useMutation({
     mutationFn: ({ childId, data }: { childId: string; data: Parameters<typeof dagensSmileyApi.createDagensSmiley>[1] }) =>
       dagensSmileyApi.createDagensSmiley(childId, data),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.dagensSmiley(data.childId.toString()) });
+    onSuccess: (_, { childId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.dagensSmiley(childId) });
+      queryClient.invalidateQueries({ queryKey: ['latest-registrations'] });
     },
   });
 }
@@ -666,6 +689,7 @@ export function useDeleteDagensSmiley() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.dagensSmiley(data.childId) });
+      queryClient.invalidateQueries({ queryKey: ['latest-registrations'] });
     },
   });
 }
@@ -731,6 +755,9 @@ export interface RegistrationEntry {
   comment?: string; // for barometer
   selectedEmoji?: string; // for smiley
   reasoning?: string; // for smiley
+  // Barometer configuration for proper value display
+  displayType?: string; // numbers, smileys, percentage
+  smileyType?: string; // emojis, simple, subtle
 }
 
 export function useLatestRegistrations(limit: number = 20) {
@@ -1018,10 +1045,11 @@ export function useCreateSengetider() {
   return useMutation({
     mutationFn: (data: { childId: number } & Parameters<typeof sengetiderApi.createSengetider>[1]) => 
       sengetiderApi.createSengetider(data.childId, data),
-    onSuccess: (data) => {
+    onSuccess: (_, { childId }) => {
       queryClient.invalidateQueries({ 
-        queryKey: queryKeys.sengetider(data.childId.toString()) 
+        queryKey: queryKeys.sengetider(childId.toString()) 
       });
+      queryClient.invalidateQueries({ queryKey: ['latest-registrations'] });
     },
   });
 }
@@ -1081,6 +1109,7 @@ export function useDeleteSengetider() {
       queryClient.invalidateQueries({ 
         queryKey: queryKeys.sengetider(variables.childId) 
       });
+      queryClient.invalidateQueries({ queryKey: ['latest-registrations'] });
     },
   });
 }

@@ -75,6 +75,30 @@ const getRelationDisplayName = (userRelation?: string, customRelationName?: stri
   }
 };
 
+// Calculate color based on rating position in scale using site's color palette
+const getRatingColor = (rating: number, barometer: Barometer) => {
+  const range = barometer.scaleMax - barometer.scaleMin;
+  const position = (rating - barometer.scaleMin) / range; // 0 to 1
+  
+  if (position <= 0.5) {
+    // Coral to Golden (0 to 0.5) - using site's coral and golden colors
+    const ratio = position * 2; // 0 to 1
+    // From coral (#e07a5f) to golden (#f2cc8f)
+    const red = Math.round(224 + (242 - 224) * ratio);
+    const green = Math.round(122 + (204 - 122) * ratio);
+    const blue = Math.round(95 + (143 - 95) * ratio);
+    return `rgb(${red}, ${green}, ${blue})`;
+  } else {
+    // Golden to Sage (0.5 to 1) - using site's golden and sage colors
+    const ratio = (position - 0.5) * 2; // 0 to 1
+    // From golden (#f2cc8f) to sage (#81b29a)
+    const red = Math.round(242 + (129 - 242) * ratio);
+    const green = Math.round(204 + (178 - 204) * ratio);
+    const blue = Math.round(143 + (154 - 143) * ratio);
+    return `rgb(${red}, ${green}, ${blue})`;
+  }
+};
+
 // Helper function to get unique color for each contributor based on site's color palette
 const getContributorColor = (contributorName: string): string => {
   // Create a consistent color mapping based on the contributor's name
@@ -104,15 +128,7 @@ const getContributorColor = (contributorName: string): string => {
 
 // Helper function to get appropriate smiley/rating display based on barometer type
 const getRatingDisplay = (rating: number, barometer: Barometer): string | React.ReactNode => {
-  // For non-smiley display types, show the rating number
-  if (barometer.displayType !== 'smileys') {
-    if (barometer.displayType === 'percentage') {
-      return `${rating}%`;
-    }
-    return rating.toString();
-  }
-
-  // For smiley display types, show the appropriate smiley
+  // Always show smileys in timeline for visual consistency
   const range = barometer.scaleMax - barometer.scaleMin;
   const position = (rating - barometer.scaleMin) / range;
   const smileyType = barometer.smileyType || 'emojis';
@@ -397,68 +413,34 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
                 )}
                 
                 <Timeline.Title>
-                  <Flex 
-                    align="center" 
-                    gap={{ base: 2, md: 3 }} 
-                    wrap={{ base: "wrap", sm: "nowrap" }}
-                    pr={{ base: 8, md: 10 }} // Add padding to avoid overlap with delete button
-                    mb={2}
-                  >
-                    {/* Rating with appropriate display type */}
-                    <Flex align="center" gap={{ base: 1, md: 2 }}>
-                      <Text fontSize={{ base: "md", md: "lg" }} display="flex" alignItems="center">
-                        {getRatingDisplay(entry.rating, barometer)}
-                      </Text>
-                      <Badge
-                        colorPalette={
-                          entry.rating >= 4 ? 'success' : 
-                          entry.rating >= 3 ? 'warning' : 'coral'
-                        }
-                        size={{ base: "xs", md: "sm" }}
-                        borderRadius="full"
-                        px={{ base: 1, md: 2 }}
-                      >
-                        {entry.rating.toFixed(1)}
-                      </Badge>
-                    </Flex>
-                    
-                    {/* User and relation info */}
-                    <HStack 
-                      gap={{ base: 1, md: 2 }} 
-                      align="center"
-                      flexWrap={{ base: "wrap", sm: "nowrap" }}
+                  {/* Rating with date next to it */}
+                  <Flex align="center" gap={3}>
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      bg={getRatingColor(entry.rating, barometer)}
+                      borderRadius="full"
+                      w="40px"
+                      h="40px"
+                      color="white"
+                      fontSize={{ base: "md", md: "lg" }}
+                      fontWeight="medium"
+                      border="2px solid"
+                      borderColor={getRatingColor(entry.rating, barometer)}
                     >
-                      <Text 
-                        fontSize={{ base: "sm", md: "md" }} 
-                        fontWeight="medium" 
-                        color="gray.800"
-                        lineClamp={1}
-                      >
-                        {entry.recordedByName || 'Ukendt bruger'}
-                      </Text>
-                      {getRelationDisplayName(entry.userRelation, entry.customRelationName) && (
-                        <Badge
-                          size={{ base: "xs", md: "sm" }}
-                          colorPalette="navy"
-                          variant="subtle"
-                          borderRadius="full"
-                          px={{ base: 1, md: 2 }}
-                          flexShrink={0}
-                        >
-                          {getRelationDisplayName(entry.userRelation, entry.customRelationName)}
-                        </Badge>
-                      )}
-                    </HStack>
+                      {getRatingDisplay(entry.rating, barometer)}
+                    </Box>
+                    
+                    {/* Date and time info next to circle */}
+                    <Text fontSize="xs" color="gray.500">
+                      {formatEntryDateTime(entry.entryDate, entry.createdAt)}
+                    </Text>
                   </Flex>
                 </Timeline.Title>
                 
                 <Timeline.Description>
-                  <VStack gap={2} align="flex-start" w="full">
-                    {/* Date and time info */}
-                    <Text fontSize="xs" color="gray.500">
-                      {formatEntryDateTime(entry.entryDate, entry.createdAt)}
-                    </Text>
-                    
+                  <VStack gap={3} align="flex-start" w="full">
                     {/* Comment */}
                     {entry.comment && (
                       <Box
@@ -478,6 +460,34 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
                         </Text>
                       </Box>
                     )}
+                    
+                    {/* User info at bottom */}
+                    <HStack 
+                      gap={{ base: 1, md: 2 }} 
+                      align="center"
+                      flexWrap={{ base: "wrap", sm: "nowrap" }}
+                    >
+                      <Text 
+                        fontSize={{ base: "xs", md: "sm" }} 
+                        fontWeight="medium" 
+                        color="gray.800"
+                        lineClamp={1}
+                      >
+                        {entry.recordedByName || 'Ukendt bruger'}
+                      </Text>
+                      {getRelationDisplayName(entry.userRelation, entry.customRelationName) && (
+                        <Badge
+                          size="xs"
+                          colorPalette="navy"
+                          variant="subtle"
+                          borderRadius="full"
+                          px={1}
+                          flexShrink={0}
+                        >
+                          {getRelationDisplayName(entry.userRelation, entry.customRelationName)}
+                        </Badge>
+                      )}
+                    </HStack>
                   </VStack>
                 </Timeline.Description>
               </Timeline.Content>

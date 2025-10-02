@@ -19,6 +19,7 @@ import { CompactDatePicker } from '@/components/ui/compact-date-picker';
 import { SmileyTimeline, SmileyTimelineRef } from '@/components/smiley/smiley-timeline';
 import { SmileySelectionDialog } from './smiley-selection-dialog';
 import { useQuery } from '@tanstack/react-query';
+import { useDeleteDagensSmiley, useDeleteSmileyEntry } from '@/lib/queries';
 
 interface DagensSmileyEntry {
   id: number;
@@ -82,6 +83,10 @@ export function DagensSmileyCard({
     today.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
     return today;
   });
+  
+  // React Query mutations
+  const deleteSmileyMutation = useDeleteDagensSmiley();
+  const deleteEntryMutation = useDeleteSmileyEntry();
 
   // Handle hydration
    // Default to today
@@ -240,13 +245,10 @@ export function DagensSmileyCard({
   const handleDeleteSmiley = async () => {
     setDeletingSmiley(true);
     try {
-      const response = await fetch(`/api/dagens-smiley/${smiley.id}`, {
-        method: 'DELETE'
+      await deleteSmileyMutation.mutateAsync({
+        smileyId: smiley.id,
+        childId: smiley.childId.toString()
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete smiley');
-      }
 
       showToast({
         title: 'Succes',
@@ -274,13 +276,11 @@ export function DagensSmileyCard({
 
   const handleDeleteEntry = async (entryId: number) => {
     try {
-      const response = await fetch(`/api/dagens-smiley/${smiley.id}/entries/${entryId}`, {
-        method: 'DELETE'
+      await deleteEntryMutation.mutateAsync({
+        smileyId: smiley.id,
+        entryId,
+        childId: smiley.childId.toString()
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete entry');
-      }
 
       showToast({
         title: 'Succes',

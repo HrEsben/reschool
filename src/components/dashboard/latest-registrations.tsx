@@ -15,12 +15,59 @@ import {
 import { useLatestRegistrations, RegistrationEntry } from '@/lib/queries';
 import { OpenMojiEmoji } from '@/components/ui/openmoji-emoji';
 import { useState } from 'react';
+import { SimpleSmiley } from '@/components/ui/simple-smiley';
+import { Thermometer, Smile, Bed } from 'lucide-react';
+import { FaStairs } from 'react-icons/fa6';
 
 interface LatestRegistrationsProps {
   limit?: number;
 }
 
+// Helper function to get the appropriate icon for each tool type (matching anchor nav)
+const getToolIcon = (type: string) => {
+  switch (type) {
+    case 'barometer':
+      return Thermometer;
+    case 'smiley':
+      return Smile;
+    case 'sengetider':
+      return Bed;
+    case 'indsatstrappe':
+      return FaStairs;
+    default:
+      return null;
+  }
+};
+
 function RegistrationItem({ registration }: { registration: RegistrationEntry }) {
+  // Simple component to display barometer values
+  const BarometerValue = ({ rating, displayType, smileyType }: { rating: number, displayType?: string, smileyType?: string }) => {
+    // Handle different display types
+    if (displayType === 'percentage') {
+      return <Text fontSize="sm" fontWeight="medium" color="gray.900">{rating}%</Text>;
+    }
+    
+    if (displayType === 'numbers') {
+      return <Text fontSize="sm" fontWeight="medium" color="gray.900">{rating}</Text>;
+    }
+    
+    // For smileys display type
+    if (displayType === 'smileys' && smileyType === 'simple') {
+      return <SimpleSmiley value={rating} size={18} />;
+    }
+    
+    // Default to emoji smileys
+    const emojiMap: { [key: number]: string } = {
+      1: '😢',
+      2: '😟', 
+      3: '😐',
+      4: '😊',
+      5: '😄'
+    };
+    
+    return <Text fontSize="sm" fontWeight="medium" color="gray.900">{emojiMap[rating] || rating}</Text>;
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -61,28 +108,23 @@ function RegistrationItem({ registration }: { registration: RegistrationEntry })
     return relationMap[relation] || relation;
   };
 
-  const typeConfig = {
-    barometer: {
-      color: 'sage',
-      icon: (
-        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-          <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-        </svg>
-      ),
-      label: 'Barometer'
-    },
-    smiley: {
-      color: 'orange',
-      icon: (
-        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0zm-.464 5.535a1 1 0 10-1.415-1.414 3 3 0 01-4.242 0 1 1 0 00-1.415 1.414 5 5 0 007.072 0z" clipRule="evenodd" />
-        </svg>
-      ),
-      label: 'Dagens smiley'
+  // Color mapping for different tool types
+  const getToolColor = (type: string): string => {
+    switch (type) {
+      case 'barometer':
+        return 'sage';
+      case 'smiley':
+        return 'orange';
+      case 'sengetider':
+        return 'blue';
+      case 'indsatstrappe':
+        return 'purple';
+      default:
+        return 'gray';
     }
   };
 
-  const config = typeConfig[registration.type];
+  const toolColor = getToolColor(registration.type);
 
   return (
     <>
@@ -98,21 +140,22 @@ function RegistrationItem({ registration }: { registration: RegistrationEntry })
         <Card.Body p={4}>
           <VStack gap={3} align="stretch" width="100%" maxW="100%">
             <HStack justify="space-between" align="start">
-              <VStack align="start" gap={1} flex={1} minW={0}>
-                <HStack gap={2} align="center">
-                  <Icon color={`${config.color}.500`}>
-                    {config.icon}
-                  </Icon>
-                  <Badge variant="subtle" colorScheme={config.color} size="sm">
-                    {config.label}
+              <VStack align="start" gap={2} flex={1} minW={0}>
+                <HStack gap={2} align="center" wrap="wrap" minW={0} width="100%">
+                  {(() => {
+                    const ToolIcon = getToolIcon(registration.type);
+                    return ToolIcon ? (
+                      <ToolIcon size={16} style={{ color: `var(--chakra-colors-${toolColor}-500)` }} />
+                    ) : null;
+                  })()}
+                  <Text fontSize="sm" fontWeight="medium" color="gray.900" lineClamp={1} wordBreak="break-word" flex={1} minW={0}>
+                    {registration.toolName}
+                  </Text>
+                  <Badge variant="subtle" colorScheme="gray" size="sm" flexShrink={0}>
+                    {registration.childName}
                   </Badge>
                 </HStack>
-                <Text fontSize="sm" fontWeight="medium" color="gray.900" lineClamp={1} wordBreak="break-word">
-                  {registration.toolName}
-                </Text>
-                <HStack gap={2} fontSize="xs" color="gray.600" minW={0} width="100%">
-                  <Text lineClamp={1} wordBreak="break-word">{registration.childName}</Text>
-                  <Text>•</Text>
+                <HStack gap={2} fontSize="xs" color="gray.600">
                   <Text>{formatDate(registration.createdAt)}</Text>
                 </HStack>
               </VStack>
@@ -122,14 +165,43 @@ function RegistrationItem({ registration }: { registration: RegistrationEntry })
               <VStack gap={2} align="stretch">
                 <HStack gap={2} align="center">
                   <Text fontSize="sm" color="gray.600">Værdi:</Text>
-                  <Badge variant="solid" colorScheme="sage">
-                    {registration.rating}
-                  </Badge>
+                  {registration.rating ? (
+                    <BarometerValue 
+                      rating={registration.rating} 
+                      displayType={registration.displayType} 
+                      smileyType={registration.smileyType} 
+                    />
+                  ) : (
+                    <Text fontSize="sm" fontWeight="medium" color="gray.900">-</Text>
+                  )}
                 </HStack>
                 {registration.comment && (
-                  <Text fontSize="sm" color="gray.700" bg="gray.50" p={2} borderRadius="md" wordBreak="break-word" lineClamp={3}>
-                    &ldquo;{registration.comment}&rdquo;
-                  </Text>
+                  <Box
+                    maxH="80px"
+                    overflowY="auto"
+                    bg="gray.50"
+                    p={2}
+                    borderRadius="md"
+                    css={{
+                      '&::-webkit-scrollbar': {
+                        width: '4px',
+                      },
+                      '&::-webkit-scrollbar-track': {
+                        background: 'transparent',
+                      },
+                      '&::-webkit-scrollbar-thumb': {
+                        background: '#cbd5e0',
+                        borderRadius: '2px',
+                      },
+                      '&::-webkit-scrollbar-thumb:hover': {
+                        background: '#a0aec0',
+                      },
+                    }}
+                  >
+                    <Text fontSize="sm" color="gray.700" wordBreak="break-word">
+                      &ldquo;{registration.comment}&rdquo;
+                    </Text>
+                  </Box>
                 )}
               </VStack>
             )}
@@ -143,9 +215,32 @@ function RegistrationItem({ registration }: { registration: RegistrationEntry })
                   )}
                 </HStack>
                 {registration.reasoning && (
-                  <Text fontSize="sm" color="gray.700" bg="gray.50" p={2} borderRadius="md" wordBreak="break-word" lineClamp={3}>
-                    &ldquo;{registration.reasoning}&rdquo;
-                  </Text>
+                  <Box
+                    maxH="80px"
+                    overflowY="auto"
+                    bg="gray.50"
+                    p={2}
+                    borderRadius="md"
+                    css={{
+                      '&::-webkit-scrollbar': {
+                        width: '4px',
+                      },
+                      '&::-webkit-scrollbar-track': {
+                        background: 'transparent',
+                      },
+                      '&::-webkit-scrollbar-thumb': {
+                        background: '#cbd5e0',
+                        borderRadius: '2px',
+                      },
+                      '&::-webkit-scrollbar-thumb:hover': {
+                        background: '#a0aec0',
+                      },
+                    }}
+                  >
+                    <Text fontSize="sm" color="gray.700" wordBreak="break-word">
+                      &ldquo;{registration.reasoning}&rdquo;
+                    </Text>
+                  </Box>
                 )}
               </VStack>
             )}
@@ -178,21 +273,22 @@ function RegistrationItem({ registration }: { registration: RegistrationEntry })
         <Card.Body p={4}>
         <VStack gap={3} align="stretch" width="100%" maxW="100%">
           <HStack justify="space-between" align="start">
-            <VStack align="start" gap={1} flex={1} minW={0}>
-              <HStack gap={2} align="center">
-                <Icon color={`${config.color}.500`}>
-                  {config.icon}
-                </Icon>
-                <Badge variant="subtle" colorScheme={config.color} size="sm">
-                  {config.label}
+            <VStack align="start" gap={2} flex={1} minW={0}>
+              <HStack gap={2} align="center" wrap="wrap" minW={0} width="100%">
+                {(() => {
+                  const ToolIcon = getToolIcon(registration.type);
+                  return ToolIcon ? (
+                    <ToolIcon size={16} style={{ color: `var(--chakra-colors-${toolColor}-500)` }} />
+                  ) : null;
+                })()}
+                <Text fontSize="sm" fontWeight="medium" color="gray.900" lineClamp={1} wordBreak="break-word" flex={1} minW={0}>
+                  {registration.toolName}
+                </Text>
+                <Badge variant="subtle" colorScheme="gray" size="sm" flexShrink={0}>
+                  {registration.childName}
                 </Badge>
               </HStack>
-              <Text fontSize="sm" fontWeight="medium" color="gray.900" lineClamp={1} wordBreak="break-word">
-                {registration.toolName}
-              </Text>
-              <HStack gap={2} fontSize="xs" color="gray.600" minW={0} width="100%">
-                <Text lineClamp={1} wordBreak="break-word">{registration.childName}</Text>
-                <Text>•</Text>
+              <HStack gap={2} fontSize="xs" color="gray.600">
                 <Text>{formatDate(registration.createdAt)}</Text>
               </HStack>
             </VStack>
@@ -202,14 +298,43 @@ function RegistrationItem({ registration }: { registration: RegistrationEntry })
             <VStack gap={2} align="stretch">
               <HStack gap={2} align="center">
                 <Text fontSize="sm" color="gray.600">Værdi:</Text>
-                <Badge variant="solid" colorScheme="sage">
-                  {registration.rating}
-                </Badge>
+                {registration.rating ? (
+                  <BarometerValue 
+                    rating={registration.rating} 
+                    displayType={registration.displayType} 
+                    smileyType={registration.smileyType} 
+                  />
+                ) : (
+                  <Text fontSize="sm" fontWeight="medium" color="gray.900">-</Text>
+                )}
               </HStack>
               {registration.comment && (
-                <Text fontSize="sm" color="gray.700" bg="white" p={2} borderRadius="md" wordBreak="break-word" lineClamp={3}>
-                  &ldquo;{registration.comment}&rdquo;
-                </Text>
+                <Box
+                  maxH="80px"
+                  overflowY="auto"
+                  bg="white"
+                  p={2}
+                  borderRadius="md"
+                  css={{
+                    '&::-webkit-scrollbar': {
+                      width: '4px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      background: 'transparent',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      background: '#cbd5e0',
+                      borderRadius: '2px',
+                    },
+                    '&::-webkit-scrollbar-thumb:hover': {
+                      background: '#a0aec0',
+                    },
+                  }}
+                >
+                  <Text fontSize="sm" color="gray.700" wordBreak="break-word">
+                    &ldquo;{registration.comment}&rdquo;
+                  </Text>
+                </Box>
               )}
             </VStack>
           )}
@@ -223,9 +348,32 @@ function RegistrationItem({ registration }: { registration: RegistrationEntry })
                 )}
               </HStack>
               {registration.reasoning && (
-                <Text fontSize="sm" color="gray.700" bg="white" p={2} borderRadius="md" wordBreak="break-word" lineClamp={3}>
-                  &ldquo;{registration.reasoning}&rdquo;
-                </Text>
+                <Box
+                  maxH="80px"
+                  overflowY="auto"
+                  bg="white"
+                  p={2}
+                  borderRadius="md"
+                  css={{
+                    '&::-webkit-scrollbar': {
+                      width: '4px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      background: 'transparent',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      background: '#cbd5e0',
+                      borderRadius: '2px',
+                    },
+                    '&::-webkit-scrollbar-thumb:hover': {
+                      background: '#a0aec0',
+                    },
+                  }}
+                >
+                  <Text fontSize="sm" color="gray.700" wordBreak="break-word">
+                    &ldquo;{registration.reasoning}&rdquo;
+                  </Text>
+                </Box>
               )}
             </VStack>
           )}

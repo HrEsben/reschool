@@ -18,6 +18,8 @@ import { VisibilityBadge } from '@/components/ui/visibility-badge';
 import { CompactDatePicker } from '@/components/ui/compact-date-picker';
 import { BarometerTimeline, BarometerTimelineRef } from './barometer-timeline-wrapper';
 import { SettingsIcon, TrashIcon } from '@/components/ui/icons';
+import { getSmileyForEntry } from '@/lib/simple-smiley-mapper';
+import { useDeleteBarometer } from '@/lib/queries';
 
 interface BarometerEntry {
   id: number;
@@ -79,6 +81,9 @@ export function BarometerCard({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [accessUsers, setAccessUsers] = useState<AccessUser[]>([]);
   const [accessDataLoaded, setAccessDataLoaded] = useState(false);
+  
+  // React Query mutations
+  const deleteBarometerMutation = useDeleteBarometer();
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     // Use a stable date to prevent hydration mismatches
     const today = new Date();
@@ -157,6 +162,33 @@ export function BarometerCard({
       return `rgb(${red}, ${green}, ${blue})`;
     }
   };
+
+  // Helper function to format date to YYYY-MM-DD string (local timezone)
+  const formatDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Helper function to get entry for selected date
+  const getEntryForDate = (date: Date) => {
+    const dateString = formatDateString(date);
+    
+    // Check if the barometer's latestEntry is for this date
+    if (barometer.latestEntry) {
+      const latestDate = new Date(barometer.latestEntry.entryDate);
+      const latestDateString = formatDateString(latestDate);
+      if (latestDateString === dateString) {
+        return barometer.latestEntry;
+      }
+    }
+    
+    return null;
+  };
+
+  // Get entry for the currently selected date
+  const selectedDateEntry = getEntryForDate(selectedDate);
 
   const isToday = (dateString: string) => {
     const today = new Date().toISOString().split('T')[0];
@@ -267,13 +299,10 @@ export function BarometerCard({
   const confirmDeleteBarometer = async () => {
     setDeletingBarometer(true);
     try {
-      const response = await fetch(`/api/barometers/${barometer.id}`, {
-        method: 'DELETE'
+      await deleteBarometerMutation.mutateAsync({
+        barometerId: barometer.id,
+        childId: barometer.childId.toString()
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete barometer');
-      }
 
       showToast({
         title: 'Succes',
@@ -300,173 +329,13 @@ export function BarometerCard({
   };
 
   const getSmiley = (rating: number) => {
-    const range = barometer.scaleMax - barometer.scaleMin;
-    const position = (rating - barometer.scaleMin) / range;
-    const smileyType = barometer.smileyType || 'emojis';
-    
-    // Get emoji based on smiley type
-    if (smileyType === 'emojis') {
-      // Traditional emojis for younger children
-      if (position <= 0.2) return '😢';
-      if (position <= 0.4) return '😟';
-      if (position <= 0.6) return '😐';
-      if (position <= 0.8) return '😊';
-      return '😄';
-    }
-    
-    if (smileyType === 'simple') {
-      // Clean, simple icons for older children
-      if (position <= 0.2) {
-        return (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
-            <circle cx="8" cy="10" r="1.5" fill="currentColor"/>
-            <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
-            <path d="M8 16s1.5-2 4-2 4 2 4 2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-          </svg>
-        );
-      }
-      if (position <= 0.4) {
-        return (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
-            <circle cx="8" cy="10" r="1.5" fill="currentColor"/>
-            <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
-            <path d="M8 15.5s1.5-1 4-1 4 1 4 1" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-          </svg>
-        );
-      }
-      if (position <= 0.6) {
-        return (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
-            <circle cx="8" cy="10" r="1.5" fill="currentColor"/>
-            <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
-            <line x1="8" y1="15" x2="16" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        );
-      }
-      if (position <= 0.8) {
-        return (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
-            <circle cx="8" cy="10" r="1.5" fill="currentColor"/>
-            <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
-            <path d="M8 14s1.5 1.5 4 1.5 4-1.5 4-1.5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-          </svg>
-        );
-      }
-      return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
-          <circle cx="8" cy="10" r="1.5" fill="currentColor"/>
-          <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
-          <path d="M8 14s1.5 2.5 4 2.5 4-2.5 4-2.5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-        </svg>
-      );
-    }
-    
-    if (smileyType === 'subtle') {
-      // More mature/professional looking for teens
-      if (position <= 0.2) {
-        return (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M8 15s1.5-2 4-2 4 2 4 2"/>
-            <path d="M9 9h.01"/>
-            <path d="M15 9h.01"/>
-          </svg>
-        );
-      }
-      if (position <= 0.4) {
-        return (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M8 14.5s1.5-1 4-1 4 1 4 1"/>
-            <path d="M9 9h.01"/>
-            <path d="M15 9h.01"/>
-          </svg>
-        );
-      }
-      if (position <= 0.6) {
-        return (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M8 14h8"/>
-            <path d="M9 9h.01"/>
-            <path d="M15 9h.01"/>
-          </svg>
-        );
-      }
-      if (position <= 0.8) {
-        return (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M8 14s1.5 1 4 1 4-1 4-1"/>
-            <path d="M9 9h.01"/>
-            <path d="M15 9h.01"/>
-          </svg>
-        );
-      }
-      return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-          <path d="M9 9h.01"/>
-          <path d="M15 9h.01"/>
-        </svg>
-      );
-    }
-    
-    // Fallback to original design
-    if (position <= 0.2) {
-      return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
-          <circle cx="8" cy="10" r="1" fill="currentColor"/>
-          <circle cx="16" cy="10" r="1" fill="currentColor"/>
-          <path d="M8 16s1.5-2 4-2 4 2 4 2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-        </svg>
-      );
-    }
-    if (position <= 0.4) {
-      return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
-          <circle cx="8" cy="10" r="1" fill="currentColor"/>
-          <circle cx="16" cy="10" r="1" fill="currentColor"/>
-          <line x1="8" y1="15" x2="16" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        </svg>
-      );
-    }
-    if (position <= 0.6) {
-      return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
-          <circle cx="8" cy="10" r="1" fill="currentColor"/>
-          <circle cx="16" cy="10" r="1" fill="currentColor"/>
-          <line x1="8" y1="15" x2="16" y2="15" stroke="currentColor" strokeWidth="1.5"/>
-        </svg>
-      );
-    }
-    if (position <= 0.8) {
-      return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
-          <circle cx="8" cy="10" r="1" fill="currentColor"/>
-          <circle cx="16" cy="10" r="1" fill="currentColor"/>
-          <path d="M8 14s1.5 1 4 1 4-1 4-1" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-        </svg>
-      );
-    }
-    return (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
-        <circle cx="8" cy="10" r="1" fill="currentColor"/>
-        <circle cx="16" cy="10" r="1" fill="currentColor"/>
-        <path d="M8 14s1.5 2 4 2 4-2 4-2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-      </svg>
-    );
+    return getSmileyForEntry({
+      rating,
+      displayType: 'smileys', // Always use smileys for button display
+      smileyType: barometer.smileyType || 'emojis', // Default to emojis if not set
+      scaleMin: barometer.scaleMin,
+      scaleMax: barometer.scaleMax
+    }, 24);
   };
 
   const generateRatingDisplay = () => {
@@ -505,7 +374,7 @@ export function BarometerCard({
             bg: color,
             borderColor: color,
             color: "white",
-            transform: "scale(1.1)"
+            transform: "scale(1.05)"
           }}
           _focus={{
             borderColor: color,
@@ -571,7 +440,7 @@ export function BarometerCard({
             bg: color,
             borderColor: color,
             color: "white",
-            transform: "scale(1.1)"
+            transform: "scale(1.05)"
           }}
           _focus={{
             borderColor: color,
@@ -748,6 +617,47 @@ export function BarometerCard({
       <Box p={4}>
         <VStack gap={4} align="stretch">
           
+          {/* Show existing entry for selected date */}
+          {selectedDateEntry && (
+            <Box
+              p={4}
+              bg="sage.50"
+              borderRadius="lg"
+              border="1px solid"
+              borderColor="sage.200"
+            >
+              <Text fontSize="sm" fontWeight="medium" color="sage.800" mb={2}>
+                Eksisterende vurdering for {selectedDate.toDateString() === new Date().toDateString() ? 'i dag' : selectedDate.toLocaleDateString('da-DK')}:
+              </Text>
+              <VStack gap={2} align="center">
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  bg={getRatingColor(selectedDateEntry.rating)}
+                  borderRadius="full"
+                  w="48px"
+                  h="48px"
+                  color="white"
+                  fontSize="lg"
+                  fontWeight="medium"
+                  border="2px solid"
+                  borderColor={getRatingColor(selectedDateEntry.rating)}
+                >
+                  {getSmiley(selectedDateEntry.rating)}
+                </Box>
+                {selectedDateEntry.comment && (
+                  <Text fontSize="sm" color="gray.700" textAlign="center">
+                    &ldquo;{selectedDateEntry.comment}&rdquo;
+                  </Text>
+                )}
+              </VStack>
+              <Text fontSize="xs" color="gray.500" mt={2} textAlign="center">
+                Vælg en ny vurdering nedenfor for at opdatere
+              </Text>
+            </Box>
+          )}
+          
           {/* Rating Display */}
           <Box>
             {generateRatingDisplay()}
@@ -802,7 +712,7 @@ export function BarometerCard({
               }}
               borderRadius="lg"
             >
-              {hasEntryToday ? 'Opdater vurdering' : 'Registrer vurdering'}
+              {selectedDateEntry ? 'Opdater vurdering' : 'Registrer vurdering'}
             </Button>
             
             <CompactDatePicker

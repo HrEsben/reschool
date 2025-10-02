@@ -8,7 +8,6 @@ import { system } from "./theme"
 import { SimpleToaster } from "./simple-toast"
 import { queryClient } from "@/lib/query-client"
 import { ServiceWorkerProvider } from "@/hooks/use-service-worker"
-import { CacheDebugger } from "@/components/debug/cache-debugger"
 
 export function Provider(props: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
@@ -35,7 +34,6 @@ export function Provider(props: { children: React.ReactNode }) {
         <ChakraProvider value={system}>
           {props.children}
           <SimpleToaster />
-          <CacheDebugger />
         </ChakraProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>

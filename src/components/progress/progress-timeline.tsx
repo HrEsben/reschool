@@ -28,6 +28,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { format, parseISO, isValid, differenceInDays } from 'date-fns';
 import { da } from 'date-fns/locale';
 import { useProgress } from '@/lib/queries';
+import { getSmileyForEntry } from '@/lib/simple-smiley-mapper';
 import type { ProgressPlan, StepWithGroupedEntries, ProgressEntry } from '@/lib/database-service';
 
 interface ProgressTimelineProps {
@@ -196,37 +197,17 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
               const rating = Number(entry.rating) || 0;
               const displayType = String(entry.displayType) || 'numbers';
               const smileyType = String(entry.smileyType) || 'emojis';
+              const scaleMin = Number(entry.scaleMin) || 1;
+              const scaleMax = Number(entry.scaleMax) || 5;
               
-              if (displayType === 'percentage') {
-                const percentage = Math.round(((rating - 1) / (5 - 1)) * 100);
-                iconString = `${percentage}%`;
-              } else if (displayType === 'numbers') {
-                iconString = String(rating);
-              } else if (displayType === 'smileys') {
-                const range = 5 - 1;
-                const position = (rating - 1) / range;
-                const currentSmileyType = smileyType || 'emojis';
-                
-                if (currentSmileyType === 'emojis') {
-                  if (position <= 0.2) iconString = '😢';
-                  else if (position <= 0.4) iconString = '😟';
-                  else if (position <= 0.6) iconString = '😐';
-                  else if (position <= 0.8) iconString = '😊';
-                  else iconString = '😄';
-                } else if (currentSmileyType === 'simple') {
-                  if (position <= 0.2) iconString = '☹️';
-                  else if (position <= 0.4) iconString = '😕';
-                  else if (position <= 0.6) iconString = '😐';
-                  else if (position <= 0.8) iconString = '🙂';
-                  else iconString = '😊';
-                } else if (currentSmileyType === 'subtle') {
-                  if (position <= 0.2) iconString = '😞';
-                  else if (position <= 0.4) iconString = '😐';
-                  else if (position <= 0.6) iconString = '😌';
-                  else if (position <= 0.8) iconString = '😊';
-                  else iconString = '😁';
-                }
-              }
+              const result = getSmileyForEntry({
+                rating,
+                displayType,
+                smileyType,
+                scaleMin,
+                scaleMax
+              });
+              iconString = typeof result === 'string' ? result : '😊';
               break;
             case 'dagens-smiley':
               iconString = String(entry.smileyValue || '😐');
@@ -1122,57 +1103,26 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
 
   // Helper function to get barometer display value based on display type
   const getBarometerDisplayValue = (rating: number, displayType: string, smileyType?: string, scaleMin = 1, scaleMax = 5): React.ReactNode => {
-    if (displayType === 'percentage') {
-      const percentage = Math.round(((rating - scaleMin) / (scaleMax - scaleMin)) * 100);
-      return `${percentage}%`;
-    }
+    const result = getSmileyForEntry({
+      rating,
+      displayType,
+      smileyType,
+      scaleMin,
+      scaleMax
+    }, 20);
     
-    if (displayType === 'numbers') {
-      return String(rating);
-    }
-    
-    if (displayType === 'smileys') {
-      const range = scaleMax - scaleMin;
-      const position = (rating - scaleMin) / range;
-      const currentSmileyType = smileyType || 'emojis';
-      
-      let emoji = '😐'; // default
-      
-      if (currentSmileyType === 'emojis') {
-        // Traditional emojis for younger children
-        if (position <= 0.2) emoji = '😢';
-        else if (position <= 0.4) emoji = '😟';
-        else if (position <= 0.6) emoji = '😐';
-        else if (position <= 0.8) emoji = '😊';
-        else emoji = '😄';
-      } else if (currentSmileyType === 'simple') {
-        // Simple text representations for table display
-        if (position <= 0.2) emoji = '☹️';
-        else if (position <= 0.4) emoji = '😕';
-        else if (position <= 0.6) emoji = '😐';
-        else if (position <= 0.8) emoji = '🙂';
-        else emoji = '😊';
-      } else if (currentSmileyType === 'subtle') {
-        // More mature representations
-        if (position <= 0.2) emoji = '😞';
-        else if (position <= 0.4) emoji = '😐';
-        else if (position <= 0.6) emoji = '😌';
-        else if (position <= 0.8) emoji = '😊';
-        else emoji = '😁';
-      }
-      
-      // Return OpenMoji component for emoji display
+    // If result is a string emoji, wrap it in OpenMoji component
+    if (typeof result === 'string' && displayType === 'smileys') {
       return (
         <OpenMojiEmoji 
-          unicode={emoji} 
+          unicode={result} 
           size={20}
           style={{ display: 'inline-block' }}
         />
       );
     }
     
-    // Fallback to rating number
-    return String(rating);
+    return result;
   };
 
   const getEntryDisplayData = (entry: ProgressEntry | null | undefined): {
@@ -1196,9 +1146,11 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
         const rating = Number(entry?.rating) || 0;
         const displayType = String(entry?.displayType) || 'numbers';
         const smileyType = String(entry?.smileyType) || 'emojis';
+        const scaleMin = Number(entry?.scaleMin) || 1;
+        const scaleMax = Number(entry?.scaleMax) || 5;
         
         return {
-          icon: getBarometerDisplayValue(rating, displayType, smileyType),
+          icon: getBarometerDisplayValue(rating, displayType, smileyType, scaleMin, scaleMax),
           title: entry?.toolTopic || 'Barometer',
           subtitle: String(entry?.comment || 'Ingen kommentar'),
           color: 'navy'

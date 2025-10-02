@@ -22,6 +22,7 @@ import { IndsatsrappeManager } from '@/components/indsatstrappe/indsatstrappe-ma
 import { ToolsAnchorNav } from '@/components/ui/tools-anchor-nav';
 import { useToolsNavigation } from '@/hooks/use-tools-navigation';
 import { useBarometers, useDagensSmiley, useSengetider } from '@/lib/queries';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface BarometerEntry {
   id: number;
@@ -97,6 +98,7 @@ export const ToolsManager = forwardRef<ToolsManagerRef, ToolsManagerProps>(
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const addDialogTriggerRef = useRef<HTMLButtonElement>(null);
   const user = useUser();
+  const queryClient = useQueryClient();
 
   // Tools navigation hook
   const {
@@ -145,15 +147,21 @@ export const ToolsManager = forwardRef<ToolsManagerRef, ToolsManagerProps>(
   }, [user]);
 
   const handleToolAdded = () => {
-    // TanStack Query will automatically refresh due to cache invalidation
+    // TanStack Query will automatically refresh due to cache invalidation from the individual mutations
+    // However, we should also invalidate the latest-registrations query to ensure the dashboard updates
+    queryClient.invalidateQueries({ queryKey: ['latest-registrations'] });
   };
 
   const handleEntryRecorded = () => {
     // TanStack Query will automatically refresh due to cache invalidation
+    // Also invalidate latest-registrations query to ensure the dashboard updates
+    queryClient.invalidateQueries({ queryKey: ['latest-registrations'] });
   };
 
   const handleBarometerDeleted = () => {
-    // TanStack Query will automatically refresh due to cache invalidation
+    // TanStack Query will automatically refresh due to cache invalidation from the delete mutation
+    // However, we should also invalidate the latest-registrations query to ensure the dashboard updates
+    queryClient.invalidateQueries({ queryKey: ['latest-registrations'] });
   };
 
   const handleBarometerEdit = (barometer: Barometer) => {
@@ -180,6 +188,8 @@ export const ToolsManager = forwardRef<ToolsManagerRef, ToolsManagerProps>(
 
   const handleSengetiderUpdated = () => {
     // TanStack Query will automatically refresh due to cache invalidation
+    // Also invalidate latest-registrations query to ensure the dashboard updates
+    queryClient.invalidateQueries({ queryKey: ['latest-registrations'] });
   };
 
   if (isLoading) {

@@ -14,7 +14,7 @@ import {
 } from '@chakra-ui/react';
 import { DialogManager } from '@/components/ui/dialog-manager';
 import { showToast } from '@/components/ui/simple-toast';
-import { useChildUsers } from '@/lib/queries';
+import { useChildUsers, useCreateDagensSmiley } from '@/lib/queries';
 import { UserWithRelation } from '@/lib/database-service';
 import { useUser } from '@stackframe/stack';
 
@@ -31,7 +31,10 @@ export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, is
   const stackUser = useUser();
   const [topic, setTopic] = useState('');
   const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
+  
+  // React Query mutation
+  const createDagensSmileyMutation = useCreateDagensSmiley();
+  const isSubmitting = createDagensSmileyMutation.isPending;
   
   // Visibility control state
   const [visibilityOption, setVisibilityOption] = useState<'alle' | 'kun_mig' | 'custom'>('alle');
@@ -51,28 +54,20 @@ export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, is
       return;
     }
 
-    setLoading(true);
     try {
       // Determine visibility settings
       const isPublic = visibilityOption === 'alle';
       const accessibleUserIds = visibilityOption === 'custom' ? selectedUserIds : [];
 
-      const response = await fetch(`/api/children/${childId}/dagens-smiley`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      await createDagensSmileyMutation.mutateAsync({
+        childId: childId.toString(),
+        data: {
           topic: topic.trim(),
           description: description.trim() || undefined,
           isPublic,
           accessibleUserIds,
-        }),
+        },
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to create dagens smiley');
-      }
 
       showToast({
         title: 'Succes',
@@ -99,8 +94,6 @@ export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, is
         type: 'error',
         duration: 3000,
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -139,7 +132,7 @@ export function CreateDagensSmileyDialog({ childId, onSmileyCreated, trigger, is
         label: "Opret",
         onClick: handleSubmit,
         colorScheme: "sage",
-        isLoading: loading,
+        isLoading: isSubmitting,
         loadingText: "Opretter..."
       }}
       secondaryAction={{

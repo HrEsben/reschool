@@ -36,6 +36,8 @@ export interface ProgressEntry {
   topic: string;
   displayType?: string;
   smileyType?: string;
+  scaleMin?: number;
+  scaleMax?: number;
   recordedByName?: string;
   toolType: string;
   smileyValue?: string;
@@ -2331,7 +2333,9 @@ export async function getLatestRegistrationsForUser(
           be.rating::text as rating,
           be.comment,
           NULL as selected_emoji,
-          NULL as reasoning
+          NULL as reasoning,
+          b.display_type,
+          b.smiley_type
         FROM barometer_entries be
         JOIN barometers b ON be.barometer_id = b.id
         JOIN children c ON b.child_id = c.id
@@ -2357,7 +2361,9 @@ export async function getLatestRegistrationsForUser(
           NULL as rating,
           NULL as comment,
           dse.selected_emoji,
-          dse.reasoning
+          dse.reasoning,
+          NULL as display_type,
+          NULL as smiley_type
         FROM dagens_smiley_entries dse
         JOIN dagens_smiley ds ON dse.smiley_id = ds.id
         JOIN children c ON ds.child_id = c.id
@@ -2392,7 +2398,9 @@ export async function getLatestRegistrationsForUser(
       rating: row.rating ? parseInt(row.rating) : undefined,
       comment: row.comment,
       selectedEmoji: row.selected_emoji,
-      reasoning: row.reasoning
+      reasoning: row.reasoning,
+      displayType: row.display_type,
+      smileyType: row.smiley_type
     }));
   } catch (error) {
     console.error('Error getting latest registrations for user:', error);
