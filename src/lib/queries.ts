@@ -510,16 +510,6 @@ interface PendingInvitation {
 
 // Invitation API functions
 const invitationApi = {
-  fetchPendingInvitations: async (): Promise<PendingInvitation[]> => {
-    const response = await fetch('/api/invitations/pending', {
-      credentials: 'include',
-    });
-    if (!response.ok) {
-      throw new Error('Failed to fetch pending invitations');
-    }
-    const data = await response.json();
-    return data.invitations;
-  },
 
   declineInvitation: async (invitationId: number): Promise<void> => {
     const response = await fetch('/api/invitations/decline', {
@@ -538,7 +528,18 @@ const invitationApi = {
 export function usePendingInvitations() {
   return useQuery({
     queryKey: queryKeys.pendingInvitations,
-    queryFn: invitationApi.fetchPendingInvitations,
+    queryFn: async (): Promise<PendingInvitation[]> => {
+      const response = await fetch('/api/invitations/pending', {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch pending invitations');
+      }
+      
+      const data = await response.json();
+      return data.invitations;
+    },
     staleTime: 30 * 1000, // 30 seconds
     refetchOnWindowFocus: false,
   });
