@@ -16,26 +16,22 @@ export function Provider(props: { children: React.ReactNode }) {
     setMounted(true)
   }, [])
 
-  if (!mounted) {
-    return (
-      <ServiceWorkerProvider>
-        <QueryClientProvider client={queryClient}>
-          <div suppressHydrationWarning>
-            {props.children}
-          </div>
-        </QueryClientProvider>
-      </ServiceWorkerProvider>
-    )
-  }
-
   return (
     <ServiceWorkerProvider>
       <QueryClientProvider client={queryClient}>
         <ChakraProvider value={system}>
-          {props.children}
-          <SimpleToaster />
+          {!mounted ? (
+            <div suppressHydrationWarning>
+              {props.children}
+            </div>
+          ) : (
+            <>
+              {props.children}
+              <SimpleToaster />
+            </>
+          )}
         </ChakraProvider>
-        <ReactQueryDevtools initialIsOpen={false} />
+        {mounted && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </ServiceWorkerProvider>
   )

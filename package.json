@@ -17,8 +17,8 @@
     "test": "npm run lint && npm run type-check",
     "clean": "rm -rf .next out dist node_modules/.cache",
     "clean:cache": "rm -rf .next/cache",
-    "deploy:preview": "vercel",
-    "deploy:prod": "vercel --prod"
+    "deploy:preview": "npx vercel",
+    "deploy:prod": "npx vercel --prod"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.26.0",
