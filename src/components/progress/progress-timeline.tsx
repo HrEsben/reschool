@@ -195,10 +195,22 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
           switch (entry.toolType) {
             case 'barometer':
               const rating = Number(entry.rating) || 0;
-              const displayType = String(entry.displayType) || 'numbers';
+              const displayType = String(entry.displayType) || 'smileys';
               const smileyType = String(entry.smileyType) || 'emojis';
               const scaleMin = Number(entry.scaleMin) || 1;
               const scaleMax = Number(entry.scaleMax) || 5;
+              
+              // Debug logging
+              console.log('🔍 transformEntriesForChart - Barometer Entry:', {
+                entryId: entry.id,
+                toolTopic: entry.toolTopic,
+                rating: entry.rating,
+                displayType: entry.displayType,
+                smileyType: entry.smileyType,
+                computed: { rating, displayType, smileyType, scaleMin, scaleMax },
+                rawSmileyType: entry.smileyType,
+                rawDisplayType: entry.displayType
+              });
               
               const result = getSmileyForEntry({
                 rating,
@@ -207,7 +219,24 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
                 scaleMin,
                 scaleMax
               });
-              iconString = typeof result === 'string' ? result : '😊';
+              
+              // For transformEntriesForChart, we need string emojis for the table display
+              // If the result is a React element (SVG), convert to emoji based on position
+              if (typeof result === 'string') {
+                iconString = result;
+              } else {
+                // Calculate position to determine the appropriate emoji
+                const range = scaleMax - scaleMin;
+                const position = (rating - scaleMin) / range;
+                
+                if (position <= 0.2) iconString = '😢';
+                else if (position <= 0.4) iconString = '😟';
+                else if (position <= 0.6) iconString = '😐';
+                else if (position <= 0.8) iconString = '😊';
+                else iconString = '😄';
+              }
+              
+              console.log('🎯 transformEntriesForChart - getSmileyForEntry result:', { result, iconString, position: (rating - scaleMin) / (scaleMax - scaleMin) });
               break;
             case 'dagens-smiley':
               iconString = String(entry.smileyValue || '😐');
@@ -1144,13 +1173,24 @@ export function ProgressTimeline({ childId }: ProgressTimelineProps) {
     switch (entry.toolType) {
       case 'barometer':
         const rating = Number(entry?.rating) || 0;
-        const displayType = String(entry?.displayType) || 'numbers';
+        const displayType = String(entry?.displayType) || 'smileys';
         const smileyType = String(entry?.smileyType) || 'emojis';
         const scaleMin = Number(entry?.scaleMin) || 1;
         const scaleMax = Number(entry?.scaleMax) || 5;
         
+        // Debug logging
+        console.log('📊 getEntryDisplayData - Barometer Entry:', {
+          entryId: entry?.id,
+          toolTopic: entry?.toolTopic,
+          rawEntry: entry,
+          computed: { rating, displayType, smileyType, scaleMin, scaleMax }
+        });
+        
+        const displayValue = getBarometerDisplayValue(rating, displayType, smileyType, scaleMin, scaleMax);
+        console.log('📈 getEntryDisplayData - getBarometerDisplayValue result:', displayValue);
+        
         return {
-          icon: getBarometerDisplayValue(rating, displayType, smileyType, scaleMin, scaleMax),
+          icon: displayValue,
           title: entry?.toolTopic || 'Barometer',
           subtitle: String(entry?.comment || 'Ingen kommentar'),
           color: 'navy'

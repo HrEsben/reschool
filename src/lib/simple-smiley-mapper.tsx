@@ -13,8 +13,16 @@ interface EntryData {
 export const getSmileyForEntry = (entry: EntryData, size: number = 24): string | React.ReactNode => {
   const { rating, displayType = 'smileys', smileyType = 'emojis', scaleMin = 1, scaleMax = 5 } = entry;
 
+  // Debug logging
+  console.log('🔍 getSmileyForEntry called with:', {
+    entry,
+    destructured: { rating, displayType, smileyType, scaleMin, scaleMax },
+    size
+  });
+
   // For non-smiley types, return the rating number
   if (displayType !== 'smileys') {
+    console.log('❌ displayType is not smileys, returning:', displayType === 'percentage' ? `${rating}%` : rating.toString());
     if (displayType === 'percentage') {
       return `${rating}%`;
     }
@@ -25,8 +33,12 @@ export const getSmileyForEntry = (entry: EntryData, size: number = 24): string |
   const range = scaleMax - scaleMin;
   const position = (rating - scaleMin) / range;
 
+  console.log('📊 Position calculation:', { range, position, rating, scaleMin, scaleMax });
+
   // Return smiley based on type and position
-  return getSmileyByPosition(position, smileyType, size);
+  const result = getSmileyByPosition(position, smileyType, size);
+  console.log('😀 getSmileyByPosition result:', result);
+  return result;
 };
 
 // Helper to get smiley by position and type

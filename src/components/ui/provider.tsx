@@ -20,16 +20,8 @@ export function Provider(props: { children: React.ReactNode }) {
     <ServiceWorkerProvider>
       <QueryClientProvider client={queryClient}>
         <ChakraProvider value={system}>
-          {!mounted ? (
-            <div suppressHydrationWarning>
-              {props.children}
-            </div>
-          ) : (
-            <>
-              {props.children}
-              <SimpleToaster />
-            </>
-          )}
+          {props.children}
+          {mounted && <SimpleToaster />}
         </ChakraProvider>
         {mounted && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
