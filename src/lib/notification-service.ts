@@ -19,6 +19,7 @@ export type NotificationType =
   | 'invitation_accepted'
   | 'child_added'
   | 'barometer_entry'
+  | 'tool_entry'
   | 'user_joined_child'
   | 'system';
 
@@ -351,6 +352,32 @@ export async function createBarometerEntryNotification(
     {
       childName,
       childSlug,
+      entryDate,
+      actionUrl: `/${childSlug}`
+    }
+  );
+}
+
+export async function createToolEntryNotification(
+  userId: number,
+  childName: string,
+  childSlug: string,
+  toolName: string,
+  toolTopic: string,
+  createdByName: string,
+  entryDate: string
+): Promise<Notification | null> {
+  return createNotification(
+    userId,
+    'tool_entry',
+    'Ny registrering',
+    `${createdByName} har registreret en ny måling i ${toolName}: ${toolTopic} for ${childName}`,
+    {
+      childName,
+      childSlug,
+      toolName,
+      toolTopic,
+      createdByName,
       entryDate,
       actionUrl: `/${childSlug}`
     }

@@ -4,7 +4,9 @@ import {
   createSengetiderEntry, 
   getSengetiderEntries,
   getUserByStackAuthId,
-  getSengetiderById
+  getSengetiderById,
+  getChildById,
+  notifyUsersOfNewToolEntry
 } from '@/lib/database-service';
 
 export async function GET(
@@ -116,6 +118,23 @@ export async function POST(
 
       if (!entry) {
         return NextResponse.json({ error: 'Failed to create sengetider entry' }, { status: 500 });
+      }
+
+      // Get child information for notifications using the sengetider we already fetched
+      const child = await getChildById(sengetiderTool.childId);
+      
+      if (child && child.slug) {
+        // Notify all other users who have access to this child about the new entry
+        await notifyUsersOfNewToolEntry(
+          sengetiderTool.childId,
+          dbUser.id, // Exclude the user who created the entry
+          child.name,
+          child.slug,
+          'Sengetider',
+          'Sengetider', // Sengetider doesn't have a topic field, so use the name
+          dbUser.displayName || dbUser.email,
+          entry.entryDate
+        );
       }
 
       return NextResponse.json({ entry }, { status: 201 });

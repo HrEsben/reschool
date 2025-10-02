@@ -4283,3 +4283,39 @@ function groupEntriesByStepTiming(
   
   return groupedSteps;
 }
+
+// Notification helper function for tool entries
+export async function notifyUsersOfNewToolEntry(
+  childId: number,
+  excludeUserId: number,
+  childName: string,
+  childSlug: string,
+  toolName: string,
+  toolTopic: string,
+  createdByName: string,
+  entryDate: string
+): Promise<void> {
+  try {
+    // Get all users who have access to this child (excluding the user who created the entry)
+    const users = await getUsersForChild(childId);
+    const otherUsers = users.filter(user => user.id !== excludeUserId);
+
+    // Import notification service function
+    const { createToolEntryNotification } = await import('./notification-service');
+
+    // Create notifications for all other users
+    for (const user of otherUsers) {
+      await createToolEntryNotification(
+        user.id,
+        childName,
+        childSlug,
+        toolName,
+        toolTopic,
+        createdByName,
+        entryDate
+      );
+    }
+  } catch (error) {
+    console.error('Error notifying users of new tool entry:', error);
+  }
+}

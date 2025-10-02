@@ -100,6 +100,24 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to record entry' }, { status: 500 });
     }
 
+    // Get child information for notifications
+    const { getChildById, notifyUsersOfNewToolEntry } = await import('@/lib/database-service');
+    const child = await getChildById(barometer.childId);
+    
+    if (child && child.slug) {
+      // Notify all other users who have access to this child about the new entry
+      await notifyUsersOfNewToolEntry(
+        barometer.childId,
+        dbUser.id, // Exclude the user who created the entry
+        child.name,
+        child.slug,
+        'Barometer',
+        barometer.topic,
+        dbUser.displayName || dbUser.email,
+        entry.entryDate
+      );
+    }
+
     return NextResponse.json({ entry }, { status: 201 });
 
   } catch (error) {

@@ -182,6 +182,7 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
       case 'child_added': return 'green';
       case 'user_joined_child': return 'purple';
       case 'barometer_entry': return 'orange';
+      case 'tool_entry': return 'teal';
       default: return 'gray';
     }
   };
@@ -269,6 +270,7 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
                         {notification.type === 'child_added' && '👶'}
                         {notification.type === 'user_joined_child' && '👥'}
                         {notification.type === 'barometer_entry' && '📊'}
+                        {notification.type === 'tool_entry' && '🔧'}
                       </Badge>
                       <VStack align="start" gap={1} flex={1}>
                         <Text

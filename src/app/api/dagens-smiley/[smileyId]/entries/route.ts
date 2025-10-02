@@ -5,7 +5,9 @@ import {
   getDagensSmileyById,
   getUserByStackAuthId,
   checkUserDagensSmileyAccess,
-  getDagensSmileyEntries
+  getDagensSmileyEntries,
+  getChildById,
+  notifyUsersOfNewToolEntry
 } from '@/lib/database-service';
 
 export async function GET(
@@ -105,6 +107,23 @@ export async function POST(
 
     if (!entry) {
       return NextResponse.json({ error: 'Failed to record entry' }, { status: 500 });
+    }
+
+    // Get child information for notifications using the smiley we already fetched
+    const child = await getChildById(smiley.childId);
+    
+    if (child && child.slug) {
+      // Notify all other users who have access to this child about the new entry
+      await notifyUsersOfNewToolEntry(
+        smiley.childId,
+        dbUser.id, // Exclude the user who created the entry
+        child.name,
+        child.slug,
+        'Dagens Smiley',
+        smiley.topic,
+        dbUser.displayName || dbUser.email,
+        entry.entryDate
+      );
     }
 
     return NextResponse.json(entry, { status: 201 });
