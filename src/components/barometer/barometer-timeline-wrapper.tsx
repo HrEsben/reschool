@@ -49,7 +49,9 @@ export interface BarometerTimelineRef {
 export const BarometerTimeline = forwardRef<BarometerTimelineRef, BarometerTimelineProps>(
   ({ barometer, maxEntries = 10, currentUserId, isUserAdmin = false, onEntryDeleted }, ref) => {
     const [entries, setEntries] = useState<BarometerEntry[]>([]);
+    const [allEntries, setAllEntries] = useState<BarometerEntry[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showAll, setShowAll] = useState(false);
     const timelineRef = React.useRef<ModernTimelineRef>(null);
 
     const fetchEntries = useCallback(async () => {
@@ -63,7 +65,8 @@ export const BarometerTimeline = forwardRef<BarometerTimelineRef, BarometerTimel
         
         const data = await response.json();
         const entriesArray = data.entries || [];
-        setEntries(entriesArray.slice(0, maxEntries));
+        setAllEntries(entriesArray);
+        setEntries(showAll ? entriesArray : entriesArray.slice(0, maxEntries));
       } catch (error) {
         console.error('Error fetching barometer entries:', error);
         showToast({
@@ -75,11 +78,26 @@ export const BarometerTimeline = forwardRef<BarometerTimelineRef, BarometerTimel
       } finally {
         setLoading(false);
       }
-    }, [barometer.id, maxEntries]);
+    }, [barometer.id, maxEntries, showAll]);
 
     useEffect(() => {
       fetchEntries();
     }, [fetchEntries]);
+
+    // Update displayed entries when showAll changes
+    useEffect(() => {
+      if (allEntries.length > 0) {
+        setEntries(showAll ? allEntries : allEntries.slice(0, maxEntries));
+      }
+    }, [showAll, allEntries, maxEntries]);
+
+    const handleShowAll = () => {
+      setShowAll(true);
+    };
+
+    const handleShowLess = () => {
+      setShowAll(false);
+    };
 
     useImperativeHandle(ref, () => ({
       refresh: () => {
@@ -152,7 +170,11 @@ export const BarometerTimeline = forwardRef<BarometerTimelineRef, BarometerTimel
         barometer={barometer}
         onDeleteEntry={canDelete ? handleDeleteEntry : undefined}
         canDelete={canDelete}
-        limit={maxEntries}
+        limit={showAll ? undefined : maxEntries}
+        totalEntries={allEntries.length}
+        showAll={showAll}
+        onShowAll={handleShowAll}
+        onShowLess={handleShowLess}
       />
     );
   }

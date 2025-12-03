@@ -77,6 +77,7 @@ export function DagensSmileyCard({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [accessUsers, setAccessUsers] = useState<AccessUser[]>([]);
   const [accessDataLoaded, setAccessDataLoaded] = useState(false);
+  const [showAllEntries, setShowAllEntries] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     // Use a stable date to prevent hydration mismatches
     const today = new Date();
@@ -453,6 +454,11 @@ export function DagensSmileyCard({
             canDelete={isUserAdmin}
             onDeleteEntry={handleDeleteEntry}
             childName={childName}
+            limit={showAllEntries ? undefined : 10}
+            totalEntries={entries.length}
+            showAll={showAllEntries}
+            onShowAll={() => setShowAllEntries(true)}
+            onShowLess={() => setShowAllEntries(false)}
           />
         </VStack>
       </Box>

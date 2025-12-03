@@ -57,11 +57,12 @@ export default function SignupPage() {
 
       if (result.status === "ok") {
         // If there's a redirect URL (like from invitation), go there instead of dashboard
+        // Use replace to avoid adding to browser history and prevent back button issues
         if (redirect) {
-          router.push(redirect);
+          router.replace(redirect);
         } else {
           // Go to dashboard - AuthenticatedLayout will handle name collection
-          router.push('/dashboard');
+          router.replace('/dashboard');
         }
       } else {
         // Handle specific Stack Auth errors

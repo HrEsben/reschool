@@ -42,7 +42,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="light">
       <head>
-        
+        {/* Preload critical routes to eliminate redirect delays */}
+        <link rel="prefetch" href="/dashboard" />
+        <link rel="prefetch" href="/handler/sign-in" />
+        {/* DNS prefetch for Stack Auth to reduce connection time */}
+        <link rel="dns-prefetch" href="https://api.stackframe.co" />
+        <link rel="dns-prefetch" href="https://api.stack-auth.com" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

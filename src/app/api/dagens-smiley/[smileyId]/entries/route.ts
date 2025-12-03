@@ -43,7 +43,7 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    const entries = await getDagensSmileyEntries(smileyId);
+    const entries = await getDagensSmileyEntries(smileyId, 500); // Get all entries (up to 500)
     return NextResponse.json({ entries });
 
   } catch (error) {

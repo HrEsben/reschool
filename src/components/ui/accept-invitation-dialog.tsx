@@ -50,7 +50,7 @@ export function AcceptInvitationDialog({
         if (data.childSlug) {
           router.push(`/${data.childSlug}`);
         } else {
-          router.push('/dashboard');
+          router.replace('/dashboard');
         }
       } else {
         const errorData = await response.json();

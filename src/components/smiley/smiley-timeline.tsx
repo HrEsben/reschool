@@ -47,6 +47,10 @@ interface SmileyTimelineProps {
   canDelete?: boolean;
   limit?: number;
   childName?: string;
+  totalEntries?: number;
+  showAll?: boolean;
+  onShowAll?: () => void;
+  onShowLess?: () => void;
 }
 
 export interface SmileyTimelineRef {
@@ -131,7 +135,7 @@ const formatDateTime = (dateString: string): string => {
 };
 
 export const SmileyTimeline = forwardRef<SmileyTimelineRef, SmileyTimelineProps>(
-  ({ entries, smiley, onDeleteEntry, canDelete = false, limit, childName }, ref) => { // eslint-disable-line @typescript-eslint/no-unused-vars
+  ({ entries, smiley, onDeleteEntry, canDelete = false, limit, childName, totalEntries, showAll, onShowAll, onShowLess }, ref) => { // eslint-disable-line @typescript-eslint/no-unused-vars
     const [localEntries, setLocalEntries] = useState<DagensSmileyEntry[]>(Array.isArray(entries) ? entries : []);
     const [entryToDelete, setEntryToDelete] = useState<DagensSmileyEntry | null>(null);
     
@@ -331,12 +335,44 @@ export const SmileyTimeline = forwardRef<SmileyTimelineRef, SmileyTimelineProps>
           })}
         </Timeline.Root>
         
-        {/* Show more indicator if limited */}
-        {limit && entries.length > limit && (
+        {/* Show more/less controls */}
+        {((totalEntries !== undefined && totalEntries > (limit || 10)) || (limit && entries.length > limit)) && (
           <Box textAlign="center" pt={2}>
-            <Text fontSize="xs" color="gray.500">
-              Viser {limit} af {entries.length} registreringer
-            </Text>
+            {showAll ? (
+              <VStack gap={2}>
+                <Text fontSize="xs" color="gray.500">
+                  Viser alle {totalEntries || entries.length} registreringer
+                </Text>
+                {onShowLess && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    colorPalette="sage"
+                    onClick={onShowLess}
+                    _hover={{ bg: "sage.50" }}
+                  >
+                    Vis færre
+                  </Button>
+                )}
+              </VStack>
+            ) : (
+              <VStack gap={2}>
+                <Text fontSize="xs" color="gray.500">
+                  Viser {Math.min(limit || 10, displayEntries.length)} af {totalEntries || entries.length} registreringer
+                </Text>
+                {onShowAll && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    colorPalette="sage"
+                    onClick={onShowAll}
+                    _hover={{ bg: "sage.50" }}
+                  >
+                    Vis alle ({totalEntries || entries.length})
+                  </Button>
+                )}
+              </VStack>
+            )}
           </Box>
         )}
         

@@ -49,6 +49,10 @@ interface ModernTimelineProps {
   onDeleteEntry?: (entryId: number) => void;
   canDelete?: boolean;
   limit?: number;
+  totalEntries?: number;
+  showAll?: boolean;
+  onShowAll?: () => void;
+  onShowLess?: () => void;
 }
 
 export interface ModernTimelineRef {
@@ -319,7 +323,7 @@ const formatEntryDateTime = (entryDate: string, createdAt: string): string => {
 };
 
 export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>(
-  ({ entries, barometer, onDeleteEntry, canDelete = false, limit }, ref) => {
+  ({ entries, barometer, onDeleteEntry, canDelete = false, limit, totalEntries, showAll, onShowAll, onShowLess }, ref) => {
     const [localEntries, setLocalEntries] = useState<BarometerEntry[]>(entries);
     const [entryToDelete, setEntryToDelete] = useState<BarometerEntry | null>(null);
 
@@ -495,12 +499,40 @@ export const ModernTimeline = forwardRef<ModernTimelineRef, ModernTimelineProps>
           ))}
         </Timeline.Root>
         
-        {/* Show more indicator if limited */}
-        {limit && entries.length > limit && (
+        {/* Show more/less controls */}
+        {totalEntries !== undefined && totalEntries > (limit || 10) && (
           <Box textAlign="center" pt={2}>
-            <Text fontSize="xs" color="gray.500">
-              Viser {limit} af {entries.length} registreringer
-            </Text>
+            {showAll ? (
+              <VStack gap={2}>
+                <Text fontSize="xs" color="gray.500">
+                  Viser alle {totalEntries} registreringer
+                </Text>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  colorPalette="sage"
+                  onClick={onShowLess}
+                  _hover={{ bg: "sage.50" }}
+                >
+                  Vis færre
+                </Button>
+              </VStack>
+            ) : (
+              <VStack gap={2}>
+                <Text fontSize="xs" color="gray.500">
+                  Viser {Math.min(limit || 10, displayEntries.length)} af {totalEntries} registreringer
+                </Text>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  colorPalette="sage"
+                  onClick={onShowAll}
+                  _hover={{ bg: "sage.50" }}
+                >
+                  Vis alle ({totalEntries})
+                </Button>
+              </VStack>
+            )}
           </Box>
         )}
         

@@ -44,10 +44,11 @@ export default function LoginPage() {
 
       if (result.status === "ok") {
         // If there's a redirect URL (like from invitation), go there instead of dashboard
+        // Use replace to avoid adding to browser history and prevent back button issues
         if (redirect) {
-          router.push(redirect);
+          router.replace(redirect);
         } else {
-          router.push("/dashboard");
+          router.replace("/dashboard");
         }
       } else {
         setError("Ugyldige loginoplysninger");

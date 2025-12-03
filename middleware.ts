@@ -20,9 +20,14 @@ export async function middleware(request: NextRequest) {
     // Get the user from Stack Auth
     const user = await stackServerApp.getUser();
 
-    // If user is not authenticated and trying to access protected routes, redirect to home
-    if (!user && pathname === '/dashboard') {
-      return NextResponse.redirect(new URL('/', request.url));
+    // Define protected routes that require authentication
+    const protectedRoutes = ['/dashboard'];
+    const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+
+    // If user is not authenticated and trying to access protected routes, redirect to sign-in
+    if (!user && isProtectedRoute) {
+      // Redirect directly to Stack Auth sign-in to avoid multiple redirects
+      return NextResponse.redirect(new URL('/handler/sign-in', request.url));
     }
 
     return NextResponse.next();

@@ -3,19 +3,12 @@
 import { useUser } from "@stackframe/stack";
 import { Box, Button, Heading, Text, VStack, HStack, Spinner } from "@chakra-ui/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, Suspense } from "react";
+import { Suspense } from "react";
 
 function AuthenticatedHome() {
   const user = useUser(); // This is now inside a Suspense boundary
-  const router = useRouter();
-
-  // Redirect if authenticated
-  useEffect(() => {
-    if (user) {
-      router.push("/dashboard");
-    }
-  }, [user, router]);
+  // Note: Removed client-side redirect to eliminate redirect chains
+  // Users can navigate to dashboard via the UI button instead
 
   return (
     <Box 
@@ -81,10 +74,23 @@ function AuthenticatedHome() {
             </HStack>
           </VStack>
         ) : (
-          // User is authenticated, redirecting...
-          <VStack gap={4}>
-            <Spinner size="lg" className="text-delft-blue-500" />
-            <Text className="text-delft-blue-600">Omdirigerer til dashboard...</Text>
+          // User is authenticated - show dashboard access
+          <VStack gap={6}>
+            <Text fontSize="lg" className="text-delft-blue-600" maxW="md" textAlign="center" lineHeight="1.6">
+              Velkommen tilbage! Du er nu logget ind.
+            </Text>
+            
+            <Link href="/dashboard">
+              <Button 
+                bg="#81b29a"
+                color="white"
+                _hover={{ bg: "#6da085" }}
+                size="lg"
+                fontWeight="600"
+              >
+                Gå til Dashboard
+              </Button>
+            </Link>
           </VStack>
         )}
       </VStack>

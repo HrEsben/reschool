@@ -37,7 +37,7 @@ export async function GET(
     }
 
     // Get entries for this barometer
-    const entries = await getBarometerEntries(barometerId, 50); // Get last 50 entries
+    const entries = await getBarometerEntries(barometerId, 500); // Get all entries (up to 500)
 
     return NextResponse.json({ entries });
 
